@@ -13,6 +13,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Plus, Pencil, Trash2, Search, Upload, Users, Loader2 } from "lucide-react";
 import { z } from "zod";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const contactSchema = z.object({
   first_name: z.string().trim().max(80).optional().or(z.literal("")),
@@ -66,6 +67,7 @@ export default function ContactsManager() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const fileRef = useRef(null);
+  const confirmDelete = useConfirmDelete();
 
   const [search, setSearch] = useState("");
   const [editOpen, setEditOpen] = useState(false);
@@ -223,7 +225,12 @@ export default function ContactsManager() {
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c)}>
                     <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { if (confirm("Delete this contact?")) deleteMutation.mutate(c.id); }}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => confirmDelete({
+                    title: "Delete contact",
+                    description: `Permanently delete "${(c.first_name || c.last_name) ? `${c.first_name || ""} ${c.last_name || ""}`.trim() : (c.email || c.phone)}"? This cannot be undone.`,
+                    confirmLabel: "Delete",
+                    onConfirm: () => deleteMutation.mutate(c.id),
+                  })}>
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
                   </Button>
                 </div>
