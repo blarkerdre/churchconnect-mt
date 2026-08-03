@@ -15,6 +15,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { toast } from "sonner";
 import { requestNotificationPermission, registerServiceWorker, triggerNotificationAlert, testNotificationSound } from "@/lib/notification-alert";
 import { subscribeToPush } from "@/hooks/usePushSubscription";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const typeIcons = {
   pastoral_care: Heart,
@@ -59,6 +60,7 @@ export default function NotificationBell() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState(null);
+  const confirmDelete = useConfirmDelete();
 
   const { data: notifications = [] } = useQuery({
     queryKey: ["notifications", user?.id, tenantId],
@@ -196,10 +198,14 @@ export default function NotificationBell() {
   };
 
   const handleDeleteFromDialog = () => {
-    if (selected) {
-      deleteNotif.mutate(selected.id);
-      setSelected(null);
-    }
+    if (!selected) return;
+    const target = selected;
+    confirmDelete({
+      title: "Delete notification",
+      description: `Permanently delete "${target.title}"?`,
+      onConfirm: () => deleteNotif.mutate(target.id),
+    });
+    setSelected(null);
   };
 
   const selectedRefType = selected?.reference_type || selected?.type;
@@ -280,7 +286,14 @@ export default function NotificationBell() {
                         </p>
                       </div>
                       <button
-                        onClick={(e) => { e.stopPropagation(); deleteNotif.mutate(n.id); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          confirmDelete({
+                            title: "Delete notification",
+                            description: `Permanently delete "${n.title}"?`,
+                            onConfirm: () => deleteNotif.mutate(n.id),
+                          });
+                        }}
                         className="shrink-0 text-muted-foreground/40 hover:text-destructive transition-colors"
                       >
                         <Trash2 className="h-3.5 w-3.5" />

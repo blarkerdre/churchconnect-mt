@@ -724,7 +724,7 @@ export default function WoFBIAttendanceTab() {
                           size="sm"
                           variant="ghost"
                           onClick={() => {
-confirmDelete({
+                              confirmDelete({
                               title: "Delete session",
                               description: "Delete this attendance session and all its check-ins? This cannot be undone.",
                               onConfirm: () => deleteSession.mutate(s.id),
@@ -868,7 +868,7 @@ confirmDelete({
                                               size="sm"
                                               variant="ghost"
                                               onClick={() => {
-confirmDelete({
+                                                confirmDelete({
                                                   title: "Delete attendance record",
                                                   description: "Delete this attendance record? This cannot be undone.",
                                                   onConfirm: () => deleteRecord.mutate(rec.id),
