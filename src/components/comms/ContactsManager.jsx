@@ -225,7 +225,7 @@ export default function ContactsManager() {
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c)}>
                     <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { if (confirm("Delete this contact?")) deleteMutation.mutate(c.id); }}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={async () => { if (await confirmDelete({ title: "Delete contact", description: `Delete ${[c.first_name, c.last_name].filter(Boolean).join(" ") || "this contact"}? This cannot be undone.` })) deleteMutation.mutate(c.id); }}>
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
                   </Button>
                 </div>
