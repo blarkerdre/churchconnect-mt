@@ -20,6 +20,7 @@ import WoFBIPersistentQRDialog from "./WoFBIPersistentQRDialog";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 import { useTenant } from "@/contexts/TenantContext";
 import { downloadRosterCsv, printRosterPdf } from "@/lib/attendance-roster";
+import { useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
 
 function pct(num, den) {
   if (!den) return "0%";
@@ -145,17 +146,20 @@ export default function WoFBIAttendanceTab() {
     },
   });
 
+  const { sessionId: editionId, sessionName: editionName, applySession, isAll: isAllEditions } = useExamSessionFilter();
+
   const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
-    queryKey: ["wofbi-att-sessions", tenantId, selectedCourseId],
+    queryKey: ["wofbi-att-sessions", tenantId, selectedCourseId, editionId],
     enabled: !!tenantId && !!selectedCourseId,
     queryFn: async () => {
-      const { data, error } = await scopeQuery(
-        supabase
-          .from("wofbi_attendance_sessions")
-          .select("*")
-          .eq("course_id", selectedCourseId)
-          .order("session_date", { ascending: false })
-      );
+      const { data, error } = await applySession(
+        scopeQuery(
+          supabase
+            .from("wofbi_attendance_sessions")
+            .select("*, edition:exam_sessions(id, name)")
+            .eq("course_id", selectedCourseId)
+        )
+      ).order("session_date", { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -654,6 +658,7 @@ export default function WoFBIAttendanceTab() {
       logoUrl: currentTenant?.logo_url || null,
       meta: [
         ["Course", courseForExport?.name || "—"],
+        session.edition?.name ? ["Edition", session.edition.name] : (!isAllEditions ? ["Edition", editionName] : null),
         subject ? ["Subject", subject.name] : null,
         ["Date", session.session_date],
         ["Status", session.status === "closed" ? "Closed" : "Open"],
@@ -688,12 +693,13 @@ export default function WoFBIAttendanceTab() {
     ]);
     const fullyPresent = perStudent.filter((s) => s.absent === 0).length;
     return {
-      title: `Attendance Roster — ${courseForExport?.name || "Course"} (all sessions)`,
+      title: `Attendance Roster — ${courseForExport?.name || "Course"}${isAllEditions ? " (all sessions)" : ` — ${editionName}`}`,
       orgName: currentTenant?.name || "",
       logoUrl: currentTenant?.logo_url || null,
       meta: [
         ["Course", courseForExport?.name || "—"],
         courseForExport?.course_code ? ["Code", courseForExport.course_code] : null,
+        !isAllEditions ? ["Edition", editionName] : null,
         ["Sessions", sessions.length],
       ].filter(Boolean),
       summary: [
@@ -703,7 +709,7 @@ export default function WoFBIAttendanceTab() {
       ],
       headers: ["#", "Name", "Student no.", "Present", "Late", "Absent", "Sessions", "Attendance", "Punctuality", "Hours", "Missing check-outs"],
       rows,
-      filename: `roster-${courseForExport?.name || "course"}-summary`,
+      filename: `roster-${courseForExport?.name || "course"}${isAllEditions ? "" : `-${editionName}`}-summary`,
     };
   };
 
@@ -785,7 +791,12 @@ export default function WoFBIAttendanceTab() {
                   return (
                     <TableRow key={s.id}>
                       <TableCell className="whitespace-nowrap">{s.session_date}</TableCell>
-                      <TableCell className="font-medium">{s.title}</TableCell>
+                      <TableCell className="font-medium">
+                        {s.title}
+                        {isAllEditions && s.edition?.name && (
+                          <span className="block text-[11px] font-normal text-muted-foreground">{s.edition.name}</span>
+                        )}
+                      </TableCell>
                       <TableCell>{c.present}</TableCell>
                       <TableCell>{c.late}</TableCell>
                       <TableCell>

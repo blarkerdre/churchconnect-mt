@@ -40,6 +40,8 @@ import WoFBIFeedbackDialog from "@/components/exams/WoFBIFeedbackDialog";
 
 import WoFBIAttendanceTab from "@/components/exams/WoFBIAttendanceTab";
 import SessionManager from "@/components/exams/SessionManager";
+import SessionFilterBar from "@/components/exams/SessionFilterBar";
+import { ExamSessionFilterProvider, useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
 import ModuleTour from "@/components/tour/ModuleTour";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
@@ -64,7 +66,7 @@ const emptyQuestion = {
 
 const WOFBI_DEFAULT_ABOUT = "Bible School is a structured Bible training programme designed to equip believers with foundational knowledge of God's Word through courses and examinations.";
 
-export default function ExamManagement() {
+function ExamManagementInner() {
   const { user, isAdmin, myMember } = useAuth();
   const qc = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
@@ -335,6 +337,7 @@ export default function ExamManagement() {
             </h1>
             <p className="text-sm text-muted-foreground mt-1">Record and review lecturer QC checks.</p>
           </div>
+          <SessionFilterBar />
           <QcReport />
         </div>
       );
@@ -359,6 +362,8 @@ export default function ExamManagement() {
         )}
       </div>
       <WoFBIRegistrationQRCode open={qrOpen} onOpenChange={setQrOpen} />
+
+      <SessionFilterBar />
 
       <Tabs defaultValue="management" className="w-full min-w-0">
         <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start scrollbar-thin">
@@ -959,6 +964,15 @@ export default function ExamManagement() {
   );
 }
 
+export default function ExamManagement() {
+  return (
+    <ExamSessionFilterProvider>
+      <ExamManagementInner />
+    </ExamSessionFilterProvider>
+  );
+}
+
+
 function CourseRegistrationsView({ course }) {
   const qc = useQueryClient();
   const { tenantId } = useTenantQuery();
@@ -978,16 +992,18 @@ function CourseRegistrationsView({ course }) {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
 
+  const { sessionId: editionId, applySession: applyEdition, isAll: isAllEditions, sessionName: sessionNameForExport } = useExamSessionFilter();
+
   const { data: registrations = [], isLoading } = useQuery({
-    queryKey: ["course-registrations", tenantId, course.id],
+    queryKey: ["course-registrations", tenantId, course.id, editionId],
     queryFn: async () => {
       let q = supabase
         .from("course_registrations")
-        .select("id, registered_at, member_id, student_number, status, approved_at, exam_link_sent_at, registration_email_sent_at, registration_origin, members(first_name, last_name, email, phone, user_id)")
+        .select("id, registered_at, member_id, student_number, status, approved_at, exam_link_sent_at, registration_email_sent_at, registration_origin, session_id, edition:exam_sessions(id, name), members(first_name, last_name, email, phone, user_id)")
         .eq("course_id", course.id)
-        .in("status", ["approved", "active"])
-        .order("registered_at", { ascending: false });
+        .in("status", ["approved", "active"]);
       if (tenantId) q = q.eq("tenant_id", tenantId);
+      q = applyEdition(q).order("registered_at", { ascending: false });
       const { data, error } = await q;
       if (error) throw error;
       return data;
@@ -1209,11 +1225,12 @@ function CourseRegistrationsView({ course }) {
   });
 
   const downloadCSV = () => {
-    const headers = ["Name", "Email", "Phone", "Source", "Status", "Student No.", "Registered At", "Approved At"];
+    const headers = ["Name", "Email", "Phone", "Edition", "Source", "Status", "Student No.", "Registered At", "Approved At"];
     const rows = filteredRegistrations.map(r => [
       `${r.members?.first_name || ""} ${r.members?.last_name || ""}`.trim(),
       r.members?.email || "",
       r.members?.phone || "",
+      r.edition?.name || "",
       originLabel(originOf(r)),
       r.status || "pending",
       r.student_number || "",
@@ -1226,6 +1243,7 @@ function CourseRegistrationsView({ course }) {
     const a = document.createElement("a");
     a.href = url;
     const parts = [course.name, "registrations"];
+    if (!isAllEditions) parts.push(sessionNameForExport);
     if (dateFrom) parts.push(`from-${dateFrom}`);
     if (dateTo) parts.push(`to-${dateTo}`);
     a.download = `${parts.join("_")}.csv`;
@@ -1397,6 +1415,7 @@ function CourseRegistrationsView({ course }) {
                           <TableHead className="font-semibold">Name</TableHead>
                           <TableHead className="font-semibold">Email</TableHead>
                           <TableHead className="font-semibold">Phone</TableHead>
+                          <TableHead className="font-semibold">Edition</TableHead>
                           <TableHead className="font-semibold">Source</TableHead>
                           <TableHead className="font-semibold">Status</TableHead>
                           <TableHead className="font-semibold">Exam link</TableHead>
@@ -1428,6 +1447,7 @@ function CourseRegistrationsView({ course }) {
                             <TableCell className="font-medium">{r.members?.first_name} {r.members?.last_name}</TableCell>
                             <TableCell className="text-sm text-muted-foreground">{r.members?.email || "—"}</TableCell>
                             <TableCell className="text-sm text-muted-foreground">{r.members?.phone || "—"}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{r.edition?.name || "—"}</TableCell>
                             <TableCell>
                               {(() => {
                                 const o = originOf(r);

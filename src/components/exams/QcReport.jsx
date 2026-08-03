@@ -22,6 +22,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import QcCheckDialog from "@/components/exams/QcCheckDialog";
 import { YES_NO_FIELDS, SCORE_FIELDS } from "@/lib/qc-options";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import { useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
 
 const emptyFilters = {
   courseId: "all",
@@ -42,7 +43,7 @@ function fmtBool(v) {
 
 function toCSV(rows) {
   const headers = [
-    "date","lecturer","course","subject","tier","qc_member",
+    "date","edition","lecturer","course","subject","tier","qc_member",
     "started_on_time","finished_on_time","introduced_self",
     "orderliness_score","orderliness_note","content_focus_score","content_focus_note",
     "conducted_test","qa_observations","general_observations",
@@ -57,6 +58,7 @@ function toCSV(rows) {
   for (const r of rows) {
     lines.push([
       r.check_date,
+      r.exam_sessions?.name || "",
       r.lecturers?.name || "",
       r.exam_titles?.name || "",
       r.exam_subjects?.name || "",
@@ -108,15 +110,18 @@ export default function QcReport() {
   const [qcPrefill, setQcPrefill] = useState(null);
 
 
+  const { sessionId, sessionName, applySession, isAll } = useExamSessionFilter();
+
   const { data: checks = [], isLoading } = useQuery({
-    queryKey: ["lecturer-qc-checks", tenantId],
+    queryKey: ["lecturer-qc-checks", tenantId, sessionId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("lecturer_qc_checks")
-        .select("*, lecturers(id,name,level), exam_titles(id,name), exam_subjects(id,name)")
-        .eq("tenant_id", tenantId)
-        .order("check_date", { ascending: false });
+      const { data, error } = await applySession(
+        supabase
+          .from("lecturer_qc_checks")
+          .select("*, lecturers(id,name,level), exam_titles(id,name), exam_subjects(id,name), exam_sessions(id,name)")
+          .eq("tenant_id", tenantId)
+      ).order("check_date", { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -310,7 +315,8 @@ export default function QcReport() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `qc-checks-${new Date().toISOString().slice(0, 10)}.csv`;
+    const slug = (sessionName || "all-editions").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+    a.download = `qc-checks-${slug}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -326,7 +332,10 @@ export default function QcReport() {
             <CardTitle className="text-base font-display flex items-center gap-2">
               <ClipboardCheck className="h-4 w-4 text-primary" /> Quality Control
             </CardTitle>
-            <CardDescription>Record and analyse lecturer QC checks against the WOFBI checklist.</CardDescription>
+            <CardDescription>
+              Record and analyse lecturer QC checks against the WOFBI checklist.
+              {!isAll && <> Showing <span className="font-medium text-foreground">{sessionName}</span> only.</>}
+            </CardDescription>
           </div>
           <div className="flex gap-2">
             {canCreate && (
@@ -475,6 +484,7 @@ export default function QcReport() {
                           <TableHead>Date</TableHead>
                           <TableHead>Lecturer</TableHead>
                           <TableHead>Course</TableHead>
+                          <TableHead>Edition</TableHead>
                           <TableHead>Tier</TableHead>
                           <TableHead>QC Member</TableHead>
                           <TableHead className="text-right">Total</TableHead>
@@ -487,6 +497,7 @@ export default function QcReport() {
                             <TableCell className="whitespace-nowrap">{r.check_date}</TableCell>
                             <TableCell className="font-medium">{r.lecturers?.name || "—"}</TableCell>
                             <TableCell>{r.exam_titles?.name || "—"}</TableCell>
+                            <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{r.exam_sessions?.name || "—"}</TableCell>
                             <TableCell>{r.tier ? <Badge variant="secondary">{r.tier}</Badge> : "—"}</TableCell>
                             <TableCell>{r.qc_member_name || "—"}</TableCell>
                             <TableCell className="text-right font-semibold">{r.total_score ?? "—"}/20</TableCell>
