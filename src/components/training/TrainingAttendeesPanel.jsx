@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, Send, Trash2, UserPlus, Search } from "lucide-react";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const STATUS_VARIANT = {
   none: "outline",
@@ -23,6 +24,7 @@ const STATUS_VARIANT = {
 };
 
 export default function TrainingAttendeesPanel({ report }) {
+  const confirmDelete = useConfirmDelete();
   const qc = useQueryClient();
   const { user, isAdmin } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
