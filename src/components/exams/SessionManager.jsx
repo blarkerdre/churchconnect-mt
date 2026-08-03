@@ -371,7 +371,22 @@ export default function SessionManager() {
                       className="text-destructive"
                       disabled={c.attempts > 0}
                       title={c.attempts > 0 ? "Sessions with exam attempts cannot be deleted" : undefined}
-                      onClick={() => setDeleteTarget(s)}
+                      onClick={() => confirmDelete({
+                        title: "Delete this session?",
+                        description: (
+                          <div className="space-y-1">
+                            <p>“{s.name}” will be removed.</p>
+                            <p>
+                              {(c.regs || 0)} registration{(c.regs || 0) === 1 ? "" : "s"} keep their data but lose the edition label.
+                            </p>
+                            <p>
+                              {(c.reports || 0)} course final report{(c.reports || 0) === 1 ? "" : "s"} for this edition will be deleted permanently.
+                            </p>
+                          </div>
+                        ),
+                        confirmLabel: "Delete",
+                        onConfirm: () => deleteMutation.mutate(s.id),
+                      })}
                     >
                       <Trash2 className="h-4 w-4 mr-1" /> Delete
                     </Button>
