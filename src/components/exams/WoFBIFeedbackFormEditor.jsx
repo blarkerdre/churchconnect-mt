@@ -22,6 +22,7 @@ import {
   mergeFeedbackDefaults,
 } from "@/lib/wofbi-feedback-defaults";
 import WoFBIDynamicForm from "./WoFBIDynamicForm";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 function slug(s) {
   return String(s || "field").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || `field_${Date.now()}`;
@@ -35,6 +36,7 @@ function csvEscape(v) {
 export default function WoFBIFeedbackFormEditor() {
   const qc = useQueryClient();
   const { tenantId } = useTenantQuery();
+  const confirmDelete = useConfirmDelete();
   const [local, setLocal] = useState(null);
   const [editingField, setEditingField] = useState(null);
   const [editingIndex, setEditingIndex] = useState(-1);
@@ -365,7 +367,11 @@ export default function WoFBIFeedbackFormEditor() {
                       </p>
                     </div>
                     <Button size="sm" variant="outline" onClick={() => setViewing(r)}>View</Button>
-                    <Button size="icon" variant="ghost" onClick={() => confirm("Delete this response?") && deleteResponse.mutate(r.id)}>
+                    <Button size="icon" variant="ghost" onClick={() => confirmDelete({
+                      title: "Delete response",
+                      description: "Permanently delete this feedback response? This cannot be undone.",
+                      onConfirm: () => deleteResponse.mutate(r.id),
+                    })}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>

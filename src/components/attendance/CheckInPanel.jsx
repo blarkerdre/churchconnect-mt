@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, CheckCircle2, Clock, XCircle, MinusCircle, Users, X, Lock, Download } from "lucide-react";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const STATUS_CONFIG = {
   Present: { color: "bg-chart-3/10 text-chart-3 border-chart-3/20", icon: CheckCircle2, iconColor: "text-chart-3" },
@@ -40,6 +41,7 @@ export default function CheckInPanel({ session, onClose }) {
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
+  const confirmDelete = useConfirmDelete();
 
   const { data: allMembers = [] } = useQuery({
     queryKey: ["members-checkin", tenantId],
@@ -188,7 +190,12 @@ export default function CheckInPanel({ session, onClose }) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => removeRecordMutation.mutate(r.id)}
+                  onClick={() => confirmDelete({
+                    title: "Remove check-in",
+                    description: <>Remove the stale check-in for <strong>{m ? `${m.first_name} ${m.last_name}` : "this member"}</strong>? This cannot be undone.</>,
+                    confirmLabel: "Remove",
+                    onConfirm: () => removeRecordMutation.mutateAsync(r.id),
+                  })}
                   className="h-8 text-xs gap-1"
                 >
                   <X className="h-3.5 w-3.5" /> Remove

@@ -58,7 +58,6 @@ export default function SessionManager() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
-  const [deleteTarget, setDeleteTarget] = useState(null);
   const [confirmClose, setConfirmClose] = useState(null);
   const [confirmStart, setConfirmStart] = useState(null);
   const [conflict, setConflict] = useState(null);
@@ -562,33 +561,6 @@ export default function SessionManager() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this session?</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-2">
-                <p>“{deleteTarget?.name}” will be removed.</p>
-                <ul className="list-disc pl-4 space-y-1">
-                  <li>
-                    {(counts[deleteTarget?.id]?.regs || 0)} registration{(counts[deleteTarget?.id]?.regs || 0) === 1 ? "" : "s"} keep their data but lose the edition label.
-                  </li>
-                  <li>
-                    {(counts[deleteTarget?.id]?.reports || 0)} course final report{(counts[deleteTarget?.id]?.reports || 0) === 1 ? "" : "s"} for this edition will be deleted permanently.
-                  </li>
-                </ul>
-              </div>
-            </AlertDialogDescription>
-
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground" onClick={() => deleteMutation.mutate(deleteTarget.id)}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
