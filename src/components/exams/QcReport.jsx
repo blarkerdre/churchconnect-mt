@@ -479,6 +479,7 @@ export default function QcReport() {
                           <TableHead>Date</TableHead>
                           <TableHead>Lecturer</TableHead>
                           <TableHead>Course</TableHead>
+                          <TableHead>Edition</TableHead>
                           <TableHead>Tier</TableHead>
                           <TableHead>QC Member</TableHead>
                           <TableHead className="text-right">Total</TableHead>
@@ -491,6 +492,7 @@ export default function QcReport() {
                             <TableCell className="whitespace-nowrap">{r.check_date}</TableCell>
                             <TableCell className="font-medium">{r.lecturers?.name || "—"}</TableCell>
                             <TableCell>{r.exam_titles?.name || "—"}</TableCell>
+                            <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{r.exam_sessions?.name || "—"}</TableCell>
                             <TableCell>{r.tier ? <Badge variant="secondary">{r.tier}</Badge> : "—"}</TableCell>
                             <TableCell>{r.qc_member_name || "—"}</TableCell>
                             <TableCell className="text-right font-semibold">{r.total_score ?? "—"}/20</TableCell>
