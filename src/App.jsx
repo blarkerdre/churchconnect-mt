@@ -319,9 +319,11 @@ function App() {
     <QueryClientProvider client={queryClientInstance}>
       <Router>
         <AuthProvider>
-          <AppRoutes />
-          <MFASetupDialog />
-          <CookieConsentBanner />
+          <DeleteConfirmProvider>
+            <AppRoutes />
+            <MFASetupDialog />
+            <CookieConsentBanner />
+          </DeleteConfirmProvider>
         </AuthProvider>
       </Router>
       <Toaster />
