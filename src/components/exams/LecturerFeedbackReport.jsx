@@ -537,6 +537,7 @@ export default function LecturerFeedbackReport() {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Date</TableHead>
+                            <TableHead>Edition</TableHead>
                             <TableHead>Lecturer</TableHead>
                             <TableHead>Subject</TableHead>
                             <TableHead>Student</TableHead>
@@ -550,6 +551,7 @@ export default function LecturerFeedbackReport() {
                           {filtered.map((r) => (
                             <TableRow key={r.id}>
                               <TableCell className="text-xs whitespace-nowrap">{new Date(r.created_at).toLocaleDateString()}</TableCell>
+                              <TableCell className="text-xs whitespace-nowrap text-muted-foreground">{r.exam_sessions?.name || "—"}</TableCell>
                               <TableCell>{r.lecturers?.name || "—"}</TableCell>
                               <TableCell className="text-sm text-muted-foreground">{r.exam_subjects?.name || "—"}</TableCell>
                               <TableCell className="text-sm">{r.members ? `${r.members.first_name} ${r.members.last_name}` : "—"}</TableCell>
