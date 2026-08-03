@@ -14,6 +14,7 @@ import { Plus, Trash2, User, KeyRound, ShieldCheck, ShieldAlert } from "lucide-r
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 
 
@@ -206,7 +207,7 @@ export default function TeensSection({ memberId }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editTeen, setEditTeen] = useState(null);
-  const [deleteTeen, setDeleteTeen] = useState(null);
+  const confirmDelete = useConfirmDelete();
 
   const { data: teens = [], refetch } = useQuery({
     queryKey: ["my-teens", tenantId, memberId],
@@ -226,7 +227,7 @@ export default function TeensSection({ memberId }) {
       const { error } = await supabase.from("teens").delete().eq("id", t.id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Teen removed"); setDeleteTeen(null); qc.invalidateQueries({ queryKey: ["my-teens"] }); },
+    onSuccess: () => { toast.success("Teen removed"); qc.invalidateQueries({ queryKey: ["my-teens"] }); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -270,7 +271,12 @@ export default function TeensSection({ memberId }) {
               </div>
               <div className="flex gap-1">
                 <Button size="sm" variant="outline" onClick={() => { setEditTeen(t); setOpen(true); }}>Edit</Button>
-                <Button size="sm" variant="destructive" onClick={() => setDeleteTeen(t)}><Trash2 className="h-4 w-4" /></Button>
+                <Button size="sm" variant="destructive" onClick={() => confirmDelete({
+                  title: "Delete teen",
+                  description: <>Permanently delete <strong>{t.first_name} {t.last_name}</strong>? This also removes their attendance records. This cannot be undone.</>,
+                  confirmLabel: "Delete teen",
+                  onConfirm: () => removeTeen.mutateAsync(t),
+                })}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </CardContent>
           </Card>
@@ -279,22 +285,6 @@ export default function TeensSection({ memberId }) {
 
       {memberId && <TeenForm open={open} onOpenChange={setOpen} teen={editTeen} memberId={memberId} onSaved={refetch} />}
 
-      <AlertDialog open={!!deleteTeen} onOpenChange={(o) => !o && setDeleteTeen(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {deleteTeen?.first_name} {deleteTeen?.last_name}?</AlertDialogTitle>
-            <AlertDialogDescription>This also removes their attendance records.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={(e) => { e.preventDefault(); removeTeen.mutate(deleteTeen); }}
-              disabled={removeTeen.isPending}
-            >Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

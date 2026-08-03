@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, QrCode, Calendar, LogIn, LogOut, Users, Pencil, Trash2, FileText, Lock, ShieldAlert, ShieldCheck, KeyRound, BarChart3, Search, UserRound, Download } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 import TeensPersistentQRDialog from "@/components/teens/TeensPersistentQRDialog";
 
 const SESSION_TYPES = [
@@ -900,12 +901,12 @@ export default function TeensAttendance({ embedded = false }) {
   const canManage = isAdmin || isLeader;         // create/edit/delete/report
   const canWrite = canManage || isMember;         // create + close + sign in/out
   const canDelete = isAdmin || isLeader;
+  const confirmDelete = useConfirmDelete();
 
   const [formSession, setFormSession] = useState(null); // {} for new, session for edit
   const [qrOpen, setQrOpen] = useState(false);
   const [rosterSession, setRosterSession] = useState(null);
   const [reportSession, setReportSession] = useState(null);
-  const [deleteSession, setDeleteSession] = useState(null);
   const [cumulativeOpen, setCumulativeOpen] = useState(false);
   const [registeredOpen, setRegisteredOpen] = useState(false);
 
@@ -934,7 +935,7 @@ export default function TeensAttendance({ embedded = false }) {
       const { error } = await supabase.from("teen_attendance_sessions").delete().eq("id", s.id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Session deleted"); setDeleteSession(null); refetch(); },
+    onSuccess: () => { toast.success("Session deleted"); refetch(); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -1019,7 +1020,12 @@ export default function TeensAttendance({ embedded = false }) {
                   </>
                 )}
                 {canDelete && (
-                  <Button size="sm" variant="destructive" onClick={() => setDeleteSession(s)}>
+                  <Button size="sm" variant="destructive" onClick={() => confirmDelete({
+                    title: "Delete session",
+                    description: <>This will remove <strong>{s.title}</strong> and every attendance record attached to it. This can't be undone.</>,
+                    confirmLabel: "Delete session",
+                    onConfirm: () => removeSession.mutateAsync(s),
+                  })}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 )}
@@ -1062,24 +1068,6 @@ export default function TeensAttendance({ embedded = false }) {
 
 
 
-      <AlertDialog open={!!deleteSession} onOpenChange={(o) => !o && setDeleteSession(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete session?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will remove <strong>{deleteSession?.title}</strong> and every attendance record attached to it. This can't be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={(e) => { e.preventDefault(); removeSession.mutate(deleteSession); }}
-              disabled={removeSession.isPending}
-            >Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

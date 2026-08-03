@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, QrCode, Trash2, Download, CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Pencil, Star } from "lucide-react";
 import WoFBIPersistentQRDialog from "./WoFBIPersistentQRDialog";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 function pct(num, den) {
   if (!den) return "0%";
@@ -80,6 +81,7 @@ export default function WoFBIAttendanceTab() {
   const { user, isAdmin } = useAuth();
   const qc = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
+  const confirmDelete = useConfirmDelete();
 
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [newOpen, setNewOpen] = useState(false);
@@ -722,7 +724,11 @@ export default function WoFBIAttendanceTab() {
                           size="sm"
                           variant="ghost"
                           onClick={() => {
-                            if (confirm("Delete this attendance session and all its check-ins?")) deleteSession.mutate(s.id);
+confirmDelete({
+                              title: "Delete session",
+                              description: "Delete this attendance session and all its check-ins? This cannot be undone.",
+                              onConfirm: () => deleteSession.mutate(s.id),
+                            });
                           }}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -862,7 +868,11 @@ export default function WoFBIAttendanceTab() {
                                               size="sm"
                                               variant="ghost"
                                               onClick={() => {
-                                                if (confirm("Delete this attendance record?")) deleteRecord.mutate(rec.id);
+confirmDelete({
+                                                  title: "Delete attendance record",
+                                                  description: "Delete this attendance record? This cannot be undone.",
+                                                  onConfirm: () => deleteRecord.mutate(rec.id),
+                                                });
                                               }}
                                             >
                                               <Trash2 className="h-3 w-3" />
