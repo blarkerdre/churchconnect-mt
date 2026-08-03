@@ -16,12 +16,12 @@ import { cn } from "@/lib/utils";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 export default function SermonFolderSidebar({
-  const confirmDelete = useConfirmDelete();
   folders,
   notes,
   selectedFolder,
   onSelectFolder,
 }) {
+  const confirmDelete = useConfirmDelete();
   const { user } = useAuth();
   const { tenantId } = useTenantQuery();
   const queryClient = useQueryClient();
