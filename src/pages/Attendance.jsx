@@ -7,14 +7,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, Clock, Users, CalendarCheck, Plus, Loader2, Lock, FileText, Filter, Download, Printer, UserCog, Trash2 } from "lucide-react";
+import { CheckCircle2, Clock, Users, CalendarCheck, Plus, Loader2, Lock, FileText, Filter, Download, Printer, UserCog, Trash2, ClipboardList, FileSpreadsheet, FileDown } from "lucide-react";
 import PrintReportButton from "@/components/PrintReportButton";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useTenant } from "@/contexts/TenantContext";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
+import { downloadRosterCsv, printRosterPdf } from "@/lib/attendance-roster";
 import ReportAttachments from "@/components/reports/ReportAttachments";
 import CheckInPanel from "@/components/attendance/CheckInPanel";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
