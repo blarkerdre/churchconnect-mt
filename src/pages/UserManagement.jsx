@@ -56,6 +56,7 @@ const roleLabels = {
 
 export default function UserManagement() {
   const { isAdmin, roles, user } = useAuth();
+  const confirmDelete = useConfirmDelete();
   const isSuperAdmin = roles.includes("super_admin");
   const queryClient = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
