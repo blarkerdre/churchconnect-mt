@@ -693,12 +693,13 @@ export default function WoFBIAttendanceTab() {
     ]);
     const fullyPresent = perStudent.filter((s) => s.absent === 0).length;
     return {
-      title: `Attendance Roster — ${courseForExport?.name || "Course"} (all sessions)`,
+      title: `Attendance Roster — ${courseForExport?.name || "Course"}${isAllEditions ? " (all sessions)" : ` — ${editionName}`}`,
       orgName: currentTenant?.name || "",
       logoUrl: currentTenant?.logo_url || null,
       meta: [
         ["Course", courseForExport?.name || "—"],
         courseForExport?.course_code ? ["Code", courseForExport.course_code] : null,
+        !isAllEditions ? ["Edition", editionName] : null,
         ["Sessions", sessions.length],
       ].filter(Boolean),
       summary: [
@@ -708,7 +709,7 @@ export default function WoFBIAttendanceTab() {
       ],
       headers: ["#", "Name", "Student no.", "Present", "Late", "Absent", "Sessions", "Attendance", "Punctuality", "Hours", "Missing check-outs"],
       rows,
-      filename: `roster-${courseForExport?.name || "course"}-summary`,
+      filename: `roster-${courseForExport?.name || "course"}${isAllEditions ? "" : `-${editionName}`}-summary`,
     };
   };
 
