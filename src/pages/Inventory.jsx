@@ -27,6 +27,7 @@ import InspectionHistoryDialog from "@/components/inventory/InspectionHistoryDia
 import PrintReportButton from "@/components/PrintReportButton";
 import { logAudit } from "@/lib/audit";
 import ModuleTour from "@/components/tour/ModuleTour";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const conditionColor = {
   good: "bg-chart-3/10 text-chart-3",
@@ -47,6 +48,7 @@ function dueStatus(item) {
 }
 
 export default function Inventory() {
+  const confirmDelete = useConfirmDelete();
   const { tenantId, withTenant } = useTenantQuery();
   const { tenantSlug } = useParams();
   const queryClient = useQueryClient();
@@ -117,7 +119,7 @@ export default function Inventory() {
   };
 
   const handleDeleteItem = async (item) => {
-    if (!confirm(`Delete "${item.name}"? This also removes its inspection history.`)) return;
+    if (!(await confirmDelete({ title: "Delete inventory item", itemName: item.name, highImpact: true, impacts: ["Its inspection history will also be removed."] }))) return;
     const { error } = await supabase.from("inventory_items").delete().eq("id", item.id).eq("tenant_id", tenantId);
     if (error) { toast.error(error.message); return; }
     await logAudit("inventory.item_deleted", "inventory_items", item.id, { name: item.name }, tenantId);
@@ -324,7 +326,7 @@ export default function Inventory() {
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
                         <Button size="sm" variant="ghost" onClick={async () => {
-                          if (!confirm(`Delete category "${c.name}"?`)) return;
+                          if (!(await confirmDelete({ title: "Delete category", description: `Permanently delete the category "${c.name}"?` }))) return;
                           const { error } = await supabase.from("inventory_categories").delete().eq("id", c.id).eq("tenant_id", tenantId);
                           if (error) { toast.error(error.message); return; }
                           toast.success("Category deleted");

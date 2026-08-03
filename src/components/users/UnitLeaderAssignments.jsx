@@ -9,8 +9,10 @@ import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import { useAuth } from "@/hooks/useAuth";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 export default function UnitLeaderAssignments({ userId }) {
+  const confirmDelete = useConfirmDelete();
   const queryClient = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { isAdmin } = useAuth();
@@ -71,7 +73,7 @@ export default function UnitLeaderAssignments({ userId }) {
       {assignedUnits.map((unit) => (
         <Badge key={unit} variant="outline" className="gap-1 text-xs">
           {unit}
-          <button onClick={() => removeMutation.mutate(unit)} className="ml-0.5 hover:text-destructive">
+          <button onClick={async () => { if (await confirmDelete({ title: "Remove unit assignment", description: `Remove ${unit} from this user's leadership assignments?`, confirmLabel: "Remove" })) removeMutation.mutate(unit); }} className="ml-0.5 hover:text-destructive">
             <X className="h-3 w-3" />
           </button>
         </Badge>
