@@ -13,6 +13,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Plus, Pencil, Trash2, Search, Upload, Users, Loader2 } from "lucide-react";
 import { z } from "zod";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const contactSchema = z.object({
   first_name: z.string().trim().max(80).optional().or(z.literal("")),
