@@ -16,6 +16,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, Search, Download, Eye, CheckCircle2, XCircle, Trash2, BarChart3, X } from "lucide-react";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import { useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
 
 const STATUS_VARIANT = {
   submitted: "secondary",
