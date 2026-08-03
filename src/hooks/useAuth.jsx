@@ -80,9 +80,11 @@ export function AuthProvider({ children }) {
         if (session?.user) {
           setDataLoaded(false);
           fetchUserData(session.user.id, session.user.email);
+          refreshMfaStatus();
         } else {
           setDataLoaded(true);
         }
+
       })
       .catch((err) => {
         console.warn("Unable to restore auth session:", err?.message || err);
