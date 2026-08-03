@@ -1156,12 +1156,13 @@ export default function WoFBIAttendanceTab() {
                         <Button size="sm" variant={status === "late" ? "default" : "outline"} onClick={() => markStatus.mutate({ registration: r, status: "late" })}>Late</Button>
                         <Button size="sm" variant={status === "absent" ? "default" : "outline"} onClick={() => markStatus.mutate({ registration: r, status: "absent" })}>Absent</Button>
                         {rec && !rec.checked_out_at && (
-                          <Button size="sm" variant="outline" onClick={() => markStatus.mutate({ registration: r, action: "set_time_out" })}>Time-out</Button>
+                          <Button size="sm" variant="outline" onClick={() => setTimeOutConfirm({ registration: r, action: "set_time_out" })}>Time-out</Button>
                         )}
                         {rec?.checked_out_at && (
-                          <Button size="sm" variant="ghost" onClick={() => markStatus.mutate({ registration: r, action: "clear_time_out" })}>Clear out</Button>
+                          <Button size="sm" variant="ghost" onClick={() => setTimeOutConfirm({ registration: r, action: "clear_time_out" })}>Clear out</Button>
                         )}
                       </TableCell>
+
                     </TableRow>
                   );
                 })}
