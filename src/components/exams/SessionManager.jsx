@@ -19,6 +19,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, Plus, Trash2, Edit, Play, Square, RotateCcw, CalendarClock } from "lucide-react";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const emptyForm = {
   name: "",
