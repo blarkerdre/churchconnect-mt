@@ -314,7 +314,8 @@ export default function QcReport() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `qc-checks-${new Date().toISOString().slice(0, 10)}.csv`;
+    const slug = (sessionName || "all-editions").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+    a.download = `qc-checks-${slug}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
