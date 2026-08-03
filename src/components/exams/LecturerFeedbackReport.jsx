@@ -34,7 +34,7 @@ const emptyFilters = {
 
 function toCSV(rows) {
   const headers = [
-    "date","course","subject","lecturer","level","student","overall_rating",
+    "date","edition","course","subject","lecturer","level","student","overall_rating",
     "session_description","delivery","time_keeping","class_atmosphere","test_quality","have_again","comments",
   ];
   const esc = (v) => {
@@ -46,6 +46,7 @@ function toCSV(rows) {
   for (const r of rows) {
     lines.push([
       new Date(r.created_at).toISOString().slice(0, 10),
+      r.exam_sessions?.name || "",
       r.exam_titles?.name || "",
       r.exam_subjects?.name || "",
       r.lecturers?.name || "",
