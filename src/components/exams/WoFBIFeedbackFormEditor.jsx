@@ -71,15 +71,18 @@ export default function WoFBIFeedbackFormEditor() {
     }
   }, [data, tenantId]);
 
+  const { sessionId: editionId, applySession: applyEdition } = useExamSessionFilter();
+
   const { data: responses = [], isLoading: respLoading } = useQuery({
-    queryKey: ["wofbi-feedback-responses", tenantId],
+    queryKey: ["wofbi-feedback-responses", tenantId, editionId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("wofbi_feedback_responses")
-        .select("*, members(first_name, last_name, email)")
-        .eq("tenant_id", tenantId)
-        .order("submitted_at", { ascending: false });
+      const { data, error } = await applyEdition(
+        supabase
+          .from("wofbi_feedback_responses")
+          .select("*, members(first_name, last_name, email), edition:exam_sessions(id, name)")
+          .eq("tenant_id", tenantId)
+      ).order("submitted_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
