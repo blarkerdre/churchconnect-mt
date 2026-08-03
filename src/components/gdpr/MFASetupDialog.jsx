@@ -74,12 +74,13 @@ export default function MFASetupDialog() {
     try {
       await supabase.from("profiles").update({ mfa_prompt_snoozed_until: until }).eq("user_id", user.id);
     } catch { /* ignore */ }
+    if (step === "verify") await cleanupUnverifiedFactors();
     setOpen(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-md">
+    <Dialog open={open} onOpenChange={(next) => { if (!next) snooze(); else setOpen(true); }}>
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto pb-24 sm:pb-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-primary" /> Protect your account
@@ -92,7 +93,8 @@ export default function MFASetupDialog() {
         {step === "intro" && (
           <div className="space-y-3 text-sm">
             <p>You'll need an authenticator app (Google Authenticator, 1Password, Authy, etc.).</p>
-            <p className="text-muted-foreground">Optional — you can enable it later from settings.</p>
+            <p className="text-muted-foreground">Optional — you can also turn it on later from My Profile.</p>
+
           </div>
         )}
 
