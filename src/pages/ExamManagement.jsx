@@ -464,89 +464,82 @@ export default function ExamManagement() {
             <CourseResultsView course={selectedCourse} />
           ) : (
             <>
-              {/* Subject Manager */}
+              {/* Subject Manager — questions live inside each expanded subject */}
               <SubjectManager
                 course={selectedCourse}
                 onSelectSubject={(s) => setSelectedSubject(s)}
                 selectedSubjectId={selectedSubject?.id}
-              />
-
-              {/* Questions for selected subject */}
-              {selectedSubject && (
-                <>
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-foreground">
-                      Questions — {selectedSubject.name}
-                    </h3>
-                    <div className="flex gap-2">
-                      {questions.length > 0 && (
-                        <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setPreviewSubject(selectedSubject)}>
-                          <Eye className="h-3.5 w-3.5" /> Preview Exam
+                onAddQuestion={openNew}
+                onPreviewSubject={(s) => setPreviewSubject(s)}
+                renderSubjectPanel={(s) => (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <h3 className="text-sm font-semibold text-foreground">Questions — {s.name}</h3>
+                      <div className="flex gap-2">
+                        {questions.length > 0 && (
+                          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setPreviewSubject(s)}>
+                            <Eye className="h-3.5 w-3.5" /> Preview Exam
+                          </Button>
+                        )}
+                        <Button size="sm" className="gap-1.5" onClick={openNew}>
+                          <Plus className="h-4 w-4" /> Add Question
                         </Button>
-                      )}
-                      <Button size="sm" className="gap-1.5" onClick={openNew}>
-                        <Plus className="h-4 w-4" /> Add Question
-                      </Button>
+                      </div>
                     </div>
-                  </div>
-
-                  <Card className="border-0 shadow-sm">
-                    <CardContent className="pt-6">
-                      {isLoading ? (
-                        <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-                      ) : questions.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-8">No questions yet for this subject.</p>
-                      ) : (
-                        <div className="space-y-3">
-                          {questions.map((q, idx) => {
-                            const qType = q.question_type || "multiple_choice";
-                            const qOpts = OPTION_LETTERS.slice(0, q.answer_count || 4);
-                            return (
-                              <div key={q.id} className="p-4 rounded-lg border border-border bg-card">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-foreground">
-                                      <span className="text-muted-foreground mr-2">{idx + 1}.</span>{q.question_text}
-                                    </p>
-                                    <div className="flex items-center gap-1.5 mt-1.5">
-                                      <Badge variant="secondary" className="text-[10px]">{questionTypeLabel(qType)}</Badge>
+                    {isLoading ? (
+                      <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                    ) : questions.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">No questions yet for this subject.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {questions.map((q, idx) => {
+                          const qType = q.question_type || "multiple_choice";
+                          const qOpts = OPTION_LETTERS.slice(0, q.answer_count || 4);
+                          return (
+                            <div key={q.id} className="p-4 rounded-lg border border-border bg-card">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-foreground">
+                                    <span className="text-muted-foreground mr-2">{idx + 1}.</span>{q.question_text}
+                                  </p>
+                                  <div className="flex items-center gap-1.5 mt-1.5">
+                                    <Badge variant="secondary" className="text-[10px]">{questionTypeLabel(qType)}</Badge>
+                                  </div>
+                                  {qType === "multiple_choice" && (
+                                    <div className="grid grid-cols-2 gap-2 mt-2">
+                                      {qOpts.map(opt => q[`option_${opt}`] && (
+                                        <div key={opt} className={`text-xs px-2 py-1.5 rounded ${q.correct_answer === opt ? "bg-emerald-500/10 text-emerald-600 font-semibold border border-emerald-500/30" : "bg-muted text-muted-foreground"}`}>
+                                          <span className="font-bold uppercase mr-1">{opt}.</span>{q[`option_${opt}`]}
+                                        </div>
+                                      ))}
                                     </div>
-                                    {qType === "multiple_choice" && (
-                                      <div className="grid grid-cols-2 gap-2 mt-2">
+                                  )}
+                                  {qType === "fill_in_gap" && <p className="text-xs text-emerald-600 mt-2">Answer: <strong>{q.correct_answer}</strong></p>}
+                                  {qType === "drag_and_drop" && (
+                                    <div className="mt-2 space-y-1">
+                                      <div className="flex flex-wrap gap-1.5">
                                         {qOpts.map(opt => q[`option_${opt}`] && (
-                                          <div key={opt} className={`text-xs px-2 py-1.5 rounded ${q.correct_answer === opt ? "bg-emerald-500/10 text-emerald-600 font-semibold border border-emerald-500/30" : "bg-muted text-muted-foreground"}`}>
-                                            <span className="font-bold uppercase mr-1">{opt}.</span>{q[`option_${opt}`]}
-                                          </div>
+                                          <span key={opt} className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground">{opt.toUpperCase()}. {q[`option_${opt}`]}</span>
                                         ))}
                                       </div>
-                                    )}
-                                    {qType === "fill_in_gap" && <p className="text-xs text-emerald-600 mt-2">Answer: <strong>{q.correct_answer}</strong></p>}
-                                    {qType === "drag_and_drop" && (
-                                      <div className="mt-2 space-y-1">
-                                        <div className="flex flex-wrap gap-1.5">
-                                          {qOpts.map(opt => q[`option_${opt}`] && (
-                                            <span key={opt} className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground">{opt.toUpperCase()}. {q[`option_${opt}`]}</span>
-                                          ))}
-                                        </div>
-                                        <p className="text-xs text-emerald-600">Correct order: <strong>{q.correct_answer}</strong></p>
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-1 shrink-0">
-                                    <Badge variant="outline" className="text-[10px]">{q.points} pt{q.points !== 1 ? "s" : ""}</Badge>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(q)}><Edit className="h-3.5 w-3.5" /></Button>
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(q)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                                  </div>
+                                      <p className="text-xs text-emerald-600">Correct order: <strong>{q.correct_answer}</strong></p>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <Badge variant="outline" className="text-[10px]">{q.points} pt{q.points !== 1 ? "s" : ""}</Badge>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(q)}><Edit className="h-3.5 w-3.5" /></Button>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget(q)}><Trash2 className="h-3.5 w-3.5" /></Button>
                                 </div>
                               </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </>
-              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              />
             </>
           )}
         </>
