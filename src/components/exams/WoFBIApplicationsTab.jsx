@@ -721,6 +721,7 @@ export default function WoFBIApplicationsTab() {
                   <TableHead>Applicant</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Course</TableHead>
+                  <TableHead>Edition</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
