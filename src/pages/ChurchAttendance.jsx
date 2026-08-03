@@ -487,8 +487,8 @@ export default function ChurchAttendance() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-7 w-7 text-destructive hover:text-destructive"
-                                  onClick={() => {
-                                    if (window.confirm("Delete this attendance report? This cannot be undone.")) {
+                                  onClick={async () => {
+                                    if (await confirmDelete({ title: "Delete attendance report", description: "This attendance report will be permanently deleted." })) {
                                       deleteMutation.mutate(r.id);
                                     }
                                   }}

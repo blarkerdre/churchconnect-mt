@@ -190,7 +190,7 @@ export default function TrainingAttendeesPanel({ report }) {
                     )}
                     {canEdit && !signposted && (
                       <Button variant="ghost" size="icon" className="h-7 w-7"
-                        onClick={() => { if (confirm("Remove attendee?")) removeMutation.mutate(a.id); }}>
+                        onClick={async () => { if (await confirmDelete({ title: "Remove attendee", description: "This attendee record will be permanently removed.", confirmLabel: "Remove" })) removeMutation.mutate(a.id); }}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     )}
