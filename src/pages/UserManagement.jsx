@@ -383,11 +383,19 @@ export default function UserManagement() {
                           <div className="min-w-0">
                             <p className="font-medium text-foreground truncate">{p.full_name || "—"}</p>
                             <p className="text-xs text-muted-foreground truncate md:hidden">{p.email || ""}</p>
-                            {isDisabled && (
-                              <Badge variant="outline" className="text-destructive border-destructive/30 text-[10px] mt-0.5">
-                                <Ban className="h-2.5 w-2.5 mr-1" /> Disabled
-                              </Badge>
-                            )}
+                            <div className="flex flex-wrap gap-1 mt-0.5">
+                              {isDisabled && (
+                                <Badge variant="outline" className="text-destructive border-destructive/30 text-[10px]">
+                                  <Ban className="h-2.5 w-2.5 mr-1" /> Disabled
+                                </Badge>
+                              )}
+                              {hasMfa && (
+                                <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">
+                                  <KeyRound className="h-2.5 w-2.5 mr-1" /> 2FA
+                                </Badge>
+                              )}
+                            </div>
+
                           </div>
                         </div>
                       </td>
