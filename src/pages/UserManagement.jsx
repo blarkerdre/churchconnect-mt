@@ -127,6 +127,52 @@ export default function UserManagement() {
 
   const disabledUsers = Object.fromEntries(bannedUserIds.map(id => [id, true]));
 
+  // Which users have a verified authenticator (admin-only lookup)
+  const { data: mfaUserIds = [] } = useQuery({
+    queryKey: ["users-with-mfa", tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("users_with_mfa", { _tenant_id: tenantId });
+      if (error) {
+        console.warn("users_with_mfa failed:", error.message);
+        return [];
+      }
+      return (data || []).map(r => r.user_id);
+    },
+    enabled: !!tenantId,
+    retry: false,
+  });
+  const mfaUsers = Object.fromEntries(mfaUserIds.map(id => [id, true]));
+
+  const resetMfaMutation = useMutation({
+    mutationFn: async ({ userId, targetName }) => {
+      const { data, error } = await supabase.functions.invoke("admin-reset-mfa", {
+        body: { user_id: userId, tenant_id: tenantId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      await logAudit("mfa_reset", "profiles", userId, { target_name: targetName, factors_removed: data?.removed ?? 0 }, tenantId);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users-with-mfa"] });
+      toast({ title: "Two-factor authentication reset", description: "The user can sign in with their password and set up 2FA again." });
+    },
+    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const handleResetMfa = async (p) => {
+    const targetName = p.full_name || p.email;
+    const ok = await confirmDelete({
+      title: "Reset two-factor authentication",
+      itemName: targetName,
+      highImpact: true,
+      impacts: ["This user will be able to sign in with just their password until they set up 2FA again."],
+      confirmLabel: "Reset 2FA",
+    });
+    if (ok) resetMfaMutation.mutate({ userId: p.user_id, targetName });
+  };
+
+
   const toggleRoleMutation = useMutation({
     mutationFn: async ({ userId, role, add, targetName }) => {
       if (add) {
