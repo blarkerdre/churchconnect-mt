@@ -10,10 +10,12 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, UserPlus, CheckCircle2, XCircle, Trash2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 export default function RegistrationsDialog({ open, onOpenChange, event }) {
   const { user } = useAuth();
   const { tenantId, withTenant } = useTenantQuery();
+  const confirmDelete = useConfirmDelete();
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [adding, setAdding] = useState(false);
