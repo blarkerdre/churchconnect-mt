@@ -789,7 +789,12 @@ export default function WoFBIAttendanceTab() {
                   return (
                     <TableRow key={s.id}>
                       <TableCell className="whitespace-nowrap">{s.session_date}</TableCell>
-                      <TableCell className="font-medium">{s.title}</TableCell>
+                      <TableCell className="font-medium">
+                        {s.title}
+                        {isAllEditions && s.edition?.name && (
+                          <span className="block text-[11px] font-normal text-muted-foreground">{s.edition.name}</span>
+                        )}
+                      </TableCell>
                       <TableCell>{c.present}</TableCell>
                       <TableCell>{c.late}</TableCell>
                       <TableCell>
