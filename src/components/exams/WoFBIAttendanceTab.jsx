@@ -848,9 +848,19 @@ export default function WoFBIAttendanceTab() {
               {selectedCourse?.name || "Course"} · {sessions.length} session{sessions.length === 1 ? "" : "s"}
             </p>
           </div>
-          <Button variant="outline" onClick={exportCsv} disabled={!perStudent.length} className="gap-2 w-full sm:w-auto">
-            <Download className="h-4 w-4" /> Export CSV
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              onClick={() => { setRosterExportScope(sessions[0]?.id || "summary"); setRosterExportOpen(true); }}
+              disabled={!roster.length}
+              className="gap-2 w-full sm:w-auto"
+            >
+              <Download className="h-4 w-4" /> Download roster
+            </Button>
+            <Button variant="outline" onClick={exportCsv} disabled={!perStudent.length} className="gap-2 w-full sm:w-auto">
+              <Download className="h-4 w-4" /> Export CSV
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {perStudent.length === 0 ? (
