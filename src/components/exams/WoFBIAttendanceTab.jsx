@@ -287,8 +287,8 @@ export default function WoFBIAttendanceTab() {
           late_after: payload.late_after || null,
           notes: payload.notes || null,
           status: isClosed ? "closed" : "open",
-          scheduled_open_at: isClosed ? null : openAt,
-          scheduled_close_at: isClosed ? null : closeAt,
+          scheduled_open_at: openAt,
+          scheduled_close_at: closeAt,
         })
         .eq("id", editSession.id)
         .eq("tenant_id", tenantId);
@@ -318,10 +318,10 @@ export default function WoFBIAttendanceTab() {
 
   const closeSession = useMutation({
     mutationFn: async (id) => {
-      // Manual close overrides any schedule
+      // Manual close overrides the schedule but keeps it on record
       const { error } = await supabase
         .from("wofbi_attendance_sessions")
-        .update({ status: "closed", scheduled_open_at: null, scheduled_close_at: null })
+        .update({ status: "closed" })
         .eq("id", id)
         .eq("tenant_id", tenantId);
       if (error) throw error;
@@ -335,10 +335,10 @@ export default function WoFBIAttendanceTab() {
 
   const reopenSession = useMutation({
     mutationFn: async (id) => {
-      // Manual reopen overrides any schedule
+      // Manual reopen overrides the schedule but keeps it on record
       const { error } = await supabase
         .from("wofbi_attendance_sessions")
-        .update({ status: "open", scheduled_open_at: null, scheduled_close_at: null })
+        .update({ status: "open" })
         .eq("id", id)
         .eq("tenant_id", tenantId);
       if (error) throw error;
@@ -671,6 +671,7 @@ export default function WoFBIAttendanceTab() {
               <TableBody>
                 {sessions.map((s) => {
                   const c = recordsBySession[s.id] || { present: 0, late: 0 };
+                  const todayStr = new Date().toISOString().slice(0, 10);
                   return (
                     <TableRow key={s.id}>
                       <TableCell className="whitespace-nowrap">{s.session_date}</TableCell>
@@ -686,14 +687,18 @@ export default function WoFBIAttendanceTab() {
                           )}
                           {(s.scheduled_open_at || s.scheduled_close_at) && (
                             <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                              {s.scheduled_open_at ? `Opens ${fmtLocal(s.scheduled_open_at)}` : ""}
+                              {"Scheduled: "}
+                              {s.scheduled_open_at ? `opens ${fmtLocal(s.scheduled_open_at)}` : ""}
                               {s.scheduled_open_at && s.scheduled_close_at ? " · " : ""}
-                              {s.scheduled_close_at ? `Closes ${fmtLocal(s.scheduled_close_at)}` : ""}
+                              {s.scheduled_close_at ? `closes ${fmtLocal(s.scheduled_close_at)}` : ""}
+                              {s.status === "closed" ? " (closed manually)" : ""}
                             </span>
                           )}
-                          {!s.scheduled_open_at && !s.scheduled_close_at && (
-                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">No auto open/close schedule</span>
-                          )}
+                          {!s.scheduled_open_at &&
+                            !s.scheduled_close_at &&
+                            (s.status === "open" || s.session_date >= todayStr) && (
+                              <span className="text-[10px] text-muted-foreground whitespace-nowrap">No auto open/close schedule</span>
+                            )}
                         </div>
                       </TableCell>
 
