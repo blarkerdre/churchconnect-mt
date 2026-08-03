@@ -992,7 +992,7 @@ function CourseRegistrationsView({ course }) {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
 
-  const { sessionId: editionId, applySession: applyEdition, isAll: isAllEditions } = useExamSessionFilter();
+  const { sessionId: editionId, applySession: applyEdition, isAll: isAllEditions, sessionName: sessionNameForExport } = useExamSessionFilter();
 
   const { data: registrations = [], isLoading } = useQuery({
     queryKey: ["course-registrations", tenantId, course.id, editionId],
