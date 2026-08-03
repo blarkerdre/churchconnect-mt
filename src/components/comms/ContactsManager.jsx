@@ -64,6 +64,7 @@ function parseCsv(text) {
 export default function ContactsManager() {
   const { user } = useAuth();
   const { tenantId, withTenant } = useTenantQuery();
+  const confirmDelete = useConfirmDelete();
   const { toast } = useToast();
   const qc = useQueryClient();
   const fileRef = useRef(null);
