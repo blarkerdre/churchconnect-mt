@@ -469,6 +469,7 @@ export default function WoFBIApplicationsTab() {
       "Email",
       "Phone",
       "Course",
+      "Edition",
       "Status",
       ...fields.filter((f) => f.type !== "section_heading").map((f) => f.label),
     ];
@@ -480,6 +481,7 @@ export default function WoFBIApplicationsTab() {
       a.email,
       a.phone || "",
       a.course?.name || "",
+      a.edition?.name || "",
       a.status,
       ...fields.filter((f) => f.type !== "section_heading").map((f) => {
         const v = a.answers?.[f.id];
@@ -489,7 +491,8 @@ export default function WoFBIApplicationsTab() {
       }),
     ]);
     const suffix = answerFilters.length > 0 ? "-filtered" : "";
-    downloadCsv([headers, ...rows], `bible-school-applications${suffix}-${new Date().toISOString().slice(0, 10)}.csv`);
+    const edSlug = isAll ? "" : `-${(sessionName || "").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+    downloadCsv([headers, ...rows], `bible-school-applications${edSlug}${suffix}-${new Date().toISOString().slice(0, 10)}.csv`);
   };
 
   const exportReport = () => {
