@@ -1447,6 +1447,7 @@ function CourseRegistrationsView({ course }) {
                             <TableCell className="font-medium">{r.members?.first_name} {r.members?.last_name}</TableCell>
                             <TableCell className="text-sm text-muted-foreground">{r.members?.email || "—"}</TableCell>
                             <TableCell className="text-sm text-muted-foreground">{r.members?.phone || "—"}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{r.edition?.name || "—"}</TableCell>
                             <TableCell>
                               {(() => {
                                 const o = originOf(r);
