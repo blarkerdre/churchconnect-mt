@@ -73,7 +73,7 @@ function PageFallback() {
 }
 
 function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth();
+  const { user, loading, mfaRequired } = useAuth();
   const { tenantSlug } = useParams();
   if (loading) {
     return (
@@ -84,8 +84,10 @@ function ProtectedRoute({ children }) {
   }
   const authPath = tenantSlug ? `/t/${tenantSlug}/auth` : "/auth";
   if (!user) return <Navigate to={authPath} replace />;
+  if (mfaRequired) return <MfaChallengeGate />;
   return children;
 }
+
 
 function AdminRoute({ children }) {
   const { isAdmin, loading } = useAuth();
