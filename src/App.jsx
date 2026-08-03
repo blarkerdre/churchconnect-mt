@@ -63,6 +63,8 @@ const PreteensCheckinLanding = lazy(() => import("@/pages/PreteensCheckinLanding
 const WoFBICheckinLanding = lazy(() => import("@/pages/WoFBICheckinLanding"));
 import CookieConsentBanner from "@/components/gdpr/CookieConsentBanner";
 import MFASetupDialog from "@/components/gdpr/MFASetupDialog";
+import MfaChallengeGate from "@/components/security/MfaChallengeGate";
+
 
 function PageFallback() {
   return (
