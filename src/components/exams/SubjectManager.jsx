@@ -56,6 +56,25 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
     enabled: !!course.id && !!tenantId,
   });
 
+  // Question counts per subject — powers the row badge and enables/disables
+  // the quick "preview exam" icon.
+  const subjectIds = subjects.map((s) => s.id);
+  const { data: questionCounts = {} } = useQuery({
+    queryKey: ["exam-question-counts", course.id, tenantId, subjectIds.join(",")],
+    enabled: !!tenantId && subjectIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("exam_questions")
+        .select("id, subject_id")
+        .eq("tenant_id", tenantId)
+        .in("subject_id", subjectIds);
+      if (error) throw error;
+      const map = {};
+      for (const row of data || []) map[row.subject_id] = (map[row.subject_id] || 0) + 1;
+      return map;
+    },
+  });
+
   const saveMutation = useMutation({
     mutationFn: async (payload) => {
       if (editing) {
