@@ -496,11 +496,11 @@ export default function MyFamily() {
   const { isSuperAdmin } = useTenant();
   const { tenantId } = useTenantQuery();
   const qc = useQueryClient();
+  const confirmDelete = useConfirmDelete();
   const [childOpen, setChildOpen] = useState(false);
   const [editChild, setEditChild] = useState(null);
   const [guardianFor, setGuardianFor] = useState(null);
   const [delegateFor, setDelegateFor] = useState(null);
-  const [deleteChild, setDeleteChild] = useState(null);
   const [promoteChild, setPromoteChild] = useState(null);
   const [showAll, setShowAll] = useState(false);
   const tour = useTour();
@@ -531,7 +531,7 @@ export default function MyFamily() {
       const { error } = await supabase.from("children").delete().eq("id", child.id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Child removed"); setDeleteChild(null); qc.invalidateQueries({ queryKey: ["my-children"] }); },
+    onSuccess: () => { toast.success("Child removed"); qc.invalidateQueries({ queryKey: ["my-children"] }); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -709,7 +709,12 @@ export default function MyFamily() {
                     }}><ArrowUpCircle className="h-4 w-4 mr-1" /> Promote to preteen</Button>
                     <Button size="sm" variant="destructive" onClick={() => {
                       if (active) { toast.error("Release child from care before deleting"); return; }
-                      setDeleteChild(c);
+                      confirmDelete({
+                        title: "Delete child",
+                        description: `Permanently delete ${c.first_name} ${c.last_name}'s profile, authorised adults, and pickup delegations? This cannot be undone.`,
+                        confirmLabel: "Delete",
+                        onConfirm: () => removeChild.mutateAsync(c),
+                      });
                     }}><Trash2 className="h-4 w-4 mr-1" /> Delete</Button>
                   </div>
                 </CardContent>
@@ -735,25 +740,6 @@ export default function MyFamily() {
       {meMember && <ChildForm open={childOpen} onOpenChange={setChildOpen} child={editChild} memberId={meMember.id} onSaved={refetch} />}
       {guardianFor && <GuardianManager open={!!guardianFor} onOpenChange={() => setGuardianFor(null)} child={guardianFor} />}
       {delegateFor && <DelegationDialog open={!!delegateFor} onOpenChange={() => setDelegateFor(null)} child={delegateFor} />}
-
-      <AlertDialog open={!!deleteChild} onOpenChange={(o) => !o && setDeleteChild(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {deleteChild?.first_name} {deleteChild?.last_name}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This permanently removes this child's profile, authorised adults, and pickup delegations. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={(e) => { e.preventDefault(); removeChild.mutate(deleteChild); }}
-              disabled={removeChild.isPending}
-            >Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <AlertDialog open={!!promoteChild} onOpenChange={(o) => !o && setPromoteChild(null)}>
         <AlertDialogContent>
