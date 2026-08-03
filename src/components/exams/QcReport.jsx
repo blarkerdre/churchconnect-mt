@@ -108,15 +108,18 @@ export default function QcReport() {
   const [qcPrefill, setQcPrefill] = useState(null);
 
 
+  const { sessionId, sessionName, applySession, isAll } = useExamSessionFilter();
+
   const { data: checks = [], isLoading } = useQuery({
-    queryKey: ["lecturer-qc-checks", tenantId],
+    queryKey: ["lecturer-qc-checks", tenantId, sessionId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("lecturer_qc_checks")
-        .select("*, lecturers(id,name,level), exam_titles(id,name), exam_subjects(id,name)")
-        .eq("tenant_id", tenantId)
-        .order("check_date", { ascending: false });
+      const { data, error } = await applySession(
+        supabase
+          .from("lecturer_qc_checks")
+          .select("*, lecturers(id,name,level), exam_titles(id,name), exam_subjects(id,name), exam_sessions(id,name)")
+          .eq("tenant_id", tenantId)
+      ).order("check_date", { ascending: false });
       if (error) throw error;
       return data || [];
     },
