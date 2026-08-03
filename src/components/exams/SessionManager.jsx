@@ -19,6 +19,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, Plus, Trash2, Edit, Play, Square, RotateCcw, CalendarClock } from "lucide-react";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const emptyForm = {
   name: "",
@@ -52,11 +53,11 @@ export default function SessionManager() {
   const qc = useQueryClient();
   const { tenantId } = useTenantQuery();
   const { user, isAdmin } = useAuth();
+  const confirmDelete = useConfirmDelete();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
-  const [deleteTarget, setDeleteTarget] = useState(null);
   const [confirmClose, setConfirmClose] = useState(null);
   const [confirmStart, setConfirmStart] = useState(null);
   const [conflict, setConflict] = useState(null);
@@ -369,7 +370,22 @@ export default function SessionManager() {
                       className="text-destructive"
                       disabled={c.attempts > 0}
                       title={c.attempts > 0 ? "Sessions with exam attempts cannot be deleted" : undefined}
-                      onClick={() => setDeleteTarget(s)}
+                      onClick={() => confirmDelete({
+                        title: "Delete this session?",
+                        description: (
+                          <div className="space-y-1">
+                            <p>“{s.name}” will be removed.</p>
+                            <p>
+                              {(c.regs || 0)} registration{(c.regs || 0) === 1 ? "" : "s"} keep their data but lose the edition label.
+                            </p>
+                            <p>
+                              {(c.reports || 0)} course final report{(c.reports || 0) === 1 ? "" : "s"} for this edition will be deleted permanently.
+                            </p>
+                          </div>
+                        ),
+                        confirmLabel: "Delete",
+                        onConfirm: () => deleteMutation.mutate(s.id),
+                      })}
                     >
                       <Trash2 className="h-4 w-4 mr-1" /> Delete
                     </Button>
@@ -545,33 +561,6 @@ export default function SessionManager() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete this session?</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-2">
-                <p>“{deleteTarget?.name}” will be removed.</p>
-                <ul className="list-disc pl-4 space-y-1">
-                  <li>
-                    {(counts[deleteTarget?.id]?.regs || 0)} registration{(counts[deleteTarget?.id]?.regs || 0) === 1 ? "" : "s"} keep their data but lose the edition label.
-                  </li>
-                  <li>
-                    {(counts[deleteTarget?.id]?.reports || 0)} course final report{(counts[deleteTarget?.id]?.reports || 0) === 1 ? "" : "s"} for this edition will be deleted permanently.
-                  </li>
-                </ul>
-              </div>
-            </AlertDialogDescription>
-
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground" onClick={() => deleteMutation.mutate(deleteTarget.id)}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

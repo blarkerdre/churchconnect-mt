@@ -20,6 +20,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Loader2, ClipboardCheck, Download, Printer, RotateCcw, Plus, Eye, Edit, Trash2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import QcCheckDialog from "@/components/exams/QcCheckDialog";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 import { YES_NO_FIELDS, SCORE_FIELDS } from "@/lib/qc-options";
 
 const emptyFilters = {
@@ -95,6 +96,7 @@ export default function QcReport() {
   const { user, isAdmin } = useAuth();
   const { currentTenant } = useTenant();
   const { isMemberOfUnit: isTrainingRep } = useUnitMembership("Training Rep");
+  const confirmDelete = useConfirmDelete();
   const qcEnabled = !!currentTenant?.settings?.wofbi_qc_enabled;
   const canCreate = isAdmin || (isTrainingRep && qcEnabled);
   const canDelete = isAdmin;
@@ -102,7 +104,6 @@ export default function QcReport() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editRecord, setEditRecord] = useState(null);
   const [viewRecord, setViewRecord] = useState(null);
-  const [deleteId, setDeleteId] = useState(null);
 
   const { data: checks = [], isLoading } = useQuery({
     queryKey: ["lecturer-qc-checks", tenantId],
@@ -442,7 +443,11 @@ export default function QcReport() {
                                   <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(r)}><Edit className="h-3.5 w-3.5" /></Button>
                                 )}
                                 {canDelete && (
-                                  <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => setDeleteId(r.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                                  <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => confirmDelete({
+                                    title: "Delete QC check",
+                                    description: "Permanently delete this QC check? This cannot be undone.",
+                                    onConfirm: () => deleteMutation.mutate(r.id),
+                                  })}><Trash2 className="h-3.5 w-3.5" /></Button>
                                 )}
                               </div>
                             </TableCell>
@@ -604,18 +609,6 @@ export default function QcReport() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete QC check?</AlertDialogTitle>
-            <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteMutation.mutate(deleteId)}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </Card>
   );
 }
