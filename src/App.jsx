@@ -9,6 +9,7 @@ import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { TenantProvider } from "@/contexts/TenantContext";
 import TenantThemeProvider from "@/components/tenants/TenantThemeProvider";
+import { DeleteConfirmProvider } from "@/components/shared/DeleteConfirmProvider";
 import { useTenant } from "@/contexts/TenantContext";
 import LandingPage from "@/pages/LandingPage";
 import Layout from "@/components/AppLayout";
