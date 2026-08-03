@@ -7,14 +7,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, Clock, Users, CalendarCheck, Plus, Loader2, Lock, FileText, Filter, Download, Printer, UserCog, Trash2 } from "lucide-react";
+import { CheckCircle2, Clock, Users, CalendarCheck, Plus, Loader2, Lock, FileText, Filter, Download, Printer, UserCog, Trash2, ClipboardList, FileSpreadsheet, FileDown } from "lucide-react";
 import PrintReportButton from "@/components/PrintReportButton";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useTenant } from "@/contexts/TenantContext";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
+import { downloadRosterCsv, printRosterPdf } from "@/lib/attendance-roster";
 import ReportAttachments from "@/components/reports/ReportAttachments";
 import CheckInPanel from "@/components/attendance/CheckInPanel";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
@@ -23,6 +26,7 @@ import ModuleTour from "@/components/tour/ModuleTour";
 export default function Attendance() {
   const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits = [], leaderCentres = [], myUnits = [] } = useAuth();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
+  const { currentTenant } = useTenant();
   const { data: churchUnits = [] } = useChurchUnits(!isAdmin);
   const canManage = isAdmin || isUnitLeader || isWSFLeader;
   const isUnitLeaderOnly = isUnitLeader && !isAdmin;
@@ -120,6 +124,113 @@ export default function Attendance() {
       return count || 0;
     },
   });
+
+  // Full member list used to build the attendance roster (includes absentees)
+  const { data: rosterMemberPool = [] } = useQuery({
+    queryKey: ["roster-members", tenantId],
+    enabled: !!tenantId && canManage,
+    queryFn: async () => {
+      const { data, error } = await scopeQuery(
+        supabase
+          .from("members")
+          .select("id, first_name, last_name, church_unit, wsf_centre_id, membership_status")
+          .order("first_name")
+      );
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Members eligible for the selected meeting — mirrors the check-in panel rules
+  const eligibleMembers = useMemo(() => {
+    if (!selectedSession) return [];
+    const active = rosterMemberPool.filter(m => m.membership_status !== "Inactive");
+    if (selectedSession.session_type === "Unit Meeting" && selectedSession.unit) {
+      const target = selectedSession.unit.toLowerCase().trim();
+      return active.filter(m =>
+        (m.church_unit || "").split(",").map(u => u.trim().toLowerCase()).includes(target)
+      );
+    }
+    if (selectedSession.session_type === "Home Cell Meeting" && selectedSession.unit) {
+      const centre = wsfCentres.find(c => (c.name || "").toLowerCase() === selectedSession.unit.toLowerCase());
+      if (centre) return active.filter(m => m.wsf_centre_id === centre.id);
+      return active;
+    }
+    return active.filter(m => m.membership_status === "Active");
+  }, [rosterMemberPool, selectedSession, wsfCentres]);
+
+  const buildRoster = () => {
+    if (!selectedSession) return null;
+    const recordByMember = new Map(records.map(r => [r.member_id, r]));
+    const seen = new Set();
+    const rows = [];
+    const fmtTime = (iso) => (iso ? new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "—");
+
+    eligibleMembers.forEach((m) => {
+      const rec = recordByMember.get(m.id);
+      if (rec) seen.add(m.id);
+      rows.push([
+        rows.length + 1,
+        `${m.first_name || ""} ${m.last_name || ""}`.trim(),
+        m.church_unit || "—",
+        rec ? "Present" : "Absent",
+        fmtTime(rec?.checked_in_at),
+        rec?.check_in_method || "—",
+      ]);
+    });
+
+    // Any check-in that isn't in the eligible list (e.g. a moved member) still gets listed
+    records.forEach((r) => {
+      if (seen.has(r.member_id) || eligibleMembers.some(m => m.id === r.member_id)) return;
+      rows.push([
+        rows.length + 1,
+        `${r.members?.first_name || ""} ${r.members?.last_name || ""}`.trim() || "Unknown member",
+        "—",
+        "Present",
+        fmtTime(r.checked_in_at),
+        r.check_in_method || "—",
+      ]);
+    });
+
+    const presentTotal = rows.filter(r => r[3] === "Present").length;
+    const label = selectedSession.title || selectedSession.session_type;
+
+    return {
+      title: `Attendance Roster — ${label}`,
+      orgName: currentTenant?.name || "",
+      logoUrl: currentTenant?.logo_url || null,
+      meta: [
+        ["Type", selectedSession.session_type],
+        ["Date", selectedSession.session_date],
+        selectedSession.unit ? ["Unit", selectedSession.unit] : null,
+        ["Status", selectedSession.status === "closed" ? "Closed" : "Open"],
+      ].filter(Boolean),
+      summary: [
+        ["On roster", rows.length],
+        ["Present", presentTotal],
+        ["Absent", rows.length - presentTotal],
+        ["Rate", rows.length ? `${Math.round((presentTotal / rows.length) * 100)}%` : "0%"],
+      ],
+      headers: ["#", "Name", "Unit", "Status", "Check-in", "Method"],
+      rows,
+      filename: `attendance-roster-${label}-${selectedSession.session_date}`,
+    };
+  };
+
+  const handleRoster = async (mode) => {
+    const roster = buildRoster();
+    if (!roster) return;
+    if (!roster.rows.length) {
+      toast({ title: "Nothing to export", description: "No members are on this meeting's roster.", variant: "destructive" });
+      return;
+    }
+    try {
+      if (mode === "csv") downloadRosterCsv(roster);
+      else await printRosterPdf(roster);
+    } catch (e) {
+      toast({ title: "Roster export failed", description: e?.message || "Please try again.", variant: "destructive" });
+    }
+  };
 
   const createSessionMutation = useMutation({
     mutationFn: async (formData) => {
@@ -302,6 +413,21 @@ export default function Attendance() {
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:ml-auto">
           {canManage && selectedSession && (
             <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <ClipboardList className="h-4 w-4" /><span className="hidden sm:inline ml-2">Roster</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleRoster("pdf")}>
+                    <FileDown className="h-4 w-4 mr-2" /> Download PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleRoster("csv")}>
+                    <FileSpreadsheet className="h-4 w-4 mr-2" /> Download CSV
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button variant="outline" size="sm" onClick={generateReport}>
                 <Download className="h-4 w-4" /><span className="hidden sm:inline ml-2">Download</span>
               </Button>
