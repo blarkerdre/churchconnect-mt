@@ -14,6 +14,7 @@ import { Plus, Trash2, User, KeyRound, ShieldCheck, ShieldAlert, ArrowUpCircle }
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 
 
@@ -202,6 +203,7 @@ function PreteenForm({ open, onOpenChange, preteen, memberId, onSaved }) {
 }
 
 export default function PreteensSection({ memberId }) {
+  const confirmDelete = useConfirmDelete();
   const { tenantId } = useTenantQuery();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);

@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, QrCode, Trash2, Download, CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Pencil, Star } from "lucide-react";
 import WoFBIPersistentQRDialog from "./WoFBIPersistentQRDialog";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 function pct(num, den) {
   if (!den) return "0%";
@@ -77,6 +78,7 @@ function StarRating({ value, onChange, disabled }) {
 
 
 export default function WoFBIAttendanceTab() {
+  const confirmDelete = useConfirmDelete();
   const { user, isAdmin } = useAuth();
   const qc = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();

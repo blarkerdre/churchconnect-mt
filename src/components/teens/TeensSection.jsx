@@ -14,6 +14,7 @@ import { Plus, Trash2, User, KeyRound, ShieldCheck, ShieldAlert } from "lucide-r
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 
 
@@ -202,6 +203,7 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
 }
 
 export default function TeensSection({ memberId }) {
+  const confirmDelete = useConfirmDelete();
   const { tenantId } = useTenantQuery();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);

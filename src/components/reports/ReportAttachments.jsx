@@ -7,10 +7,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/components/ui/use-toast";
 import { assertStorageAvailable } from "@/lib/storageQuota";
 import { Loader2, Upload, Download, Trash2, FileText, Paperclip } from "lucide-react";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export default function ReportAttachments({ relatedTable, relatedId }) {
+  const confirmDelete = useConfirmDelete();
   const fileRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const { user } = useAuth();
