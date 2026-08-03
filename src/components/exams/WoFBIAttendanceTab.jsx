@@ -146,7 +146,9 @@ export default function WoFBIAttendanceTab() {
     },
   });
 
-  const { sessionId: editionId, sessionName: editionName, applySession, isAll: isAllEditions } = useExamSessionFilter();
+  const { sessionId: editionId, sessionName: editionName, sessionMap, applySession, isAll: isAllEditions, isUnassigned, setSessionId: setEditionId } = useExamSessionFilter();
+  const pinnedEditionId = !isAllEditions && !isUnassigned ? editionId : null;
+  const pinnedEdition = pinnedEditionId ? sessionMap[pinnedEditionId] : null;
 
   const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
     queryKey: ["wofbi-att-sessions", tenantId, selectedCourseId, editionId],
