@@ -20,7 +20,7 @@ import WoFBIPersistentQRDialog from "./WoFBIPersistentQRDialog";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 import { useTenant } from "@/contexts/TenantContext";
 import { downloadRosterCsv, printRosterPdf } from "@/lib/attendance-roster";
-import { useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
+import { useExamSessionFilter, EXAM_SESSION_ALL } from "@/contexts/ExamSessionFilterContext";
 
 function pct(num, den) {
   if (!den) return "0%";
@@ -146,7 +146,9 @@ export default function WoFBIAttendanceTab() {
     },
   });
 
-  const { sessionId: editionId, sessionName: editionName, applySession, isAll: isAllEditions } = useExamSessionFilter();
+  const { sessionId: editionId, sessionName: editionName, sessionMap, applySession, isAll: isAllEditions, isUnassigned, setSessionId: setEditionId } = useExamSessionFilter();
+  const pinnedEditionId = !isAllEditions && !isUnassigned ? editionId : null;
+  const pinnedEdition = pinnedEditionId ? sessionMap[pinnedEditionId] : null;
 
   const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
     queryKey: ["wofbi-att-sessions", tenantId, selectedCourseId, editionId],
@@ -247,6 +249,7 @@ export default function WoFBIAttendanceTab() {
       const { error } = await supabase.from("wofbi_attendance_sessions").insert(
         withTenant({
           course_id: selectedCourseId,
+          ...(pinnedEditionId ? { session_id: pinnedEditionId } : {}),
           subject_id: payload.subject_id || null,
           title: payload.title,
           session_date: payload.session_date,
@@ -297,6 +300,7 @@ export default function WoFBIAttendanceTab() {
       const { error } = await supabase
         .from("wofbi_attendance_sessions")
         .update({
+          ...(pinnedEditionId ? { session_id: pinnedEditionId } : {}),
           subject_id: payload.subject_id || null,
           title: payload.title,
           session_date: payload.session_date,
@@ -771,7 +775,17 @@ export default function WoFBIAttendanceTab() {
           {sessionsLoading ? (
             <div className="py-8 flex justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
           ) : sessions.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">No attendance sessions yet for this course.</p>
+            <div className="py-6 text-center space-y-2">
+              <p className="text-sm text-muted-foreground">
+                No attendance sessions yet for this course
+                {!isAllEditions ? ` in ${editionName}` : ""}.
+              </p>
+              {!isAllEditions && (
+                <Button variant="link" size="sm" onClick={() => setEditionId(EXAM_SESSION_ALL)}>
+                  Show all editions
+                </Button>
+              )}
+            </div>
           ) : (
             <div className="overflow-x-auto -mx-3 sm:mx-0">
             <Table className="min-w-[640px]">
@@ -1039,6 +1053,17 @@ export default function WoFBIAttendanceTab() {
                 <Input type="time" value={form.late_after} onChange={(e) => setForm({ ...form, late_after: e.target.value })} />
               </div>
             </div>
+            {pinnedEdition && form.session_date && (
+              ((pinnedEdition.starts_on && form.session_date < pinnedEdition.starts_on) ||
+                (pinnedEdition.ends_on && form.session_date > pinnedEdition.ends_on)) && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2">
+                  This date falls outside <span className="font-medium">{pinnedEdition.name}</span>
+                  {pinnedEdition.starts_on && pinnedEdition.ends_on
+                    ? ` (${pinnedEdition.starts_on} to ${pinnedEdition.ends_on})`
+                    : ""}. The session will still be recorded under this edition.
+                </p>
+              )
+            )}
             {subjects.length > 0 && (
               <div className="space-y-1.5">
                 <Label>Subject (optional)</Label>
