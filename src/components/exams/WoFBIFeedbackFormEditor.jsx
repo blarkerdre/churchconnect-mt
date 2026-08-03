@@ -22,6 +22,7 @@ import {
   mergeFeedbackDefaults,
 } from "@/lib/wofbi-feedback-defaults";
 import WoFBIDynamicForm from "./WoFBIDynamicForm";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 function slug(s) {
   return String(s || "field").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || `field_${Date.now()}`;
@@ -33,6 +34,7 @@ function csvEscape(v) {
 }
 
 export default function WoFBIFeedbackFormEditor() {
+  const confirmDelete = useConfirmDelete();
   const qc = useQueryClient();
   const { tenantId } = useTenantQuery();
   const [local, setLocal] = useState(null);

@@ -12,8 +12,10 @@ import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks/useAuth";
 import { Key, Plus, Copy, Trash2, Loader2, AlertTriangle } from "lucide-react";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 export default function ApiKeysSection() {
+  const confirmDelete = useConfirmDelete();
   const { tenantId } = useTenantQuery();
   const { user } = useAuth();
   const queryClient = useQueryClient();
