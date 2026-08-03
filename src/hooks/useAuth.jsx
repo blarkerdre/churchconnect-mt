@@ -261,9 +261,11 @@ export function AuthProvider({ children }) {
     isTenantOwner, isTenantAdmin,
     refreshUser,
     refetchMemberForTenant,
+    mfaRequired, refreshMfaStatus,
   }), [user, profile, roles, loading, dataLoaded, leaderUnits, leaderCentres, myUnits, myMember, tenantMemberships,
        isAdmin, isUnitLeader, isWSFLeader, isMember, isReportsOfficer, isReadOnly, isTenantOwner, isTenantAdmin,
-       refreshUser, refetchMemberForTenant]);
+       refreshUser, refetchMemberForTenant, mfaRequired, refreshMfaStatus]);
+
 
 
   return (
