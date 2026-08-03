@@ -683,6 +683,10 @@ export default function MyProfile() {
       {/* Certificates */}
       {!editing && <MyCertificates memberId={member.id} hiddenCourseNames={hiddenCourseNames} />}
 
+      {/* Security */}
+      {!editing && <TwoFactorSection />}
+
+
 
 
       {/* Attendance History */}
