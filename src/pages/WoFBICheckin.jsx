@@ -124,6 +124,43 @@ export default function WoFBICheckin() {
           <CardTitle className="text-center">Bible School Check-in</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-center">
+          {confirm && (
+            <>
+              <AlertTriangle className="h-12 w-12 mx-auto text-amber-500" />
+              <div>
+                <p className="text-lg font-semibold">You're already checked in</p>
+                <p className="text-sm text-muted-foreground">{confirm.session_title}</p>
+                <p className="text-xs text-muted-foreground">{confirm.session_date}</p>
+                <p className="mt-2 text-sm">
+                  Checked in at{" "}
+                  <span className="font-semibold">
+                    {confirm.checked_in_at
+                      ? new Date(confirm.checked_in_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                      : "—"}
+                  </span>
+                  {confirm.elapsed_minutes != null && (
+                    <> · {fmtDuration(confirm.elapsed_minutes)} on premises</>
+                  )}
+                </p>
+                <p className="mt-3 text-sm font-medium text-amber-700">
+                  Scanning again will check you out. Only continue if you are leaving now.
+                </p>
+              </div>
+              <Button
+                variant="destructive"
+                className="w-full"
+                disabled={confirming}
+                onClick={handleConfirmCheckout}
+              >
+                {confirming ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <LogOut className="h-4 w-4 mr-2" />}
+                Yes, check me out
+              </Button>
+              <Button variant="outline" className="w-full" disabled={confirming} onClick={() => navigate("/")}>
+                No, stay checked in
+              </Button>
+            </>
+          )}
+
           {state.result && (() => {
             const r = state.result;
             const isOut = r.action === "checked_out";
