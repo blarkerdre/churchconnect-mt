@@ -1,20 +1,33 @@
-## Why it says that
+## Goal
 
-The note is informational, not an error. A Bible School attendance session loses its auto open/close times whenever it is opened or closed manually (the open/close actions and the edit dialog both null out `scheduled_open_at` / `scheduled_close_at`). So a manually closed session such as BCC August 2026 – Day 2 will always show "No auto open/close schedule". It does not block recording attendance — admins can still edit and save attendance on a closed session.
+Every delete action in the app asks the signed-in user to re-enter their password before anything is removed — no exceptions, and no "remember for X minutes" window.
 
-## Plan
+## Approach
 
-### 1. Keep the schedule when a session is closed
-Stop wiping `scheduled_open_at` / `scheduled_close_at` on manual open/close and on edit-with-closed-status. The saved window stays visible so the session's intended timing isn't lost, and manual status simply overrides it.
+Rather than hand-wiring the existing `PasswordConfirmDialog` into ~50 files, add a single app-wide confirmation service so each delete site becomes a one-line change.
 
-### 2. Only flag a genuinely missing schedule
-Show the "No auto open/close schedule" note only for sessions that are still upcoming or open and truly have no times set. Past/closed sessions that ran to completion won't show it.
+### 1. Global delete-confirmation provider
+- New `DeleteConfirmProvider` mounted once in `App.jsx`, rendering one shared password dialog.
+- Exposes `useConfirmDelete()` returning `confirmDelete({ title, description, confirmLabel, onConfirm })`.
+- The dialog verifies the password against the signed-in account before running `onConfirm`; a wrong password blocks the delete and shows an error. Cancel does nothing.
+- Prompts every time — no caching of a verified state.
 
-### 3. Wording
-When a session is closed but still has a stored window, show it as "Scheduled: opens … · closes … (closed manually)" rather than the bare times, so the state is unambiguous.
+### 2. Convert all delete call sites
+Replace existing one-click deletes and plain `AlertDialog` "Are you sure?" confirmations with `confirmDelete(...)`, keeping each item's current wording as the dialog description. Covers, across the app:
+- Members, Early Years / Preteens / Teens and My Family records, users, roles and unit/home-cell assignments, tenants and platform users
+- Attendance sessions and records (church, unit, home cell, teens, preteens, Bible School), check-ins
+- Bible School: courses, sessions, subjects, lecturers, QC checks, feedback forms, results, reports
+- Events and registrations, follow-ups, pastoral care, unit tasks and comments, inventory, transportation, training reports
+- Communications: contacts, announcements, templates, API keys, external links, invoices, certificate templates, banners
+- Personal items: sermon notes and folders, notifications, report attachments, documents
+
+### 3. Sign-out safety
+Password verification re-authenticates the current account. Keep the existing session intact so a failed or successful check never signs the user out or drops them from the page.
 
 ## Technical notes
 
-- All changes in `src/components/exams/WoFBIAttendanceTab.jsx`: the open/close mutations (~lines 324, 341), the edit mutation's `isClosed ? null : …` branch (~lines 290–291), and the session-row badge rendering (~lines 687–696).
-- No database, policy, or cron changes; the auto-transition job already keys off status plus the scheduled times, and a manually closed session stays closed.
-- No change to how attendance is recorded or counted.
+- New files: `src/components/shared/DeleteConfirmProvider.jsx` (provider + context + hook). `PasswordConfirmDialog.jsx` is reused as the dialog body.
+- `src/App.jsx` wraps the routed tree in the provider, inside the auth and tenant providers.
+- Roughly 50 files are edited to swap their delete triggers to `confirmDelete(...)`; existing `AlertDialog` confirm wrappers are removed where they become redundant.
+- No database, RLS, or edge-function changes — this is a client-side confirmation gate; server-side permissions already govern who may delete what.
+- Trade-off to note: this adds a password prompt to lightweight actions such as dismissing a notification or deleting one's own sermon note, as requested.
