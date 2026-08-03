@@ -145,17 +145,20 @@ export default function WoFBIAttendanceTab() {
     },
   });
 
+  const { sessionId: editionId, sessionName: editionName, applySession, isAll: isAllEditions } = useExamSessionFilter();
+
   const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
-    queryKey: ["wofbi-att-sessions", tenantId, selectedCourseId],
+    queryKey: ["wofbi-att-sessions", tenantId, selectedCourseId, editionId],
     enabled: !!tenantId && !!selectedCourseId,
     queryFn: async () => {
-      const { data, error } = await scopeQuery(
-        supabase
-          .from("wofbi_attendance_sessions")
-          .select("*")
-          .eq("course_id", selectedCourseId)
-          .order("session_date", { ascending: false })
-      );
+      const { data, error } = await applySession(
+        scopeQuery(
+          supabase
+            .from("wofbi_attendance_sessions")
+            .select("*, edition:exam_sessions(id, name)")
+            .eq("course_id", selectedCourseId)
+        )
+      ).order("session_date", { ascending: false });
       if (error) throw error;
       return data || [];
     },
