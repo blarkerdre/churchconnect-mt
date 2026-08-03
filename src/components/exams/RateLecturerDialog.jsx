@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, Star } from "lucide-react";
+import { logWofbiActivity } from "@/lib/wofbi-activity";
 
 const QUESTIONS = [
   {
@@ -72,11 +73,12 @@ const emptyForm = {
   comments: "",
 };
 
-export default function RateLecturerDialog({ open, onOpenChange }) {
+export default function RateLecturerDialog({ open, onOpenChange, initialCourseId = null, initialSubjectId = null }) {
   const qc = useQueryClient();
   const { user, myMember } = useAuth();
   const { tenantId } = useTenantQuery();
   const [form, setForm] = useState(emptyForm);
+
 
   const { data: lecturers = [], isLoading: lecLoading } = useQuery({
     queryKey: ["lecturers-active", tenantId],
@@ -131,11 +133,36 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
     },
   });
 
+  // Subjects this student has already rated (for the "still outstanding" hint)
+  const { data: ratedSubjectIds = [] } = useQuery({
+    queryKey: ["my-rated-subjects", tenantId, user?.id],
+    enabled: !!tenantId && !!user?.id && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lecturer_ratings")
+        .select("subject_id")
+        .eq("tenant_id", tenantId)
+        .eq("submitted_by", user.id);
+      if (error) throw error;
+      return (data || []).map((r) => r.subject_id).filter(Boolean);
+    },
+  });
+
+  const pendingSubjects = subjects.filter((s) => !ratedSubjectIds.includes(s.id));
+
   const mappedLecturerId = subjects.find((s) => s.id === form.subject_id)?.lecturer_id || "";
 
   useEffect(() => {
-    if (!open) setForm(emptyForm);
-  }, [open]);
+    if (!open) { setForm(emptyForm); return; }
+    if (initialCourseId || initialSubjectId) {
+      setForm((f) => ({
+        ...f,
+        course_id: initialCourseId || f.course_id,
+        subject_id: initialSubjectId || f.subject_id,
+      }));
+    }
+  }, [open, initialCourseId, initialSubjectId]);
+
 
   // Load existing rating for selected subject to allow edit (one rating per subject per student)
   const [existingFound, setExistingFound] = useState(false);
@@ -216,12 +243,26 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
         .from("lecturer_ratings")
         .upsert(payload, { onConflict: "tenant_id,subject_id,submitted_by" });
       if (error) throw error;
+      const subjectName = subjects.find((s) => s.id === form.subject_id)?.name || "a subject";
+      const courseName = courses.find((c) => c.id === form.course_id)?.name || "Bible School";
+      await logWofbiActivity(tenantId, {
+        action: existingFound ? "wofbi_lecturer_rating_updated" : "wofbi_lecturer_rating_submitted",
+        entityType: "lecturer_ratings",
+        entityId: form.subject_id,
+        title: `Lecturer feedback received — ${subjectName}`,
+        message: `${courseName} · rated ${form.overall_rating}/10`,
+        details: { course: courseName, subject: subjectName, target_name: subjectName, overall_rating: form.overall_rating },
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lecturer-ratings"] });
+      qc.invalidateQueries({ queryKey: ["my-rated-subjects"] });
+      qc.invalidateQueries({ queryKey: ["my-pending-ratings"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
       toast({ title: "Thank you!", description: "Your feedback has been submitted." });
       onOpenChange(false);
     },
+
     onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
@@ -271,11 +312,20 @@ export default function RateLecturerDialog({ open, onOpenChange }) {
                   <SelectTrigger><SelectValue placeholder={form.course_id ? "Select a subject" : "Select a course first"} /></SelectTrigger>
                   <SelectContent>
                     {subjects.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.code ? `${s.code} — ${s.name}` : s.name}</SelectItem>
+                      <SelectItem key={s.id} value={s.id}>
+                        {ratedSubjectIds.includes(s.id) ? "✓ " : ""}{s.code ? `${s.code} — ${s.name}` : s.name}
+                        {ratedSubjectIds.includes(s.id) ? " (rated)" : ""}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {form.course_id && pendingSubjects.length > 0 && (
+                  <p className="text-[11px] text-muted-foreground pt-1">
+                    Awaiting your feedback: {pendingSubjects.map((s) => s.name).join(", ")}
+                  </p>
+                )}
               </div>
+
               <div>
                 <Label>Lecturer's Name *</Label>
                 {mappedLecturerId ? (

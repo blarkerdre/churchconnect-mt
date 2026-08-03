@@ -1708,6 +1708,8 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
   const [examSelection, setExamSelection] = useState(null);
   const [statementCourse, setStatementCourse] = useState(null);
   const [rateOpen, setRateOpen] = useState(false);
+  const [rateSelection, setRateSelection] = useState(null);
+
   const [feedbackCourse, setFeedbackCourse] = useState(null);
 
   const lecturerRatingEnabled = !!currentTenant?.settings?.wofbi_lecturer_rating_enabled;
@@ -1769,6 +1771,21 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
         .eq("tenant_id", tenantId);
       if (error) throw error;
       return (data || []).map(r => r.registration_id);
+    },
+  });
+
+  // Subjects this student has already rated — used to hint what's still outstanding
+  const { data: myRatedSubjectIds = [] } = useQuery({
+    queryKey: ["my-pending-ratings", memberId, tenantId],
+    enabled: !!memberId && !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lecturer_ratings")
+        .select("subject_id")
+        .eq("member_id", memberId)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+      return (data || []).map((r) => r.subject_id).filter(Boolean);
     },
   });
 
@@ -1980,6 +1997,23 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
                           {submittedFeedbackIds.includes(regIdByCourse[course.id]) ? "Feedback submitted" : "Course feedback"}
                         </Button>
                       )}
+                      {lecturerRatingEnabled && canRateLecturer && isRegistered && (() => {
+                        const unrated = subjects.filter((s) => !myRatedSubjectIds.includes(s.id));
+                        return (
+                          <Button
+                            variant={unrated.length ? "default" : "outline"}
+                            size="sm"
+                            className="gap-1 text-xs h-7"
+                            onClick={() => setRateSelection({ courseId: course.id, subjectId: unrated[0]?.id || null })}
+                            title={unrated.length ? `Awaiting your feedback: ${unrated.map((s) => s.name).join(", ")}` : "All subjects rated"}
+                          >
+                            <Star className="h-3 w-3" />
+                            {unrated.length ? `Rate lecturer (${unrated.length} left)` : "All lecturers rated"}
+                          </Button>
+                        );
+                      })()}
+
+
 
                     </div>
                   </div>
@@ -2059,6 +2093,13 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
       />
 
       <RateLecturerDialog open={rateOpen} onOpenChange={setRateOpen} />
+      <RateLecturerDialog
+        open={!!rateSelection}
+        onOpenChange={(v) => !v && setRateSelection(null)}
+        initialCourseId={rateSelection?.courseId || null}
+        initialSubjectId={rateSelection?.subjectId || null}
+      />
+
       <WoFBIFeedbackDialog
         open={!!feedbackCourse}
         onOpenChange={(v) => !v && setFeedbackCourse(null)}
