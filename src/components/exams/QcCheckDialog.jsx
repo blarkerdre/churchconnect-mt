@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, ClipboardCheck } from "lucide-react";
 import { SCORE_LABELS } from "@/lib/qc-options";
+import { logWofbiActivity } from "@/lib/wofbi-activity";
 
 const emptyForm = {
   lecturer_id: "",
@@ -80,11 +81,12 @@ function YesNoRow({ label, value, onChange }) {
   );
 }
 
-export default function QcCheckDialog({ open, onOpenChange, editRecord = null }) {
+export default function QcCheckDialog({ open, onOpenChange, editRecord = null, initialCourseId = null, initialSubjectId = null, initialLecturerId = null }) {
   const qc = useQueryClient();
   const { user } = useAuth();
   const { tenantId } = useTenantQuery();
   const [form, setForm] = useState(emptyForm);
+
 
   const { data: lecturers = [] } = useQuery({
     queryKey: ["lecturers-active", tenantId],
@@ -132,11 +134,30 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
     },
   });
 
+  // Subjects that already have a QC check (blocked by the one-QC-per-subject rule)
+  const { data: checkedSubjectIds = [] } = useQuery({
+    queryKey: ["qc-checked-subjects", tenantId],
+    enabled: !!tenantId && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lecturer_qc_checks")
+        .select("exam_subject_id")
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+      return (data || []).map((r) => r.exam_subject_id).filter(Boolean);
+    },
+  });
+
+  const outstandingSubjects = subjects.filter(
+    (s) => !checkedSubjectIds.includes(s.id) || s.id === editRecord?.exam_subject_id,
+  );
+
   // Auto-fill the lecturer mapped to the selected subject
   const selectSubject = (subjectId) => {
     const mapped = subjects.find((s) => s.id === subjectId)?.lecturer_id;
     setForm((f) => ({ ...f, exam_subject_id: subjectId, lecturer_id: mapped || f.lecturer_id }));
   };
+
 
 
   // Training Rep members for QC Team Member dropdown
@@ -206,11 +227,15 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
         : "";
       setForm({
         ...emptyForm,
+        exam_title_id: initialCourseId || "",
+        exam_subject_id: initialSubjectId || "",
+        lecturer_id: initialLecturerId || "",
         qc_member_id: isTrainingRep && currentMember ? currentMember.id : "",
         qc_member_name: autoName,
       });
     }
-  }, [open, editRecord, currentMember]);
+  }, [open, editRecord, currentMember, initialCourseId, initialSubjectId, initialLecturerId]);
+
 
   const total = useMemo(
     () =>
@@ -294,12 +319,28 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
         const { error } = await supabase.from("lecturer_qc_checks").insert(payload);
         if (error) throw error;
       }
+
+      const subjectName = subjects.find((s) => s.id === form.exam_subject_id)?.name || "a subject";
+      const lecturerName = lecturers.find((l) => l.id === form.lecturer_id)?.name || "lecturer";
+      const courseName = courses.find((c) => c.id === form.exam_title_id)?.name || "Bible School";
+      await logWofbiActivity(tenantId, {
+        action: editRecord?.id ? "wofbi_qc_check_updated" : "wofbi_qc_check_recorded",
+        entityType: "lecturer_qc_checks",
+        entityId: editRecord?.id || form.exam_subject_id,
+        title: `QC check recorded — ${subjectName}`,
+        message: `${lecturerName} · ${courseName} · total ${total}`,
+        details: { course: courseName, subject: subjectName, lecturer: lecturerName, target_name: subjectName, total_score: total },
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lecturer-qc-checks"] });
+      qc.invalidateQueries({ queryKey: ["qc-checked-subjects"] });
+      qc.invalidateQueries({ queryKey: ["qc-outstanding-subjects"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
       toast({ title: editRecord ? "QC check updated" : "QC check saved" });
       onOpenChange(false);
     },
+
     onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
@@ -346,10 +387,25 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null })
               <Select value={form.exam_subject_id} onValueChange={selectSubject} disabled={!form.exam_title_id}>
                 <SelectTrigger><SelectValue placeholder={form.exam_title_id ? "Select a subject" : "Select a course first"} /></SelectTrigger>
                 <SelectContent>
-                  {subjects.map((s) => <SelectItem key={s.id} value={s.id}>{s.code ? `${s.code} — ${s.name}` : s.name}</SelectItem>)}
+                  {subjects.map((s) => {
+                    const done = checkedSubjectIds.includes(s.id) && s.id !== editRecord?.exam_subject_id;
+                    return (
+                      <SelectItem key={s.id} value={s.id} disabled={done}>
+                        {done ? "✓ " : ""}{s.code ? `${s.code} — ${s.name}` : s.name}{done ? " (QC done)" : ""}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
+              {form.exam_title_id && (
+                <p className="text-[11px] text-muted-foreground pt-1">
+                  {outstandingSubjects.length > 0
+                    ? `Still awaiting QC: ${outstandingSubjects.map((s) => s.name).join(", ")}`
+                    : "All subjects in this course have a QC check."}
+                </p>
+              )}
             </div>
+
             <div>
               <Label>QC Team Member *</Label>
               <Select

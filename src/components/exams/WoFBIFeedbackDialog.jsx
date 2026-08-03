@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, Send } from "lucide-react";
 import { FEEDBACK_CONFIDENTIALITY_NOTE, mergeFeedbackDefaults } from "@/lib/wofbi-feedback-defaults";
+import { logWofbiActivity } from "@/lib/wofbi-activity";
 import WoFBIDynamicForm from "./WoFBIDynamicForm";
 
 /**
@@ -79,23 +80,33 @@ export default function WoFBIFeedbackDialog({ open, onOpenChange, course, member
           throw Object.assign(new Error(`"${f.label}" is required`), { __friendly: true });
         }
       }
-      const { error } = await supabase.from("wofbi_feedback_responses").insert({
+      const { data: inserted, error } = await supabase.from("wofbi_feedback_responses").insert({
         tenant_id: tenantId,
         registration_id: registrationId || null,
         course_id: course?.id || null,
         member_id: memberId,
         answers: values,
-      });
+      }).select("id").maybeSingle();
       if (error) throw error;
+      await logWofbiActivity(tenantId, {
+        action: "wofbi_feedback_submitted",
+        entityType: "wofbi_feedback_responses",
+        entityId: inserted?.id || registrationId,
+        title: `Feedback received — ${course?.name || "Bible School"}`,
+        message: "Thank you — your course feedback has been recorded.",
+        details: { course: course?.name || null, target_name: course?.name || null },
+      });
     },
     onSuccess: () => {
       toast({ title: "Thank you", description: "Your feedback has been submitted." });
       qc.invalidateQueries({ queryKey: ["my-wofbi-feedback", registrationId, tenantId] });
       qc.invalidateQueries({ queryKey: ["my-wofbi-feedback-ids", memberId, tenantId] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
       onOpenChange(false);
     },
     onError: (e) => toast({ title: e.__friendly ? "Incomplete form" : "Submission failed", description: e.message, variant: "destructive" }),
   });
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

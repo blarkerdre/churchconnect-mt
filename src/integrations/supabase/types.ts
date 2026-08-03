@@ -7619,6 +7619,18 @@ export type Database = {
           title: string
         }[]
       }
+      log_wofbi_activity: {
+        Args: {
+          _action: string
+          _details?: Json
+          _entity_id?: string
+          _entity_type: string
+          _message?: string
+          _tenant_id: string
+          _title?: string
+        }
+        Returns: Json
+      }
       member_eligible_for_session: {
         Args: { _member_id: string; _session_id: string }
         Returns: boolean
