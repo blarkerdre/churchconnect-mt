@@ -223,6 +223,7 @@ export default function ExamManagement() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["exam-questions-by-subject"] });
+      qc.invalidateQueries({ queryKey: ["exam-question-counts"] });
       toast({ title: editingQuestion ? "Question updated" : "Question added" });
       setDialogOpen(false);
       setEditingQuestion(null);
@@ -238,6 +239,7 @@ export default function ExamManagement() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["exam-questions-by-subject"] });
+      qc.invalidateQueries({ queryKey: ["exam-question-counts"] });
       toast({ title: "Question deleted" });
       setDeleteTarget(null);
     },
