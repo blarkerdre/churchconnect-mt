@@ -23,6 +23,8 @@ const AuthContext = createContext({
   isTenantOwner: false, isTenantAdmin: false,
   refreshUser: () => {},
   refetchMemberForTenant: async () => {},
+  mfaRequired: false,
+  refreshMfaStatus: async () => {},
 });
 
 export function AuthProvider({ children }) {
@@ -35,6 +37,13 @@ export function AuthProvider({ children }) {
   const [tenantMemberships, setTenantMemberships] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [mfaRequired, setMfaRequired] = useState(false);
+
+  const refreshMfaStatus = useCallback(async () => {
+    const required = await isMfaChallengeRequired();
+    setMfaRequired(required);
+    return required;
+  }, []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -44,6 +53,7 @@ export function AuthProvider({ children }) {
           setLoading(false);
           setDataLoaded(false);
           setTimeout(() => fetchUserData(session.user.id, session.user.email), 0);
+          setTimeout(() => { refreshMfaStatus(); }, 0);
         } else {
           setProfile(null);
           setRoles([]);
@@ -53,9 +63,11 @@ export function AuthProvider({ children }) {
           setTenantMemberships([]);
           setLoading(false);
           setDataLoaded(true);
+          setMfaRequired(false);
         }
       }
     );
+
 
     withTimeout(
       supabase.auth.getSession(),
