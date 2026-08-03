@@ -1176,7 +1176,41 @@ export default function WoFBIAttendanceTab() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Time-out confirmation */}
+      <AlertDialog open={!!timeOutConfirm} onOpenChange={(v) => !v && setTimeOutConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {timeOutConfirm?.action === "clear_time_out" ? "Clear time-out?" : "Record time-out?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {(() => {
+                const name = `${timeOutConfirm?.registration?.members?.first_name || ""} ${timeOutConfirm?.registration?.members?.last_name || ""}`.trim() || "this student";
+                return timeOutConfirm?.action === "clear_time_out"
+                  ? `This removes the recorded time-out and duration for ${name}. They will show as still on premises.`
+                  : `This checks ${name} out now and ends their time on premises. Only continue if they are leaving.`;
+              })()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (timeOutConfirm) {
+                  markStatus.mutate({ registration: timeOutConfirm.registration, action: timeOutConfirm.action });
+                }
+                setTimeOutConfirm(null);
+              }}
+            >
+              {timeOutConfirm?.action === "clear_time_out" ? "Clear time-out" : "Check out"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Edit record dialog */}
+
       <Dialog open={!!editRecord} onOpenChange={(v) => !v && setEditRecord(null)}>
         <DialogContent className="max-w-md w-[calc(100vw-1rem)] sm:w-auto max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden">
           <div className="px-6 pt-6">
