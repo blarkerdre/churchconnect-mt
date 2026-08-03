@@ -154,7 +154,8 @@ export default function UnitTaskDetailPanel({ open, onOpenChange, task, canManag
   };
 
   const deleteTask = async () => {
-    if (!confirm("Delete this task and all its assignments? This cannot be undone.")) return;
+    const ok = await confirmDelete({ title: "Delete task", itemName: task?.title, highImpact: true, impacts: ["All assignments and comments on this task will be deleted."] });
+    if (!ok) return;
     const { error } = await supabase.from("unit_tasks").delete().eq("id", taskId).eq("tenant_id", tenantId);
     if (error) return toast.error(error.message);
     toast.success("Task deleted");

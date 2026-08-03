@@ -592,8 +592,8 @@ export default function TrainingReports() {
                                     variant="ghost"
                                     size="icon"
                                     className="h-7 w-7 text-destructive hover:text-destructive"
-                                    onClick={() => {
-                                      if (window.confirm("Delete this training session and its attendee records? This cannot be undone.")) {
+                                    onClick={async () => {
+                                      if (await confirmDelete({ title: "Delete training session", itemName: r.training_type || "this session", highImpact: true, impacts: ["All attendee records for this session will be deleted."] })) {
                                         deleteMutation.mutate(r.id);
                                       }
                                     }}
