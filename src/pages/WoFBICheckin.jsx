@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, CheckCircle2, Clock, XCircle, Mail, LogOut, CheckCheck } from "lucide-react";
+import { Loader2, CheckCircle2, Clock, XCircle, Mail, LogOut, CheckCheck, AlertTriangle } from "lucide-react";
 
 function fmtDuration(mins) {
   if (mins == null) return "";
@@ -30,6 +30,8 @@ export default function WoFBICheckin() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const [state, setState] = useState({ loading: true, result: null, error: null });
+  const [confirm, setConfirm] = useState(null);
+  const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -46,6 +48,11 @@ export default function WoFBICheckin() {
         return;
       }
       if (data?.ok) {
+        if (data.action === "confirm_checkout") {
+          setConfirm(data);
+          setState({ loading: false, result: null, error: null });
+          return;
+        }
         setState({ loading: false, result: data, error: null });
       } else {
         setState({ loading: false, result: null, error: data?.error || "unknown" });
@@ -53,6 +60,28 @@ export default function WoFBICheckin() {
     })();
     return () => { active = false; };
   }, [token, user, authLoading]);
+
+  const handleConfirmCheckout = async () => {
+    setConfirming(true);
+    const { data, error } = await supabase.rpc("wofbi_checkin", {
+      _qr_token: token,
+      _confirm_checkout: true,
+    });
+    setConfirming(false);
+    if (error) {
+      setState({ loading: false, result: null, error: error.message });
+      setConfirm(null);
+      return;
+    }
+    if (data?.ok) {
+      setConfirm(null);
+      setState({ loading: false, result: data, error: null });
+    } else {
+      setConfirm(null);
+      setState({ loading: false, result: null, error: data?.error || "unknown" });
+    }
+  };
+
 
   const [magicEmail, setMagicEmail] = useState("");
   const [magicSending, setMagicSending] = useState(false);
@@ -95,6 +124,43 @@ export default function WoFBICheckin() {
           <CardTitle className="text-center">Bible School Check-in</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-center">
+          {confirm && (
+            <>
+              <AlertTriangle className="h-12 w-12 mx-auto text-amber-500" />
+              <div>
+                <p className="text-lg font-semibold">You're already checked in</p>
+                <p className="text-sm text-muted-foreground">{confirm.session_title}</p>
+                <p className="text-xs text-muted-foreground">{confirm.session_date}</p>
+                <p className="mt-2 text-sm">
+                  Checked in at{" "}
+                  <span className="font-semibold">
+                    {confirm.checked_in_at
+                      ? new Date(confirm.checked_in_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                      : "—"}
+                  </span>
+                  {confirm.elapsed_minutes != null && (
+                    <> · {fmtDuration(confirm.elapsed_minutes)} on premises</>
+                  )}
+                </p>
+                <p className="mt-3 text-sm font-medium text-amber-700">
+                  Scanning again will check you out. Only continue if you are leaving now.
+                </p>
+              </div>
+              <Button
+                variant="destructive"
+                className="w-full"
+                disabled={confirming}
+                onClick={handleConfirmCheckout}
+              >
+                {confirming ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <LogOut className="h-4 w-4 mr-2" />}
+                Yes, check me out
+              </Button>
+              <Button variant="outline" className="w-full" disabled={confirming} onClick={() => navigate("/")}>
+                No, stay checked in
+              </Button>
+            </>
+          )}
+
           {state.result && (() => {
             const r = state.result;
             const isOut = r.action === "checked_out";

@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -95,6 +97,8 @@ export default function WoFBIAttendanceTab() {
   const [editRecord, setEditRecord] = useState(null); // { record, session, registration }
   const [editForm, setEditForm] = useState({ status: "present", checked_in_at: "", checked_out_at: "", punctuality_rating: null, punctuality_note: "" });
   const [rosterExportOpen, setRosterExportOpen] = useState(false);
+  const [timeOutConfirm, setTimeOutConfirm] = useState(null);
+
   const [rosterExportScope, setRosterExportScope] = useState("summary"); // "summary" | session id
   const [rosterExporting, setRosterExporting] = useState(false);
 
@@ -1156,12 +1160,13 @@ export default function WoFBIAttendanceTab() {
                         <Button size="sm" variant={status === "late" ? "default" : "outline"} onClick={() => markStatus.mutate({ registration: r, status: "late" })}>Late</Button>
                         <Button size="sm" variant={status === "absent" ? "default" : "outline"} onClick={() => markStatus.mutate({ registration: r, status: "absent" })}>Absent</Button>
                         {rec && !rec.checked_out_at && (
-                          <Button size="sm" variant="outline" onClick={() => markStatus.mutate({ registration: r, action: "set_time_out" })}>Time-out</Button>
+                          <Button size="sm" variant="outline" onClick={() => setTimeOutConfirm({ registration: r, action: "set_time_out" })}>Time-out</Button>
                         )}
                         {rec?.checked_out_at && (
-                          <Button size="sm" variant="ghost" onClick={() => markStatus.mutate({ registration: r, action: "clear_time_out" })}>Clear out</Button>
+                          <Button size="sm" variant="ghost" onClick={() => setTimeOutConfirm({ registration: r, action: "clear_time_out" })}>Clear out</Button>
                         )}
                       </TableCell>
+
                     </TableRow>
                   );
                 })}
@@ -1173,7 +1178,41 @@ export default function WoFBIAttendanceTab() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Time-out confirmation */}
+      <AlertDialog open={!!timeOutConfirm} onOpenChange={(v) => !v && setTimeOutConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {timeOutConfirm?.action === "clear_time_out" ? "Clear time-out?" : "Record time-out?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {(() => {
+                const name = `${timeOutConfirm?.registration?.members?.first_name || ""} ${timeOutConfirm?.registration?.members?.last_name || ""}`.trim() || "this student";
+                return timeOutConfirm?.action === "clear_time_out"
+                  ? `This removes the recorded time-out and duration for ${name}. They will show as still on premises.`
+                  : `This checks ${name} out now and ends their time on premises. Only continue if they are leaving.`;
+              })()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (timeOutConfirm) {
+                  markStatus.mutate({ registration: timeOutConfirm.registration, action: timeOutConfirm.action });
+                }
+                setTimeOutConfirm(null);
+              }}
+            >
+              {timeOutConfirm?.action === "clear_time_out" ? "Clear time-out" : "Check out"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Edit record dialog */}
+
       <Dialog open={!!editRecord} onOpenChange={(v) => !v && setEditRecord(null)}>
         <DialogContent className="max-w-md w-[calc(100vw-1rem)] sm:w-auto max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden">
           <div className="px-6 pt-6">
