@@ -64,7 +64,7 @@ const emptyQuestion = {
 
 const WOFBI_DEFAULT_ABOUT = "Bible School is a structured Bible training programme designed to equip believers with foundational knowledge of God's Word through courses and examinations.";
 
-export default function ExamManagement() {
+function ExamManagementInner() {
   const { user, isAdmin, myMember } = useAuth();
   const qc = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
