@@ -920,11 +920,12 @@ function ExamManagementInner() {
 
         <TabsContent value="lecturer" className="space-y-4 mt-4">
           {adminLecturerRatingEnabled && isAdmin && (
-            <div className="flex justify-end">
-              <Button variant="outline" onClick={() => setAdminRateOpen(true)} className="gap-2">
+            <div className="flex flex-wrap justify-end">
+              <Button variant="outline" onClick={() => setAdminRateOpen(true)} className="gap-2 w-full sm:w-auto">
                 <Star className="h-4 w-4" /> Rate a Lecturer
               </Button>
             </div>
+
           )}
           <LecturerFeedbackReport />
           <LecturerManager />
