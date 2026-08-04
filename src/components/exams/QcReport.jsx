@@ -465,13 +465,14 @@ export default function QcReport() {
               <SummaryTile label="% Recording submitted" value={summary.n ? `${summary.recSubmitted}%` : "—"} />
             </div>
 
-            <Tabs defaultValue="entries">
-              <TabsList>
-                <TabsTrigger value="entries">Entries</TabsTrigger>
-                <TabsTrigger value="lecturer">By lecturer</TabsTrigger>
-                <TabsTrigger value="course">By course</TabsTrigger>
-                <TabsTrigger value="distribution">Distribution</TabsTrigger>
+            <Tabs defaultValue="entries" className="w-full min-w-0">
+              <TabsList className="flex w-full max-w-full flex-nowrap justify-start gap-1 overflow-x-auto h-auto p-1">
+                <TabsTrigger value="entries" className="whitespace-nowrap text-xs">Entries</TabsTrigger>
+                <TabsTrigger value="lecturer" className="whitespace-nowrap text-xs">By lecturer</TabsTrigger>
+                <TabsTrigger value="course" className="whitespace-nowrap text-xs">By course</TabsTrigger>
+                <TabsTrigger value="distribution" className="whitespace-nowrap text-xs">Distribution</TabsTrigger>
               </TabsList>
+
 
               <TabsContent value="entries" className="mt-3">
                 {filtered.length === 0 ? (
