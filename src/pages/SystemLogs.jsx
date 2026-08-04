@@ -498,13 +498,22 @@ const actionIcons = {
   role_change: UserCog, role_add: UserCog, role_remove: UserCog, user_delete: Trash2,
   member_delete: Trash2, member_create: Plus, member_update: Edit,
   notification_sent: Mail, sms_sent: MessageSquare,
+  attendance_record_create: ClipboardCheck, attendance_record_update: ClipboardCheck, attendance_record_delete: Trash2,
+  attendance_session_create: CalendarIcon, attendance_session_update: CalendarIcon, attendance_session_delete: Trash2,
 };
 const actionColors = {
   role_change: "bg-primary/10 text-primary", role_add: "bg-primary/10 text-primary",
   role_remove: "bg-destructive/10 text-destructive", user_delete: "bg-destructive/10 text-destructive",
   member_delete: "bg-destructive/10 text-destructive", member_create: "bg-chart-3/10 text-chart-3",
   member_update: "bg-accent/10 text-accent",
+  attendance_record_create: "bg-chart-3/10 text-chart-3",
+  attendance_record_update: "bg-accent/10 text-accent",
+  attendance_record_delete: "bg-destructive/10 text-destructive",
+  attendance_session_create: "bg-chart-3/10 text-chart-3",
+  attendance_session_update: "bg-accent/10 text-accent",
+  attendance_session_delete: "bg-destructive/10 text-destructive",
 };
+
 
 // Plain-English verbs for known actions. Anything unmapped falls back to a
 // de-underscored version of the raw action, so new actions still read fine.
