@@ -403,14 +403,15 @@ export default function LecturerFeedbackReport() {
             </div>
 
             {/* Breakdowns */}
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList>
-                <TabsTrigger value="lecturer">By lecturer</TabsTrigger>
-                <TabsTrigger value="subject">By subject</TabsTrigger>
-                <TabsTrigger value="course">By course</TabsTrigger>
-                <TabsTrigger value="distribution">Distribution</TabsTrigger>
-                {canDelete && <TabsTrigger value="entries">Entries</TabsTrigger>}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full min-w-0">
+              <TabsList className="flex w-full max-w-full flex-nowrap justify-start gap-1 overflow-x-auto h-auto p-1">
+                <TabsTrigger value="lecturer" className="whitespace-nowrap text-xs">By lecturer</TabsTrigger>
+                <TabsTrigger value="subject" className="whitespace-nowrap text-xs">By subject</TabsTrigger>
+                <TabsTrigger value="course" className="whitespace-nowrap text-xs">By course</TabsTrigger>
+                <TabsTrigger value="distribution" className="whitespace-nowrap text-xs">Distribution</TabsTrigger>
+                {canDelete && <TabsTrigger value="entries" className="whitespace-nowrap text-xs">Entries</TabsTrigger>}
               </TabsList>
+
 
               <TabsContent value="lecturer" className="mt-3">
                 {byLecturer.length === 0 ? <EmptyState /> : (
