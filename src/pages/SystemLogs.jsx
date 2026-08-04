@@ -546,13 +546,39 @@ const ACTION_LABELS = {
   wofbi_exam_submitted: "submitted a Bible School exam",
   wofbi_qc_check_recorded: "recorded a QC check",
   wofbi_qc_check_updated: "updated a QC check",
+  attendance_record_create: "recorded attendance for",
+  attendance_record_update: "updated attendance for",
+  attendance_record_delete: "removed attendance for",
+  attendance_session_create: "created attendance session",
+  attendance_session_update: "updated attendance session",
+  attendance_session_delete: "deleted attendance session",
 };
 
+// Friendlier names for attendance columns shown in the before → after diff.
+const FIELD_LABELS = {
+  checked_in_at: "time in",
+  checked_out_at: "time out",
+  checked_in_by: "checked in by",
+  checked_out_by: "checked out by",
+  duration_minutes: "duration (mins)",
+  punctuality_rating: "punctuality",
+  punctuality_note: "punctuality note",
+  check_in_method: "check-in method",
+  session_date: "session date",
+  session_type: "session type",
+  late_after: "late after",
+  scheduled_open_at: "opens at",
+  scheduled_close_at: "closes at",
+  male_count: "male count",
+  female_count: "female count",
+  total_count: "total count",
+  meeting_date: "meeting date",
+};
 
 const humanAction = (a) => ACTION_LABELS[a] || String(a || "").replace(/[._]/g, " ");
 const humanEntity = (e) => String(e || "").replace(/[._]/g, " ");
 
-const TARGET_KEYS = ["member_name", "target_name", "child_name", "title", "tenant_name", "certificate_number", "email", "target"];
+const TARGET_KEYS = ["member_name", "target_name", "child_name", "title", "session_title", "tenant_name", "certificate_number", "email", "target"];
 function targetName(log) {
   const d = log.details || {};
   for (const k of TARGET_KEYS) {
@@ -563,6 +589,8 @@ function targetName(log) {
 
 const isSystemActor = (log) => !log.user_id || !!(log.details || {}).source;
 
+const ISO_TS = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+
 // Compact "field: old → new" list from before/after payloads.
 function diffFields(details) {
   const before = details?.before;
@@ -572,12 +600,17 @@ function diffFields(details) {
   const fmt = (v) => {
     if (v === null || v === undefined || v === "") return "—";
     if (typeof v === "object") return JSON.stringify(v);
+    if (typeof v === "string" && ISO_TS.test(v)) {
+      const d = new Date(v);
+      if (!isNaN(d)) return format(d, "dd MMM yyyy, h:mm a");
+    }
     return String(v);
   };
   return keys
     .filter((k) => JSON.stringify(before[k]) !== JSON.stringify(after[k]))
-    .map((k) => ({ field: k.replace(/_/g, " "), from: fmt(before[k]), to: fmt(after[k]) }));
+    .map((k) => ({ field: FIELD_LABELS[k] || k.replace(/_/g, " "), from: fmt(before[k]), to: fmt(after[k]) }));
 }
+
 
 const AUDIT_CSV_HEADERS = [
   { label: "Time", fn: r => format(new Date(r.created_at), "yyyy-MM-dd HH:mm:ss") },
