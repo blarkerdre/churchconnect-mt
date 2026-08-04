@@ -1189,13 +1189,13 @@ export default function WoFBIAttendanceTab() {
                         <StarRating
                           value={rec?.punctuality_rating || 0}
                           disabled={markStatus.isPending}
-                          onChange={(n) => markStatus.mutate({ registration: r, action: "set_rating", rating: n })}
+                          onChange={(n) => requestRosterEdit({ registration: r, action: "set_rating", rating: n }, r, n ? `set punctuality to ${n} star${n > 1 ? "s" : ""}` : "clear the punctuality rating")}
                         />
                       </TableCell>
                       <TableCell className="text-right space-x-1 whitespace-nowrap">
-                        <Button size="sm" variant={status === "present" ? "default" : "outline"} onClick={() => markStatus.mutate({ registration: r, status: "present" })}>Present</Button>
-                        <Button size="sm" variant={status === "late" ? "default" : "outline"} onClick={() => markStatus.mutate({ registration: r, status: "late" })}>Late</Button>
-                        <Button size="sm" variant={status === "absent" ? "default" : "outline"} onClick={() => markStatus.mutate({ registration: r, status: "absent" })}>Absent</Button>
+                        <Button size="sm" variant={status === "present" ? "default" : "outline"} onClick={() => requestRosterEdit({ registration: r, status: "present" }, r, "mark as Present")}>Present</Button>
+                        <Button size="sm" variant={status === "late" ? "default" : "outline"} onClick={() => requestRosterEdit({ registration: r, status: "late" }, r, "mark as Late")}>Late</Button>
+                        <Button size="sm" variant={status === "absent" ? "default" : "outline"} onClick={() => requestRosterEdit({ registration: r, status: "absent" }, r, "mark as Absent")}>Absent</Button>
                         {rec && !rec.checked_out_at && (
                           <Button size="sm" variant="outline" onClick={() => setTimeOutConfirm({ registration: r, action: "set_time_out" })}>Time-out</Button>
                         )}
@@ -1203,6 +1203,7 @@ export default function WoFBIAttendanceTab() {
                           <Button size="sm" variant="ghost" onClick={() => setTimeOutConfirm({ registration: r, action: "clear_time_out" })}>Clear out</Button>
                         )}
                       </TableCell>
+
 
                     </TableRow>
                   );
