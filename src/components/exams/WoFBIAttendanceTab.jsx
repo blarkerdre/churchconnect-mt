@@ -99,6 +99,7 @@ export default function WoFBIAttendanceTab() {
   const [editForm, setEditForm] = useState({ status: "present", checked_in_at: "", checked_out_at: "", punctuality_rating: null, punctuality_note: "" });
   const [rosterExportOpen, setRosterExportOpen] = useState(false);
   const [timeOutConfirm, setTimeOutConfirm] = useState(null);
+  const [pendingRosterEdit, setPendingRosterEdit] = useState(null); // { payload, description }
 
   const [rosterExportScope, setRosterExportScope] = useState("summary"); // "summary" | session id
   const [rosterExporting, setRosterExporting] = useState(false);
