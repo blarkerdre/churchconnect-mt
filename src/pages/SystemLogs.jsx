@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Mail, MessageSquare, Shield, CheckCircle, XCircle, Clock, AlertTriangle, Loader2, Search, UserCog, Trash2, Plus, Edit, CalendarIcon, Download, Phone, PhoneIncoming, PhoneOutgoing } from "lucide-react";
+import { Mail, MessageSquare, Shield, CheckCircle, XCircle, Clock, AlertTriangle, Loader2, Search, UserCog, Trash2, Plus, Edit, CalendarIcon, Download, Phone, PhoneIncoming, PhoneOutgoing, ClipboardCheck } from "lucide-react";
 
 const WhatsAppIcon = ({ className }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -498,13 +498,22 @@ const actionIcons = {
   role_change: UserCog, role_add: UserCog, role_remove: UserCog, user_delete: Trash2,
   member_delete: Trash2, member_create: Plus, member_update: Edit,
   notification_sent: Mail, sms_sent: MessageSquare,
+  attendance_record_create: ClipboardCheck, attendance_record_update: ClipboardCheck, attendance_record_delete: Trash2,
+  attendance_session_create: CalendarIcon, attendance_session_update: CalendarIcon, attendance_session_delete: Trash2,
 };
 const actionColors = {
   role_change: "bg-primary/10 text-primary", role_add: "bg-primary/10 text-primary",
   role_remove: "bg-destructive/10 text-destructive", user_delete: "bg-destructive/10 text-destructive",
   member_delete: "bg-destructive/10 text-destructive", member_create: "bg-chart-3/10 text-chart-3",
   member_update: "bg-accent/10 text-accent",
+  attendance_record_create: "bg-chart-3/10 text-chart-3",
+  attendance_record_update: "bg-accent/10 text-accent",
+  attendance_record_delete: "bg-destructive/10 text-destructive",
+  attendance_session_create: "bg-chart-3/10 text-chart-3",
+  attendance_session_update: "bg-accent/10 text-accent",
+  attendance_session_delete: "bg-destructive/10 text-destructive",
 };
+
 
 // Plain-English verbs for known actions. Anything unmapped falls back to a
 // de-underscored version of the raw action, so new actions still read fine.
@@ -537,13 +546,39 @@ const ACTION_LABELS = {
   wofbi_exam_submitted: "submitted a Bible School exam",
   wofbi_qc_check_recorded: "recorded a QC check",
   wofbi_qc_check_updated: "updated a QC check",
+  attendance_record_create: "recorded attendance for",
+  attendance_record_update: "updated attendance for",
+  attendance_record_delete: "removed attendance for",
+  attendance_session_create: "created attendance session",
+  attendance_session_update: "updated attendance session",
+  attendance_session_delete: "deleted attendance session",
 };
 
+// Friendlier names for attendance columns shown in the before → after diff.
+const FIELD_LABELS = {
+  checked_in_at: "time in",
+  checked_out_at: "time out",
+  checked_in_by: "checked in by",
+  checked_out_by: "checked out by",
+  duration_minutes: "duration (mins)",
+  punctuality_rating: "punctuality",
+  punctuality_note: "punctuality note",
+  check_in_method: "check-in method",
+  session_date: "session date",
+  session_type: "session type",
+  late_after: "late after",
+  scheduled_open_at: "opens at",
+  scheduled_close_at: "closes at",
+  male_count: "male count",
+  female_count: "female count",
+  total_count: "total count",
+  meeting_date: "meeting date",
+};
 
 const humanAction = (a) => ACTION_LABELS[a] || String(a || "").replace(/[._]/g, " ");
 const humanEntity = (e) => String(e || "").replace(/[._]/g, " ");
 
-const TARGET_KEYS = ["member_name", "target_name", "child_name", "title", "tenant_name", "certificate_number", "email", "target"];
+const TARGET_KEYS = ["member_name", "target_name", "child_name", "title", "session_title", "tenant_name", "certificate_number", "email", "target"];
 function targetName(log) {
   const d = log.details || {};
   for (const k of TARGET_KEYS) {
@@ -554,6 +589,8 @@ function targetName(log) {
 
 const isSystemActor = (log) => !log.user_id || !!(log.details || {}).source;
 
+const ISO_TS = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+
 // Compact "field: old → new" list from before/after payloads.
 function diffFields(details) {
   const before = details?.before;
@@ -563,12 +600,17 @@ function diffFields(details) {
   const fmt = (v) => {
     if (v === null || v === undefined || v === "") return "—";
     if (typeof v === "object") return JSON.stringify(v);
+    if (typeof v === "string" && ISO_TS.test(v)) {
+      const d = new Date(v);
+      if (!isNaN(d)) return format(d, "dd MMM yyyy, h:mm a");
+    }
     return String(v);
   };
   return keys
     .filter((k) => JSON.stringify(before[k]) !== JSON.stringify(after[k]))
-    .map((k) => ({ field: k.replace(/_/g, " "), from: fmt(before[k]), to: fmt(after[k]) }));
+    .map((k) => ({ field: FIELD_LABELS[k] || k.replace(/_/g, " "), from: fmt(before[k]), to: fmt(after[k]) }));
 }
+
 
 const AUDIT_CSV_HEADERS = [
   { label: "Time", fn: r => format(new Date(r.created_at), "yyyy-MM-dd HH:mm:ss") },
