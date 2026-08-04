@@ -366,18 +366,19 @@ function ExamManagementInner() {
       <SessionFilterBar />
 
       <Tabs defaultValue="management" className="w-full min-w-0">
-        <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start scrollbar-thin">
-          <TabsTrigger value="management" className="whitespace-nowrap">Management</TabsTrigger>
-          <TabsTrigger value="applications" className="whitespace-nowrap">Applications</TabsTrigger>
-          <TabsTrigger value="sessions" className="whitespace-nowrap">Sessions</TabsTrigger>
-          <TabsTrigger value="attendance" className="whitespace-nowrap">Attendance</TabsTrigger>
-          <TabsTrigger value="app-form" className="whitespace-nowrap">Application Form</TabsTrigger>
-          <TabsTrigger value="feedback-form" className="whitespace-nowrap">Feedback Form</TabsTrigger>
+        <TabsList className="flex max-w-full flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start scrollbar-thin">
+          <TabsTrigger value="management" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Management</TabsTrigger>
+          <TabsTrigger value="applications" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Applications</TabsTrigger>
+          <TabsTrigger value="sessions" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Sessions</TabsTrigger>
+          <TabsTrigger value="attendance" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Attendance</TabsTrigger>
+          <TabsTrigger value="app-form" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Application Form</TabsTrigger>
+          <TabsTrigger value="feedback-form" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Feedback Form</TabsTrigger>
 
-          <TabsTrigger value="lecturer" className="whitespace-nowrap">Lecturer Feedback</TabsTrigger>
-          <TabsTrigger value="qc" className="whitespace-nowrap">Quality Control</TabsTrigger>
-          <TabsTrigger value="course-report" className="whitespace-nowrap">Course Report</TabsTrigger>
+          <TabsTrigger value="lecturer" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Lecturer Feedback</TabsTrigger>
+          <TabsTrigger value="qc" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Quality Control</TabsTrigger>
+          <TabsTrigger value="course-report" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Course Report</TabsTrigger>
         </TabsList>
+
 
 
         <TabsContent value="management" className="space-y-6 mt-4">
