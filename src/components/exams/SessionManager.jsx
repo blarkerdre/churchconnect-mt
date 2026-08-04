@@ -390,7 +390,7 @@ export default function SessionManager() {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <TenantDialogHeader title={editing ? "Edit session" : "New session"} />
           <div className="space-y-4">
             <div className="space-y-1.5">

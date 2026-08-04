@@ -366,18 +366,19 @@ function ExamManagementInner() {
       <SessionFilterBar />
 
       <Tabs defaultValue="management" className="w-full min-w-0">
-        <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start scrollbar-thin">
-          <TabsTrigger value="management" className="whitespace-nowrap">Management</TabsTrigger>
-          <TabsTrigger value="applications" className="whitespace-nowrap">Applications</TabsTrigger>
-          <TabsTrigger value="sessions" className="whitespace-nowrap">Sessions</TabsTrigger>
-          <TabsTrigger value="attendance" className="whitespace-nowrap">Attendance</TabsTrigger>
-          <TabsTrigger value="app-form" className="whitespace-nowrap">Application Form</TabsTrigger>
-          <TabsTrigger value="feedback-form" className="whitespace-nowrap">Feedback Form</TabsTrigger>
+        <TabsList className="flex max-w-full flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start scrollbar-thin">
+          <TabsTrigger value="management" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Management</TabsTrigger>
+          <TabsTrigger value="applications" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Applications</TabsTrigger>
+          <TabsTrigger value="sessions" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Sessions</TabsTrigger>
+          <TabsTrigger value="attendance" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Attendance</TabsTrigger>
+          <TabsTrigger value="app-form" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Application Form</TabsTrigger>
+          <TabsTrigger value="feedback-form" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Feedback Form</TabsTrigger>
 
-          <TabsTrigger value="lecturer" className="whitespace-nowrap">Lecturer Feedback</TabsTrigger>
-          <TabsTrigger value="qc" className="whitespace-nowrap">Quality Control</TabsTrigger>
-          <TabsTrigger value="course-report" className="whitespace-nowrap">Course Report</TabsTrigger>
+          <TabsTrigger value="lecturer" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Lecturer Feedback</TabsTrigger>
+          <TabsTrigger value="qc" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Quality Control</TabsTrigger>
+          <TabsTrigger value="course-report" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Course Report</TabsTrigger>
         </TabsList>
+
 
 
         <TabsContent value="management" className="space-y-6 mt-4">
@@ -807,7 +808,7 @@ function ExamManagementInner() {
 
       {/* Question Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editingQuestion ? "Edit Question" : "Add Question"}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -919,11 +920,12 @@ function ExamManagementInner() {
 
         <TabsContent value="lecturer" className="space-y-4 mt-4">
           {adminLecturerRatingEnabled && isAdmin && (
-            <div className="flex justify-end">
-              <Button variant="outline" onClick={() => setAdminRateOpen(true)} className="gap-2">
+            <div className="flex flex-wrap justify-end">
+              <Button variant="outline" onClick={() => setAdminRateOpen(true)} className="gap-2 w-full sm:w-auto">
                 <Star className="h-4 w-4" /> Rate a Lecturer
               </Button>
             </div>
+
           )}
           <LecturerFeedbackReport />
           <LecturerManager />
@@ -1291,24 +1293,25 @@ function CourseRegistrationsView({ course }) {
                 <SelectItem value="link_sent">Exam link sent</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex items-center gap-1 shrink-0">
-              <label className="text-[11px] text-muted-foreground">From</label>
+            <div className="flex items-center gap-1 flex-1 min-w-[150px] sm:flex-none">
+              <label className="text-[11px] text-muted-foreground shrink-0">From</label>
               <Input
                 type="date"
                 value={dateFrom}
                 onChange={e => setDateFrom(e.target.value)}
-                className="h-8 w-[130px] sm:w-[140px] text-xs"
+                className="h-8 w-full sm:w-[140px] text-xs"
               />
             </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <label className="text-[11px] text-muted-foreground">To</label>
+            <div className="flex items-center gap-1 flex-1 min-w-[150px] sm:flex-none">
+              <label className="text-[11px] text-muted-foreground shrink-0">To</label>
               <Input
                 type="date"
                 value={dateTo}
                 onChange={e => setDateTo(e.target.value)}
-                className="h-8 w-[130px] sm:w-[140px] text-xs"
+                className="h-8 w-full sm:w-[140px] text-xs"
               />
             </div>
+
 
 
             {(dateFrom || dateTo) && (

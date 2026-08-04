@@ -967,8 +967,9 @@ export default function WoFBIAttendanceTab() {
                       {expanded && (
                         <TableRow className="bg-muted/30 hover:bg-muted/30">
                           <TableCell colSpan={10} className="p-0">
-                            <div className="p-3">
-                              <Table>
+                            <div className="p-3 overflow-x-auto">
+                              <Table className="min-w-[560px]">
+
                                 <TableHeader>
                                   <TableRow>
                                     <TableHead>Date</TableHead>
