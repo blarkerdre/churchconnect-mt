@@ -1292,24 +1292,25 @@ function CourseRegistrationsView({ course }) {
                 <SelectItem value="link_sent">Exam link sent</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex items-center gap-1 shrink-0">
-              <label className="text-[11px] text-muted-foreground">From</label>
+            <div className="flex items-center gap-1 flex-1 min-w-[150px] sm:flex-none">
+              <label className="text-[11px] text-muted-foreground shrink-0">From</label>
               <Input
                 type="date"
                 value={dateFrom}
                 onChange={e => setDateFrom(e.target.value)}
-                className="h-8 w-[130px] sm:w-[140px] text-xs"
+                className="h-8 w-full sm:w-[140px] text-xs"
               />
             </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <label className="text-[11px] text-muted-foreground">To</label>
+            <div className="flex items-center gap-1 flex-1 min-w-[150px] sm:flex-none">
+              <label className="text-[11px] text-muted-foreground shrink-0">To</label>
               <Input
                 type="date"
                 value={dateTo}
                 onChange={e => setDateTo(e.target.value)}
-                className="h-8 w-[130px] sm:w-[140px] text-xs"
+                className="h-8 w-full sm:w-[140px] text-xs"
               />
             </div>
+
 
 
             {(dateFrom || dateTo) && (
