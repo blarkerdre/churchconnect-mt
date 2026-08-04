@@ -1238,7 +1238,11 @@ export default function WoFBIAttendanceTab() {
             <AlertDialogAction
               onClick={() => {
                 if (timeOutConfirm) {
-                  markStatus.mutate({ registration: timeOutConfirm.registration, action: timeOutConfirm.action });
+                  requestRosterEdit(
+                    { registration: timeOutConfirm.registration, action: timeOutConfirm.action },
+                    timeOutConfirm.registration,
+                    timeOutConfirm.action === "clear_time_out" ? "clear the recorded time-out" : "record a time-out"
+                  );
                 }
                 setTimeOutConfirm(null);
               }}
@@ -1248,6 +1252,21 @@ export default function WoFBIAttendanceTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Password gate for roster edits */}
+      <PasswordConfirmDialog
+        open={!!pendingRosterEdit}
+        onOpenChange={(v) => !v && setPendingRosterEdit(null)}
+        title="Confirm attendance change"
+        description={pendingRosterEdit?.description || "Confirm this attendance change."}
+        confirmLabel="Apply change"
+        isPending={markStatus.isPending}
+        onConfirm={() => {
+          if (pendingRosterEdit) markStatus.mutate(pendingRosterEdit.payload);
+          setPendingRosterEdit(null);
+        }}
+      />
+
 
       {/* Edit record dialog */}
 
