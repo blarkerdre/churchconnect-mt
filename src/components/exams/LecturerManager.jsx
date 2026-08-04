@@ -228,7 +228,7 @@ export default function LecturerManager() {
         )}
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent>
+          <DialogContent className="w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editing ? "Edit Lecturer" : "Add Lecturer"}</DialogTitle>
             </DialogHeader>

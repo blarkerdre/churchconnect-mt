@@ -321,7 +321,7 @@ export default function SendResultsDialog({
                 </div>
 
                 <Tabs defaultValue={sendStatement ? "statement" : "certificate"}>
-                  <TabsList className="h-8">
+                  <TabsList className="flex w-full max-w-full flex-nowrap justify-start gap-1 overflow-x-auto h-auto p-1">
                     <TabsTrigger value="statement" className="text-xs h-7" disabled={!sendStatement}>
                       <FileText className="h-3 w-3 mr-1" /> Statement
                     </TabsTrigger>
