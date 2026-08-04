@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, QrCode, Trash2, Download, CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Pencil, Star } from "lucide-react";
 import WoFBIPersistentQRDialog from "./WoFBIPersistentQRDialog";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import { useTenant } from "@/contexts/TenantContext";
 import { downloadRosterCsv, printRosterPdf } from "@/lib/attendance-roster";
 import { useExamSessionFilter, EXAM_SESSION_ALL } from "@/contexts/ExamSessionFilterContext";
@@ -99,6 +100,7 @@ export default function WoFBIAttendanceTab() {
   const [editForm, setEditForm] = useState({ status: "present", checked_in_at: "", checked_out_at: "", punctuality_rating: null, punctuality_note: "" });
   const [rosterExportOpen, setRosterExportOpen] = useState(false);
   const [timeOutConfirm, setTimeOutConfirm] = useState(null);
+  const [pendingRosterEdit, setPendingRosterEdit] = useState(null); // { payload, description }
 
   const [rosterExportScope, setRosterExportScope] = useState("summary"); // "summary" | session id
   const [rosterExporting, setRosterExporting] = useState(false);
@@ -369,6 +371,14 @@ export default function WoFBIAttendanceTab() {
     },
     onError: (e) => toast({ title: "Reopen failed", description: e.message, variant: "destructive" }),
   });
+
+  const requestRosterEdit = (payload, registration, actionLabel) => {
+    const name = `${registration?.members?.first_name || ""} ${registration?.members?.last_name || ""}`.trim() || "this student";
+    setPendingRosterEdit({
+      payload,
+      description: `You are about to ${actionLabel} for ${name}. Re-enter your password to confirm this attendance change.`,
+    });
+  };
 
 
   const markStatus = useMutation({
@@ -1188,13 +1198,13 @@ export default function WoFBIAttendanceTab() {
                         <StarRating
                           value={rec?.punctuality_rating || 0}
                           disabled={markStatus.isPending}
-                          onChange={(n) => markStatus.mutate({ registration: r, action: "set_rating", rating: n })}
+                          onChange={(n) => requestRosterEdit({ registration: r, action: "set_rating", rating: n }, r, n ? `set punctuality to ${n} star${n > 1 ? "s" : ""}` : "clear the punctuality rating")}
                         />
                       </TableCell>
                       <TableCell className="text-right space-x-1 whitespace-nowrap">
-                        <Button size="sm" variant={status === "present" ? "default" : "outline"} onClick={() => markStatus.mutate({ registration: r, status: "present" })}>Present</Button>
-                        <Button size="sm" variant={status === "late" ? "default" : "outline"} onClick={() => markStatus.mutate({ registration: r, status: "late" })}>Late</Button>
-                        <Button size="sm" variant={status === "absent" ? "default" : "outline"} onClick={() => markStatus.mutate({ registration: r, status: "absent" })}>Absent</Button>
+                        <Button size="sm" variant={status === "present" ? "default" : "outline"} onClick={() => requestRosterEdit({ registration: r, status: "present" }, r, "mark as Present")}>Present</Button>
+                        <Button size="sm" variant={status === "late" ? "default" : "outline"} onClick={() => requestRosterEdit({ registration: r, status: "late" }, r, "mark as Late")}>Late</Button>
+                        <Button size="sm" variant={status === "absent" ? "default" : "outline"} onClick={() => requestRosterEdit({ registration: r, status: "absent" }, r, "mark as Absent")}>Absent</Button>
                         {rec && !rec.checked_out_at && (
                           <Button size="sm" variant="outline" onClick={() => setTimeOutConfirm({ registration: r, action: "set_time_out" })}>Time-out</Button>
                         )}
@@ -1202,6 +1212,7 @@ export default function WoFBIAttendanceTab() {
                           <Button size="sm" variant="ghost" onClick={() => setTimeOutConfirm({ registration: r, action: "clear_time_out" })}>Clear out</Button>
                         )}
                       </TableCell>
+
 
                     </TableRow>
                   );
@@ -1236,7 +1247,11 @@ export default function WoFBIAttendanceTab() {
             <AlertDialogAction
               onClick={() => {
                 if (timeOutConfirm) {
-                  markStatus.mutate({ registration: timeOutConfirm.registration, action: timeOutConfirm.action });
+                  requestRosterEdit(
+                    { registration: timeOutConfirm.registration, action: timeOutConfirm.action },
+                    timeOutConfirm.registration,
+                    timeOutConfirm.action === "clear_time_out" ? "clear the recorded time-out" : "record a time-out"
+                  );
                 }
                 setTimeOutConfirm(null);
               }}
@@ -1246,6 +1261,21 @@ export default function WoFBIAttendanceTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Password gate for roster edits */}
+      <PasswordConfirmDialog
+        open={!!pendingRosterEdit}
+        onOpenChange={(v) => !v && setPendingRosterEdit(null)}
+        title="Confirm attendance change"
+        description={pendingRosterEdit?.description || "Confirm this attendance change."}
+        confirmLabel="Apply change"
+        isPending={markStatus.isPending}
+        onConfirm={() => {
+          if (pendingRosterEdit) markStatus.mutate(pendingRosterEdit.payload);
+          setPendingRosterEdit(null);
+        }}
+      />
+
 
       {/* Edit record dialog */}
 
