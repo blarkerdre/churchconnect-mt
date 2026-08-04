@@ -372,6 +372,14 @@ export default function WoFBIAttendanceTab() {
     onError: (e) => toast({ title: "Reopen failed", description: e.message, variant: "destructive" }),
   });
 
+  const requestRosterEdit = (payload, registration, actionLabel) => {
+    const name = `${registration?.members?.first_name || ""} ${registration?.members?.last_name || ""}`.trim() || "this student";
+    setPendingRosterEdit({
+      payload,
+      description: `You are about to ${actionLabel} for ${name}. Re-enter your password to confirm this attendance change.`,
+    });
+  };
+
 
   const markStatus = useMutation({
     mutationFn: async ({ registration, status, action, rating }) => {
