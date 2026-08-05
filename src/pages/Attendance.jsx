@@ -771,6 +771,35 @@ export default function Attendance() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={checkinsOpen} onOpenChange={setCheckinsOpen}>
+        <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display text-base text-left">
+              {selectedSession?.title || selectedSession?.session_type}
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground text-left">
+              {selectedSession?.session_type} · {selectedSession?.session_date}
+              {selectedSession?.unit ? ` · ${selectedSession.unit}` : ""}
+            </p>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            {records.length} checked in{eligibleMembers.length ? ` of ${eligibleMembers.length} eligible` : ""}
+          </p>
+          <CheckInsList records={records} />
+          {canManage && selectedSession && !isClosed && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => { setCheckinsOpen(false); setManageOpen(true); }}
+            >
+              <UserCog className="h-4 w-4 mr-2" /> Manage Attendance
+            </Button>
+          )}
+        </DialogContent>
+      </Dialog>
+
+
+
       <PasswordConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
