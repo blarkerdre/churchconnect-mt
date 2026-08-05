@@ -22,6 +22,34 @@ import ReportAttachments from "@/components/reports/ReportAttachments";
 import CheckInPanel from "@/components/attendance/CheckInPanel";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import ModuleTour from "@/components/tour/ModuleTour";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+function CheckInsList({ records }) {
+  if (!records.length) {
+    return <p className="text-sm text-muted-foreground text-center py-4">No check-ins for this meeting yet.</p>;
+  }
+  return (
+    <div className="space-y-2">
+      {records.map(r => (
+        <div key={r.id} className="flex items-center justify-between gap-2 p-3 bg-muted/50 rounded-lg">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-8 w-8 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
+              {r.members?.first_name?.[0]}{r.members?.last_name?.[0]}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">{r.members?.first_name} {r.members?.last_name}</p>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="h-3 w-3" /> {r.checked_in_at ? new Date(r.checked_in_at).toLocaleTimeString() : "—"}
+              </p>
+            </div>
+          </div>
+          <Badge className="bg-chart-3/10 text-chart-3 border-0 shrink-0">{r.check_in_method || "manual"}</Badge>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 
 export default function Attendance() {
   const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits = [], leaderCentres = [], myUnits = [] } = useAuth();
@@ -38,7 +66,10 @@ export default function Attendance() {
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
+  const [checkinsOpen, setCheckinsOpen] = useState(false);
+  const isMobile = useIsMobile();
   const [deleteOpen, setDeleteOpen] = useState(false);
+
   const [form, setForm] = useState({ title: "", session_type: "Sunday Service", session_date: "", notes: "", unit: "" });
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -497,7 +528,7 @@ export default function Attendance() {
               ) : filteredSessions.map(s => (
                 <button
                   key={s.id}
-                  onClick={() => setSelectedSessionId(s.id)}
+                  onClick={() => { setSelectedSessionId(s.id); if (isMobile) setCheckinsOpen(true); }}
                   className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
                     selectedSession?.id === s.id ? "bg-primary/10 border border-primary/20" : "bg-muted/50 hover:bg-muted"
                   }`}
@@ -548,24 +579,11 @@ export default function Attendance() {
                     </div>
                   </div>
                 )}
-                {records.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">No check-ins for this meeting</p>
-                ) : records.map(r => (
-                  <div key={r.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
-                        {r.members?.first_name?.[0]}{r.members?.last_name?.[0]}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{r.members?.first_name} {r.members?.last_name}</p>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-3 w-3" /> {r.checked_in_at ? new Date(r.checked_in_at).toLocaleTimeString() : "—"}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge className="bg-chart-3/10 text-chart-3 border-0">{r.check_in_method || "manual"}</Badge>
-                  </div>
-                ))}
+                <p className="text-xs text-muted-foreground">
+                  {records.length} checked in{eligibleMembers.length ? ` of ${eligibleMembers.length} eligible` : ""}
+                </p>
+                <CheckInsList records={records} />
+
               </CardContent>
             </Card>
 
@@ -752,6 +770,35 @@ export default function Attendance() {
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={checkinsOpen} onOpenChange={setCheckinsOpen}>
+        <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display text-base text-left">
+              {selectedSession?.title || selectedSession?.session_type}
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground text-left">
+              {selectedSession?.session_type} · {selectedSession?.session_date}
+              {selectedSession?.unit ? ` · ${selectedSession.unit}` : ""}
+            </p>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            {records.length} checked in{eligibleMembers.length ? ` of ${eligibleMembers.length} eligible` : ""}
+          </p>
+          <CheckInsList records={records} />
+          {canManage && selectedSession && !isClosed && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => { setCheckinsOpen(false); setManageOpen(true); }}
+            >
+              <UserCog className="h-4 w-4 mr-2" /> Manage Attendance
+            </Button>
+          )}
+        </DialogContent>
+      </Dialog>
+
+
 
       <PasswordConfirmDialog
         open={deleteOpen}
