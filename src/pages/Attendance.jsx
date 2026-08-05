@@ -66,7 +66,10 @@ export default function Attendance() {
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
+  const [checkinsOpen, setCheckinsOpen] = useState(false);
+  const isMobile = useIsMobile();
   const [deleteOpen, setDeleteOpen] = useState(false);
+
   const [form, setForm] = useState({ title: "", session_type: "Sunday Service", session_date: "", notes: "", unit: "" });
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
