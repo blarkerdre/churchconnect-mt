@@ -579,24 +579,11 @@ export default function Attendance() {
                     </div>
                   </div>
                 )}
-                {records.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">No check-ins for this meeting</p>
-                ) : records.map(r => (
-                  <div key={r.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
-                        {r.members?.first_name?.[0]}{r.members?.last_name?.[0]}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{r.members?.first_name} {r.members?.last_name}</p>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-3 w-3" /> {r.checked_in_at ? new Date(r.checked_in_at).toLocaleTimeString() : "—"}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge className="bg-chart-3/10 text-chart-3 border-0">{r.check_in_method || "manual"}</Badge>
-                  </div>
-                ))}
+                <p className="text-xs text-muted-foreground">
+                  {records.length} checked in{eligibleMembers.length ? ` of ${eligibleMembers.length} eligible` : ""}
+                </p>
+                <CheckInsList records={records} />
+
               </CardContent>
             </Card>
 
