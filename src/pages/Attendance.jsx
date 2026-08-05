@@ -22,6 +22,34 @@ import ReportAttachments from "@/components/reports/ReportAttachments";
 import CheckInPanel from "@/components/attendance/CheckInPanel";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import ModuleTour from "@/components/tour/ModuleTour";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+function CheckInsList({ records }) {
+  if (!records.length) {
+    return <p className="text-sm text-muted-foreground text-center py-4">No check-ins for this meeting yet.</p>;
+  }
+  return (
+    <div className="space-y-2">
+      {records.map(r => (
+        <div key={r.id} className="flex items-center justify-between gap-2 p-3 bg-muted/50 rounded-lg">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-8 w-8 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
+              {r.members?.first_name?.[0]}{r.members?.last_name?.[0]}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">{r.members?.first_name} {r.members?.last_name}</p>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Clock className="h-3 w-3" /> {r.checked_in_at ? new Date(r.checked_in_at).toLocaleTimeString() : "—"}
+              </p>
+            </div>
+          </div>
+          <Badge className="bg-chart-3/10 text-chart-3 border-0 shrink-0">{r.check_in_method || "manual"}</Badge>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 
 export default function Attendance() {
   const { user, isAdmin, isUnitLeader, isWSFLeader, leaderUnits = [], leaderCentres = [], myUnits = [] } = useAuth();
