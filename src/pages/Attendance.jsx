@@ -528,7 +528,7 @@ export default function Attendance() {
               ) : filteredSessions.map(s => (
                 <button
                   key={s.id}
-                  onClick={() => setSelectedSessionId(s.id)}
+                  onClick={() => { setSelectedSessionId(s.id); if (isMobile) setCheckinsOpen(true); }}
                   className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
                     selectedSession?.id === s.id ? "bg-primary/10 border border-primary/20" : "bg-muted/50 hover:bg-muted"
                   }`}
