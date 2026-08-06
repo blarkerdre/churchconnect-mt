@@ -580,6 +580,14 @@ export default function CourseResultsView({ course }) {
         onSent={() => { clearSelection(); setSendDialog(null); }}
       />
     )}
+    <MessageFilteredMembersDialog
+      open={!!msgTargets}
+      onOpenChange={(v) => { if (!v) setMsgTargets(null); }}
+      members={msgTargets || []}
+      source="bible_school_results"
+      audienceLabel={`Results — ${course.name}`}
+      filterContext={{ course: course.name }}
+    />
     </>
   );
 }
