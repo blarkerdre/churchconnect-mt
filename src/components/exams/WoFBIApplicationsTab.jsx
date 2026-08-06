@@ -14,9 +14,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Search, Download, Eye, CheckCircle2, XCircle, Trash2, BarChart3, X } from "lucide-react";
+import { Loader2, Search, Download, Eye, CheckCircle2, XCircle, Trash2, BarChart3, X, Send } from "lucide-react";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 import { useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
+import MessageFilteredMembersDialog from "@/components/analytics/MessageFilteredMembersDialog";
 
 const STATUS_VARIANT = {
   submitted: "secondary",
@@ -56,6 +57,16 @@ export default function WoFBIApplicationsTab() {
   const [detail, setDetail] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null); // { ids: [], label: '' }
   const [showReport, setShowReport] = useState(false);
+  const [msgTargets, setMsgTargets] = useState(null);
+
+  const toRecipient = (a) => ({
+    id: a.member_id,
+    first_name: a.member?.first_name || a.first_name,
+    last_name: a.member?.last_name || a.last_name,
+    email: a.member?.email || a.email,
+    phone: a.member?.phone || a.phone,
+    user_id: a.member?.user_id || null,
+  });
 
   const { data: form } = useQuery({
     queryKey: ["wofbi-application-form-fields", tenantId],
@@ -80,7 +91,7 @@ export default function WoFBIApplicationsTab() {
         scopeQuery(
           supabase
             .from("wofbi_applications")
-            .select("*, course:exam_titles(id, name), member:members(id, first_name, last_name), edition:exam_sessions(id, name)")
+            .select("*, course:exam_titles(id, name), member:members(id, first_name, last_name, email, phone, user_id), edition:exam_sessions(id, name)")
         )
       ).order("created_at", { ascending: false });
       if (error) throw error;
@@ -96,7 +107,7 @@ export default function WoFBIApplicationsTab() {
         scopeQuery(
           supabase
             .from("course_registrations")
-            .select("id, member_id, course_id, session_id, status, registered_at, registration_email_sent_at, exam_link_sent_at, course:exam_titles(id, name), member:members(id, first_name, last_name, email, phone), edition:exam_sessions(id, name)")
+            .select("id, member_id, course_id, session_id, status, registered_at, registration_email_sent_at, exam_link_sent_at, course:exam_titles(id, name), member:members(id, first_name, last_name, email, phone, user_id), edition:exam_sessions(id, name)")
         )
       ).order("registered_at", { ascending: false });
       if (error) throw error;
@@ -687,19 +698,30 @@ export default function WoFBIApplicationsTab() {
         </div>
 
 
-        {canDelete && selectedIds.size > 0 && (
-          <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2">
+        {selectedIds.size > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/40 px-3 py-2">
             <span className="text-sm">{selectedIds.size} selected</span>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>Clear</Button>
               <Button
                 size="sm"
-                variant="destructive"
+                variant="outline"
                 className="gap-1.5"
-                onClick={() => setConfirmDelete({ ids: Array.from(selectedIds), label: `${selectedIds.size} entries` })}
+                onClick={() => setMsgTargets(filtered.filter((a) => selectedIds.has(a.id) && a.member_id).map(toRecipient))}
+                disabled={!filtered.some((a) => selectedIds.has(a.id) && a.member_id)}
               >
-                <Trash2 className="h-3.5 w-3.5" /> Delete selected
+                <Send className="h-3.5 w-3.5" /> Message selected
               </Button>
+              {canDelete && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="gap-1.5"
+                  onClick={() => setConfirmDelete({ ids: Array.from(selectedIds), label: `${selectedIds.size} entries` })}
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Delete selected
+                </Button>
+              )}
             </div>
           </div>
         )}
@@ -763,6 +785,16 @@ export default function WoFBIApplicationsTab() {
                         <Button size="sm" variant="outline" onClick={() => setDetail(a)} className="gap-1.5">
                           <Eye className="h-3.5 w-3.5" /> View
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setMsgTargets([toRecipient(a)])}
+                          disabled={!a.member_id}
+                          aria-label="Message applicant"
+                          title={a.member_id ? "Message applicant" : "No linked member record"}
+                        >
+                          <Send className="h-3.5 w-3.5" />
+                        </Button>
                         {!isApprovedStatus(a.status) && (
                           <Button
                             size="sm"
@@ -810,6 +842,17 @@ export default function WoFBIApplicationsTab() {
           </div>
         )}
       </CardContent>
+
+      <MessageFilteredMembersDialog
+        open={!!msgTargets}
+        onOpenChange={(v) => { if (!v) setMsgTargets(null); }}
+        members={msgTargets || []}
+        source="bible_school_applications"
+        audienceLabel="Bible School applicants"
+        filterContext={{ status: statusFilter, course: courseFilter, source: sourceFilter, session_id: sessionId }}
+      />
+
+
 
       <Dialog open={!!detail} onOpenChange={(v) => !v && setDetail(null)}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto w-[calc(100vw-1rem)] sm:w-auto">
