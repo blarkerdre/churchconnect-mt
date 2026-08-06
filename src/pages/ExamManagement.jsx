@@ -17,7 +17,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/components/ui/use-toast";
-import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag, Layers, Eye, CheckCircle2, Download, Users, QrCode, Search, FileText, Star, Mail, MessageSquare } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit, BookOpen, Save, Tag, Layers, Eye, CheckCircle2, Download, Users, QrCode, Search, FileText, Star, Mail, MessageSquare, Send } from "lucide-react";
 import WoFBIRegistrationQRCode from "@/components/exams/WoFBIRegistrationQRCode";
 import SubjectManager from "@/components/exams/SubjectManager";
 import CourseResultsView from "@/components/exams/CourseResultsView";
@@ -33,6 +33,8 @@ import LecturerFeedbackReport from "@/components/exams/LecturerFeedbackReport";
 import RateLecturerDialog from "@/components/exams/RateLecturerDialog";
 import QcReport from "@/components/exams/QcReport";
 import WoFBIApplicationsTab from "@/components/exams/WoFBIApplicationsTab";
+import StudentsReportTab from "@/components/exams/StudentsReportTab";
+import MessageFilteredMembersDialog from "@/components/analytics/MessageFilteredMembersDialog";
 import WoFBIApplicationFormEditor from "@/components/exams/WoFBIApplicationFormEditor";
 import WoFBIFeedbackFormEditor from "@/components/exams/WoFBIFeedbackFormEditor";
 import CourseReportTab from "@/components/exams/CourseReportTab";
@@ -369,6 +371,7 @@ function ExamManagementInner() {
         <TabsList className="flex max-w-full flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start scrollbar-thin">
           <TabsTrigger value="management" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Management</TabsTrigger>
           <TabsTrigger value="applications" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Applications</TabsTrigger>
+          <TabsTrigger value="students" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Students</TabsTrigger>
           <TabsTrigger value="sessions" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Sessions</TabsTrigger>
           <TabsTrigger value="attendance" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Attendance</TabsTrigger>
           <TabsTrigger value="app-form" className="whitespace-nowrap text-xs sm:text-sm px-2.5 sm:px-3">Application Form</TabsTrigger>
@@ -940,6 +943,12 @@ function ExamManagementInner() {
           <WoFBIApplicationsTab />
         </TabsContent>
 
+        <TabsContent value="students" className="space-y-4 mt-4">
+          <StudentsReportTab />
+        </TabsContent>
+
+
+
         <TabsContent value="app-form" className="space-y-4 mt-4">
           <WoFBIApplicationFormEditor />
         </TabsContent>
@@ -992,6 +1001,15 @@ function CourseRegistrationsView({ course }) {
   const [sendingIds, setSendingIds] = useState(() => new Set());
   const [sendingRegEmailIds, setSendingRegEmailIds] = useState(() => new Set());
   const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [msgTargets, setMsgTargets] = useState(null);
+  const regRecipient = (r) => ({
+    id: r.member_id,
+    first_name: r.members?.first_name,
+    last_name: r.members?.last_name,
+    email: r.members?.email,
+    phone: r.members?.phone,
+    user_id: r.members?.user_id || null,
+  });
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
 
   const { sessionId: editionId, applySession: applyEdition, isAll: isAllEditions, sessionName: sessionNameForExport } = useExamSessionFilter();
@@ -1329,6 +1347,21 @@ function CourseRegistrationsView({ course }) {
                 <Download className="h-3.5 w-3.5" /> Download CSV
               </Button>
             )}
+            {filteredRegistrations.length > 0 && (
+              <Button
+                size="sm"
+                className="gap-1.5"
+                onClick={() => {
+                  const pool = selectedIds.size > 0
+                    ? filteredRegistrations.filter(r => selectedIds.has(r.id))
+                    : filteredRegistrations;
+                  setMsgTargets(pool.filter(r => r.member_id).map(regRecipient));
+                }}
+              >
+                <Send className="h-3.5 w-3.5" />
+                Message {selectedIds.size > 0 ? `selected (${selectedIds.size})` : "filtered"}
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -1566,6 +1599,16 @@ function CourseRegistrationsView({ course }) {
                                     </Button>
                                   );
                                 })()}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => setMsgTargets([regRecipient(r)])}
+                                  disabled={!r.member_id}
+                                  title="Message this student"
+                                >
+                                  <Send className="h-3.5 w-3.5" />
+                                </Button>
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeleteTarget(r)}>
                                   <Trash2 className="h-3.5 w-3.5 text-destructive" />
                                 </Button>
@@ -1618,6 +1661,15 @@ function CourseRegistrationsView({ course }) {
         ]}
         isPending={deleteMutation.isPending}
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget)}
+      />
+
+      <MessageFilteredMembersDialog
+        open={!!msgTargets}
+        onOpenChange={(v) => { if (!v) setMsgTargets(null); }}
+        members={msgTargets || []}
+        source="bible_school_registrations"
+        audienceLabel={`Registrants — ${course.name}`}
+        filterContext={{ course: course.name, status: statusFilter, source: sourceFilter }}
       />
     </Card>
   );

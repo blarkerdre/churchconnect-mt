@@ -15,6 +15,7 @@ import SendResultsDialog from "@/components/exams/SendResultsDialog";
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 import { logAudit } from "@/lib/audit";
 import { useAuth } from "@/hooks/useAuth";
+import MessageFilteredMembersDialog from "@/components/analytics/MessageFilteredMembersDialog";
 
 function downloadCSV(filename, headers, rows) {
   const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
@@ -36,6 +37,15 @@ export default function CourseResultsView({ course }) {
   const [sendingBulk, setSendingBulk] = useState(false);
   const [deleteMember, setDeleteMember] = useState(null);
   const [sendDialog, setSendDialog] = useState(null); // { memberIds: string[] }
+  const [msgTargets, setMsgTargets] = useState(null);
+  const toRecipient = (m) => ({
+    id: m.id,
+    first_name: m.first_name,
+    last_name: m.last_name,
+    email: m.email,
+    phone: m.phone,
+    user_id: m.user_id || null,
+  });
 
   const classifications = course.grade_classifications || [
     { label: "Distinction", min_percentage: 75 },
@@ -67,7 +77,7 @@ export default function CourseResultsView({ course }) {
       if (subjectIds.length === 0) return [];
       const { data, error } = await supabase
         .from("exam_attempts")
-        .select("*, members(first_name, last_name)")
+        .select("*, members(first_name, last_name, email, phone, user_id)")
         .eq("tenant_id", course.tenant_id)
         .in("subject_id", subjectIds)
         .order("created_at", { ascending: false });
@@ -140,6 +150,11 @@ export default function CourseResultsView({ course }) {
     if (!memberMap[a.member_id]) {
       memberMap[a.member_id] = {
         name: `${a.members?.first_name || ""} ${a.members?.last_name || ""}`.trim(),
+        first_name: a.members?.first_name || "",
+        last_name: a.members?.last_name || "",
+        email: a.members?.email || null,
+        phone: a.members?.phone || null,
+        user_id: a.members?.user_id || null,
         subjects: {},
         totalScore: 0,
         totalPoints: 0,
