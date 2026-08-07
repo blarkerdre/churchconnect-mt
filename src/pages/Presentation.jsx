@@ -4,79 +4,113 @@ import {
   LayoutDashboard, Users, CalendarDays, UserCheck, Heart,
   Megaphone, Bus, Globe, BarChart3, Shield, CheckCircle2,
   Bell, Mail, MessageSquare, QrCode, ClipboardList, TrendingUp,
-  FileText, Lock, Eye, Smartphone, Zap, Church
+  FileText, Lock, Eye, Smartphone, Zap, Church, GraduationCap,
+  Baby, KeyRound, Award, Sparkles
 } from "lucide-react";
-import logo from "@/assets/winners-chapel-logo.png";
+
+const LOGO = "/lovable-uploads/church-connect-logo-transparent.png";
+const GOLD = "hsl(42,68%,54%)";
+const FOOTER = "Powered by DomiFort Solutions Limited";
+
+/** Shared slide wrapper: scrollable, responsive padding, consistent header + footer. */
+function SlideShell({ icon: Icon, title, subtitle, children, center = false }) {
+  return (
+    <div className="h-full w-full overflow-y-auto overscroll-contain">
+      <div className={`min-h-full flex flex-col ${center ? "justify-center" : ""} items-center gap-4 sm:gap-6 px-4 py-6 sm:px-8 sm:py-10`}>
+        {(Icon || title) && (
+          <div className="flex items-center gap-2 sm:gap-3 text-center">
+            {Icon ? <Icon className="h-6 w-6 sm:h-9 sm:w-9 shrink-0" style={{ color: GOLD }} /> : null}
+            <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white leading-tight" style={{ fontFamily: "'Playfair Display', serif" }}>
+              {title}
+            </h2>
+          </div>
+        )}
+        {subtitle ? (
+          <p className="text-white/60 text-sm sm:text-lg max-w-2xl text-center">{subtitle}</p>
+        ) : null}
+        <div className="w-full flex-1 flex flex-col items-center justify-center">
+          {children}
+        </div>
+        <p className="text-white/35 text-[10px] sm:text-xs tracking-wide pt-2">{FOOTER}</p>
+      </div>
+    </div>
+  );
+}
+
+const CARD = "bg-white/10 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-white/10";
+
+function FeatureGrid({ items, cols = 2, centerText = false }) {
+  const colClass = cols === 3
+    ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+    : cols === 4
+      ? "grid-cols-2 lg:grid-cols-4"
+      : "grid-cols-1 sm:grid-cols-2";
+  return (
+    <div className={`grid ${colClass} gap-3 sm:gap-5 max-w-5xl w-full`}>
+      {items.map(({ icon: Icon, title, desc }) => (
+        <div key={title} className={`${CARD} ${centerText ? "flex flex-col items-center text-center" : ""}`}>
+          {Icon ? <Icon className="h-6 w-6 sm:h-8 sm:w-8 mb-2 sm:mb-3" style={{ color: GOLD }} /> : null}
+          <h3 className="text-base sm:text-lg font-bold text-white mb-1 sm:mb-2">{title}</h3>
+          <p className="text-white/70 text-xs sm:text-sm leading-relaxed">{desc}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 const SLIDES = [
   // 1 — Title
   {
     bg: "from-[hsl(215,53%,18%)] to-[hsl(215,53%,30%)]",
     content: (
-      <div className="flex flex-col items-center justify-center h-full text-center gap-6 px-8">
-        <img src={logo} alt="Winners Chapel Logo" className="h-28 w-28 rounded-2xl shadow-lg" />
-        <h1 className="text-5xl md:text-7xl font-bold text-white tracking-tight" style={{ fontFamily: "'Playfair Display', serif" }}>
-          MyChurchConnect
-        </h1>
-        <p className="text-xl md:text-2xl text-white/70 max-w-2xl">
-          A Complete Church Management Platform
-        </p>
-        <div className="mt-4 px-6 py-2 rounded-full bg-[hsl(42,68%,54%)] text-[hsl(215,53%,12%)] font-semibold text-sm">
-          Winners Chapel International Cardiff
+      <SlideShell center>
+        <div className="flex flex-col items-center justify-center text-center gap-4 sm:gap-6">
+          <img src={LOGO} alt="ChurchConnect logo" className="h-20 w-20 sm:h-28 sm:w-28 object-contain drop-shadow-lg" />
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold text-white tracking-tight" style={{ fontFamily: "'Playfair Display', serif" }}>
+            ChurchConnect
+          </h1>
+          <p className="text-base sm:text-xl md:text-2xl text-white/70 max-w-2xl">
+            A Complete Church Management Platform
+          </p>
+          <div className="mt-2 px-5 py-2 rounded-full font-semibold text-xs sm:text-sm" style={{ background: GOLD, color: "hsl(215,53%,12%)" }}>
+            Demo Church
+          </div>
         </div>
-      </div>
+      </SlideShell>
     ),
   },
   // 2 — Overview
   {
     bg: "from-[hsl(215,53%,24%)] to-[hsl(215,40%,35%)]",
     content: (
-      <div className="flex flex-col items-center justify-center h-full px-8 gap-8">
-        <h2 className="text-4xl md:text-5xl font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
-          Why MyChurchConnect?
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl w-full">
-          {[
-            { icon: Users, title: "The Challenge", desc: "Churches need a centralised way to manage members, track attendance, coordinate follow-ups, and communicate — all in one place." },
-            { icon: Zap, title: "The Solution", desc: "MyChurchConnect brings everything together: member management, event coordination, pastoral care, communications, and analytics in a secure, role-based platform." },
-            { icon: Smartphone, title: "Mobile-First", desc: "Fully responsive design that works beautifully on phones, tablets, and desktops. Members can self-check-in and access their profile on the go." },
-            { icon: Shield, title: "Secure & Private", desc: "Enterprise-grade security with row-level policies, role-based access control, audit logging, and GDPR compliance built in." },
-          ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
-              <Icon className="h-8 w-8 text-[hsl(42,68%,54%)] mb-3" />
-              <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
-              <p className="text-white/70 text-sm leading-relaxed">{desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      <SlideShell title="Why ChurchConnect?">
+        <FeatureGrid items={[
+          { icon: Users, title: "The Challenge", desc: "Churches need one place to manage members, attendance, follow-ups, training and communication." },
+          { icon: Zap, title: "The Solution", desc: "Members, events, pastoral care, Bible School, children's ministry, communications and analytics in a single secure platform." },
+          { icon: Smartphone, title: "Mobile-First & Installable", desc: "Responsive across phone, tablet and desktop, installable as a PWA with push notifications." },
+          { icon: Shield, title: "Secure & Multi-Tenant", desc: "Row-level security, role-based access, audit logging, 2FA and GDPR compliance built in." },
+        ]} />
+      </SlideShell>
     ),
   },
-  // 3 — Dashboard
+  // 3 — Dashboards
   {
     bg: "from-[hsl(215,53%,20%)] to-[hsl(200,40%,28%)]",
     content: (
-      <div className="flex flex-col items-center justify-center h-full px-8 gap-6">
-        <div className="flex items-center gap-3">
-          <LayoutDashboard className="h-10 w-10 text-[hsl(42,68%,54%)]" />
-          <h2 className="text-4xl md:text-5xl font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
-            Smart Dashboard
-          </h2>
-        </div>
-        <p className="text-white/60 text-lg max-w-2xl text-center">Role-based views that show each user exactly what they need</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl w-full mt-2">
+      <SlideShell icon={LayoutDashboard} title="Smart Dashboards" subtitle="Role-based views that show each user exactly what they need">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5 max-w-5xl w-full">
           {[
-            { title: "Admin Dashboard", items: ["Total members & growth stats", "Recent activity feed", "Quick action cards", "Growth indices & trends"], color: "hsl(42,68%,54%)" },
-            { title: "Home Cell Leader View", items: ["Centre-specific stats", "Member attendance", "Meeting management", "Centre performance"], color: "hsl(160,50%,50%)" },
-            { title: "Member Dashboard", items: ["Personal welcome banner", "Self check-in widget", "Growth milestones", "Announcements feed"], color: "hsl(280,40%,60%)" },
+            { title: "Admin", items: ["Membership & growth stats", "Activity feed & alerts", "Quick actions", "Trends and indices"], color: GOLD },
+            { title: "Unit / Home Cell Leader", items: ["Unit-scoped records", "Meetings & attendance", "Task assignments", "Centre performance"], color: "hsl(160,50%,50%)" },
+            { title: "Member", items: ["Welcome banner & slideshow", "Self check-in widget", "Birthday celebrants", "Announcements feed"], color: "hsl(280,40%,60%)" },
           ].map(({ title, items, color }) => (
-            <div key={title} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
-              <div className="h-3 w-16 rounded-full mb-4" style={{ background: color }} />
-              <h3 className="text-lg font-bold text-white mb-3">{title}</h3>
-              <ul className="space-y-2">
+            <div key={title} className={CARD}>
+              <div className="h-2.5 w-14 rounded-full mb-3" style={{ background: color }} />
+              <h3 className="text-base sm:text-lg font-bold text-white mb-2">{title}</h3>
+              <ul className="space-y-1.5">
                 {items.map(item => (
-                  <li key={item} className="flex items-center gap-2 text-white/70 text-sm">
-                    <CheckCircle2 className="h-4 w-4 text-[hsl(160,50%,50%)] shrink-0" />
+                  <li key={item} className="flex items-start gap-2 text-white/70 text-xs sm:text-sm">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" style={{ color: "hsl(160,50%,50%)" }} />
                     {item}
                   </li>
                 ))}
@@ -84,278 +118,209 @@ const SLIDES = [
             </div>
           ))}
         </div>
-      </div>
+      </SlideShell>
     ),
   },
   // 4 — Member Management
   {
     bg: "from-[hsl(200,45%,22%)] to-[hsl(215,53%,28%)]",
     content: (
-      <div className="flex flex-col items-center justify-center h-full px-8 gap-6">
-        <div className="flex items-center gap-3">
-          <Users className="h-10 w-10 text-[hsl(42,68%,54%)]" />
-          <h2 className="text-4xl md:text-5xl font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
-            Member Management
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl w-full mt-2">
-          {[
-            { icon: ClipboardList, title: "Registration & Profiles", desc: "Complete member profiles with personal details, emergency contacts, and membership status tracking." },
-            { icon: QrCode, title: "QR Code Registration", desc: "Generate QR codes for quick public registration. New members can scan and fill their details instantly." },
-            { icon: TrendingUp, title: "Growth Milestones", desc: "Track spiritual growth: Water Baptism, Holy Spirit Baptism, BFC, BCC, LCC, LDC completion." },
-            { icon: Eye, title: "Status Tracking", desc: "Active, Inactive, New Convert, First Timer — comprehensive membership lifecycle management." },
-          ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
-              <Icon className="h-8 w-8 text-[hsl(42,68%,54%)] mb-3" />
-              <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
-              <p className="text-white/70 text-sm leading-relaxed">{desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      <SlideShell icon={Users} title="Member Management">
+        <FeatureGrid items={[
+          { icon: ClipboardList, title: "Profiles & Family", desc: "Full member profiles, occupation and nationality, emergency contacts and linked family members." },
+          { icon: QrCode, title: "QR Registration", desc: "Public registration links and QR codes so new members can self-register in seconds." },
+          { icon: TrendingUp, title: "Growth Milestones", desc: "Water Baptism, Holy Spirit Baptism, BFC, BCC, LCC and LDC progress at a glance." },
+          { icon: Eye, title: "Status Lifecycle", desc: "First Timer, New Convert, Visitor, Active and Inactive — with conversion reporting." },
+        ]} />
+      </SlideShell>
     ),
   },
   // 5 — Events & Attendance
   {
     bg: "from-[hsl(215,53%,22%)] to-[hsl(240,35%,28%)]",
     content: (
-      <div className="flex flex-col items-center justify-center h-full px-8 gap-6">
-        <div className="flex items-center gap-3">
-          <CalendarDays className="h-10 w-10 text-[hsl(42,68%,54%)]" />
-          <h2 className="text-4xl md:text-5xl font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
-            Events & Attendance
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl w-full mt-2">
-          {[
-            { title: "Event Creation", desc: "Create events with categories, capacity limits, registration options, and public visibility settings.", icon: CalendarDays },
-            { title: "Self Check-In", desc: "Members can check themselves in from their dashboard. Supports manual and QR-based check-in.", icon: Smartphone },
-            { title: "Session Tracking", desc: "Sunday Service, Midweek, Special Programs, Unit Meetings — track attendance across all session types.", icon: ClipboardList },
-          ].map(({ title, desc, icon: Icon }) => (
-            <div key={title} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/10 flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-2xl bg-[hsl(42,68%,54%)]/20 flex items-center justify-center mb-4">
-                <Icon className="h-8 w-8 text-[hsl(42,68%,54%)]" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
-              <p className="text-white/70 text-sm leading-relaxed">{desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      <SlideShell icon={CalendarDays} title="Events & Attendance">
+        <FeatureGrid cols={3} centerText items={[
+          { icon: CalendarDays, title: "Events", desc: "Categories, capacity, registration, reminders and public or audience-scoped visibility." },
+          { icon: Smartphone, title: "Self Check-In", desc: "Members check in from their dashboard, or scan a persistent QR code on arrival." },
+          { icon: FileText, title: "Rosters & Audit", desc: "Downloadable CSV and branded PDF rosters, with a full audit trail of every change." },
+        ]} />
+      </SlideShell>
     ),
   },
   // 6 — Follow-ups
   {
     bg: "from-[hsl(280,30%,22%)] to-[hsl(215,53%,24%)]",
     content: (
-      <div className="flex flex-col items-center justify-center h-full px-8 gap-6">
-        <div className="flex items-center gap-3">
-          <UserCheck className="h-10 w-10 text-[hsl(42,68%,54%)]" />
-          <h2 className="text-4xl md:text-5xl font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
-            Follow-Up System
-          </h2>
-        </div>
-        <p className="text-white/60 text-lg max-w-2xl text-center">Never let a new member fall through the cracks</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl w-full">
-          {[
-            { icon: UserCheck, title: "Auto-Assignment", desc: "First timers and new converts are automatically flagged for follow-up with configurable assignment rules." },
-            { icon: Bell, title: "Smart Notifications", desc: "Email and SMS notifications sent automatically when follow-ups are assigned or become overdue." },
-            { icon: ClipboardList, title: "Status Tracking", desc: "Pending → In Progress → Completed workflow with due dates, priority levels, and detailed notes." },
-            { icon: BarChart3, title: "Overdue Alerts", desc: "Dashboard alerts highlight overdue follow-ups so no one gets missed. Leaders see real-time status." },
-          ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
-              <Icon className="h-8 w-8 text-[hsl(42,68%,54%)] mb-3" />
-              <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
-              <p className="text-white/70 text-sm leading-relaxed">{desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      <SlideShell icon={UserCheck} title="Follow-Ups & Sign-Posting" subtitle="Never let a new member fall through the cracks">
+        <FeatureGrid items={[
+          { icon: UserCheck, title: "Auto-Assignment", desc: "First timers and new converts are flagged automatically with configurable assignment rules." },
+          { icon: Bell, title: "Smart Notifications", desc: "In-app, email and SMS alerts when follow-ups are assigned or become overdue." },
+          { icon: MessageSquare, title: "Sign-Posting", desc: "Refer a member to another team, track the referral timeline and close the loop with updates." },
+          { icon: BarChart3, title: "Overdue Reporting", desc: "Dashboards and printable reports keep leaders on top of pending care." },
+        ]} />
+      </SlideShell>
     ),
   },
   // 7 — Pastoral Care
   {
     bg: "from-[hsl(160,35%,18%)] to-[hsl(215,53%,22%)]",
     content: (
-      <div className="flex flex-col items-center justify-center h-full px-8 gap-6">
-        <div className="flex items-center gap-3">
-          <Heart className="h-10 w-10 text-[hsl(42,68%,54%)]" />
-          <h2 className="text-4xl md:text-5xl font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
-            Pastoral Care
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl w-full mt-2">
-          {[
-            "Counselling", "Visitation", "Prayer Request", "Hospital Visit",
-            "Bereavement", "Marriage", "Financial Support", "Other"
-          ].map(type => (
-            <div key={type} className="bg-white/10 backdrop-blur-sm rounded-xl px-5 py-4 border border-white/10 flex items-center gap-3">
-              <Heart className="h-5 w-5 text-[hsl(42,68%,54%)] shrink-0" />
-              <span className="text-white font-medium">{type}</span>
+      <SlideShell icon={Heart} title="Pastoral Care">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 max-w-4xl w-full">
+          {["Counselling", "Visitation", "Prayer Request", "Hospital Visit", "Bereavement", "Marriage", "Testimony", "Life Events"].map(type => (
+            <div key={type} className="bg-white/10 backdrop-blur-sm rounded-xl px-3 py-3 sm:px-5 sm:py-4 border border-white/10 flex items-center gap-2">
+              <Heart className="h-4 w-4 shrink-0" style={{ color: GOLD }} />
+              <span className="text-white font-medium text-xs sm:text-base">{type}</span>
             </div>
           ))}
         </div>
-        <div className="bg-white/5 rounded-2xl p-5 max-w-3xl w-full border border-white/10 mt-2">
-          <p className="text-white/80 text-sm leading-relaxed text-center">
-            Members can submit care requests directly. Cases are assigned to pastoral team members with email & SMS notifications. 
-            Full history tracking with confidentiality controls and resolution notes.
+        <div className="bg-white/5 rounded-2xl p-4 sm:p-5 max-w-3xl w-full border border-white/10 mt-4">
+          <p className="text-white/80 text-xs sm:text-sm leading-relaxed text-center">
+            Members submit care requests directly. Cases are assigned to the pastoral team with notifications,
+            confidentiality controls, full history and resolution notes.
           </p>
         </div>
-      </div>
+      </SlideShell>
     ),
   },
   // 8 — Communications
   {
     bg: "from-[hsl(215,53%,24%)] to-[hsl(42,40%,25%)]",
     content: (
-      <div className="flex flex-col items-center justify-center h-full px-8 gap-6">
-        <div className="flex items-center gap-3">
-          <Megaphone className="h-10 w-10 text-[hsl(42,68%,54%)]" />
-          <h2 className="text-4xl md:text-5xl font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
-            Communications
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl w-full mt-2">
-          {[
-            { icon: Megaphone, title: "Announcements", desc: "Create and publish announcements with categories, target audiences, publish dates, and expiry dates." },
-            { icon: Mail, title: "Email Alerts", desc: "Send bulk email notifications to members with delivery tracking and unsubscribe management." },
-            { icon: MessageSquare, title: "SMS Messaging", desc: "Twilio-powered SMS with delivery tracking, message history, invalid number detection, and webhook status updates." },
-          ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/10 flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-2xl bg-[hsl(42,68%,54%)]/20 flex items-center justify-center mb-4">
-                <Icon className="h-8 w-8 text-[hsl(42,68%,54%)]" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
-              <p className="text-white/70 text-sm leading-relaxed">{desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      <SlideShell icon={Megaphone} title="Communications">
+        <FeatureGrid cols={2} items={[
+          { icon: Megaphone, title: "Announcements", desc: "Targeted audiences, publish and expiry dates, reactions and read tracking." },
+          { icon: Mail, title: "Email", desc: "Branded transactional and bulk email with delivery tracking and unsubscribe management." },
+          { icon: MessageSquare, title: "SMS & WhatsApp", desc: "Multi-provider messaging with quotas, delivery status and invalid-number detection." },
+          { icon: Bell, title: "In-App & Push", desc: "Real-time notification bell plus installable push notifications on mobile devices." },
+        ]} />
+      </SlideShell>
     ),
   },
-  // 9 — Transportation
+  // 9 — Bible School
+  {
+    bg: "from-[hsl(215,53%,18%)] to-[hsl(160,35%,24%)]",
+    content: (
+      <SlideShell icon={GraduationCap} title="Bible School" subtitle="End-to-end training administration, session by session">
+        <FeatureGrid cols={3} items={[
+          { icon: ClipboardList, title: "Applications & Registration", desc: "Public or member applications, approval workflow and automated student-number emails." },
+          { icon: CalendarDays, title: "Sessions & Editions", desc: "Open and close editions; every tab, report and export follows the selected session." },
+          { icon: QrCode, title: "Attendance", desc: "Persistent QR check-in and check-out, punctuality tracking and downloadable rosters." },
+          { icon: FileText, title: "Exams & Results", desc: "Question banks per subject, secure exam links, automated grading and classifications." },
+          { icon: CheckCircle2, title: "Quality Control", desc: "Training Rep QC checklists per lecturer and subject, plus lecturer and course feedback." },
+          { icon: Award, title: "Certificates & Reports", desc: "Statement of result, branded certificates and an editable final course report." },
+        ]} />
+      </SlideShell>
+    ),
+  },
+  // 10 — Children & Teens
+  {
+    bg: "from-[hsl(200,45%,20%)] to-[hsl(280,30%,26%)]",
+    content: (
+      <SlideShell icon={Baby} title="Children & Teens Church" subtitle="Safeguarding-first check-in for every age group">
+        <FeatureGrid cols={2} items={[
+          { icon: QrCode, title: "QR Check-In / Out", desc: "One persistent QR code per ministry; the link only works while a session is open." },
+          { icon: KeyRound, title: "Secure Pickup", desc: "PIN-based pickup, authorised adults, delegation codes and leader override." },
+          { icon: Shield, title: "Parental Consent", desc: "Attendance requires explicit parental consent, managed from My Family." },
+          { icon: Bell, title: "Parent Notifications", desc: "In-app notifications to parents the moment a child or teen checks in or out." },
+        ]} />
+      </SlideShell>
+    ),
+  },
+  // 11 — Home Cell
+  {
+    bg: "from-[hsl(42,30%,18%)] to-[hsl(215,53%,22%)]",
+    content: (
+      <SlideShell icon={Church} title="Home Cell Centres" subtitle="Extending the church into communities">
+        <FeatureGrid items={[
+          { icon: Globe, title: "Centre Management", desc: "Locations, meeting day and time, coverage postcodes and assigned leaders." },
+          { icon: Users, title: "Member Assignment", desc: "Suggest the nearest centre by postcode and track centre membership." },
+          { icon: ClipboardList, title: "Attendance Reports", desc: "Demographic counts, first timers and testimonies captured per meeting." },
+          { icon: BarChart3, title: "Leader Dashboard", desc: "Centre performance, members and attendance history at a glance." },
+        ]} />
+      </SlideShell>
+    ),
+  },
+  // 12 — Transportation
   {
     bg: "from-[hsl(215,53%,20%)] to-[hsl(200,50%,25%)]",
     content: (
-      <div className="flex flex-col items-center justify-center h-full px-8 gap-6">
-        <div className="flex items-center gap-3">
-          <Bus className="h-10 w-10 text-[hsl(42,68%,54%)]" />
-          <h2 className="text-4xl md:text-5xl font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
-            Transportation
-          </h2>
-        </div>
-        <p className="text-white/60 text-lg max-w-2xl text-center">Help members get to church with an integrated ride-booking system</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl w-full mt-2">
+      <SlideShell icon={Bus} title="Transportation" subtitle="Integrated ride booking so nobody misses a service">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 max-w-4xl w-full">
           {[
             { label: "Request Ride", icon: Smartphone },
             { label: "Assign Driver", icon: UserCheck },
             { label: "Track Status", icon: Eye },
-            { label: "Pickup Locations", icon: Globe },
+            { label: "Pickup Points", icon: Globe },
           ].map(({ label, icon: Icon }) => (
-            <div key={label} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/10 flex flex-col items-center gap-3 text-center">
-              <div className="h-14 w-14 rounded-xl bg-[hsl(42,68%,54%)]/20 flex items-center justify-center">
-                <Icon className="h-7 w-7 text-[hsl(42,68%,54%)]" />
+            <div key={label} className={`${CARD} flex flex-col items-center gap-2 text-center`}>
+              <div className="h-11 w-11 sm:h-14 sm:w-14 rounded-xl flex items-center justify-center" style={{ background: "hsl(42,68%,54%,0.2)" }}>
+                <Icon className="h-5 w-5 sm:h-7 sm:w-7" style={{ color: GOLD }} />
               </div>
-              <span className="text-white font-semibold text-sm">{label}</span>
+              <span className="text-white font-semibold text-xs sm:text-sm">{label}</span>
             </div>
           ))}
         </div>
-        <div className="bg-white/5 rounded-2xl p-5 max-w-3xl w-full border border-white/10">
-          <p className="text-white/70 text-sm text-center">
-            Pending → Confirmed → Completed workflow • Driver assignment with phone details • Passenger count tracking
+        <div className="bg-white/5 rounded-2xl p-4 max-w-3xl w-full border border-white/10 mt-4">
+          <p className="text-white/70 text-xs sm:text-sm text-center">
+            Pending to Confirmed to Completed workflow • Driver availability and route planning • Passenger tracking and reports
           </p>
         </div>
-      </div>
+      </SlideShell>
     ),
   },
-  // 10 — Home Cell Centres
-  {
-    bg: "from-[hsl(42,30%,18%)] to-[hsl(215,53%,22%)]",
-    content: (
-      <div className="flex flex-col items-center justify-center h-full px-8 gap-6">
-        <div className="flex items-center gap-3">
-          <Church className="h-10 w-10 text-[hsl(42,68%,54%)]" />
-          <h2 className="text-4xl md:text-5xl font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
-            Home Cell Centres
-          </h2>
-        </div>
-        <p className="text-white/60 text-lg max-w-2xl text-center">Home Cell Fellowship — extending the church into communities</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl w-full mt-2">
-          {[
-            { icon: Globe, title: "Centre Management", desc: "Create and manage Home Cell centres with location, meeting day/time, coverage postcodes, and assigned leaders." },
-            { icon: Users, title: "Member Assignment", desc: "Auto-suggest nearest centre based on member postcode. Assign and track Home Cell membership." },
-            { icon: ClipboardList, title: "Attendance Reports", desc: "Record meeting attendance with male/female/children counts, first timers, and testimonies." },
-            { icon: BarChart3, title: "Leader Dashboard", desc: "Home Cell leaders see their centre's performance, members, and attendance history at a glance." },
-          ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
-              <Icon className="h-8 w-8 text-[hsl(42,68%,54%)] mb-3" />
-              <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
-              <p className="text-white/70 text-sm leading-relaxed">{desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    ),
-  },
-  // 11 — Analytics
+  // 13 — Analytics
   {
     bg: "from-[hsl(215,53%,18%)] to-[hsl(280,30%,25%)]",
     content: (
-      <div className="flex flex-col items-center justify-center h-full px-8 gap-6">
-        <div className="flex items-center gap-3">
-          <BarChart3 className="h-10 w-10 text-[hsl(42,68%,54%)]" />
-          <h2 className="text-4xl md:text-5xl font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
-            Analytics & Reports
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl w-full mt-2">
-          {[
-            { icon: TrendingUp, title: "Attendance Trends", desc: "Visualise attendance patterns across services with interactive charts and date-range filters." },
-            { icon: Bell, title: "Absence Alerts", desc: "Automatically identify members who've missed multiple consecutive services for timely follow-up." },
-            { icon: Users, title: "Member Consistency", desc: "Score and rank members by attendance consistency to identify engagement levels." },
-            { icon: FileText, title: "BFC & Training Report", desc: "Track BFC, BCC, LCC training sessions with attendance breakdowns by gender and milestones." },
-          ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
-              <Icon className="h-8 w-8 text-[hsl(42,68%,54%)] mb-3" />
-              <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
-              <p className="text-white/70 text-sm leading-relaxed">{desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      <SlideShell icon={BarChart3} title="Analytics & Reports">
+        <FeatureGrid items={[
+          { icon: TrendingUp, title: "Attendance Trends", desc: "Interactive charts with demographic breakdowns and date-range filters." },
+          { icon: Bell, title: "Absence Alerts", desc: "Spot members who have missed consecutive services and act quickly." },
+          { icon: Users, title: "Milestone & Conversion", desc: "Milestone-gap reports and First Timer to Active conversion tracking with one-click messaging." },
+          { icon: FileText, title: "Reports Hub", desc: "A read-only Reports Officer role with cross-module reporting and exports." },
+        ]} />
+      </SlideShell>
     ),
   },
-  // 12 — Security & Admin
+  // 14 — Security
   {
     bg: "from-[hsl(215,53%,14%)] to-[hsl(215,53%,24%)]",
     content: (
-      <div className="flex flex-col items-center justify-center h-full px-8 gap-6">
-        <div className="flex items-center gap-3">
-          <Shield className="h-10 w-10 text-[hsl(42,68%,54%)]" />
-          <h2 className="text-4xl md:text-5xl font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
-            Security & Administration
+      <SlideShell icon={Shield} title="Security & Administration">
+        <FeatureGrid cols={3} centerText items={[
+          { icon: Lock, title: "Role-Based Access", desc: "Super Admin, Admin, Unit Leader, Home Cell Leader, Reports Officer and Member permissions." },
+          { icon: KeyRound, title: "Two-Factor Auth", desc: "TOTP enforced at sign-in, with administrator-assisted reset when a device is lost." },
+          { icon: FileText, title: "Audit Logging", desc: "Every significant action logged with user, timestamp and field-level changes." },
+        ]} />
+        <div className="mt-4 flex flex-col items-center gap-1.5 text-center">
+          <p className="font-bold text-base sm:text-xl" style={{ color: GOLD }}>Built with a security-first architecture</p>
+          <p className="text-white/50 text-[11px] sm:text-sm">Row-Level Security • Multi-Tenant Isolation • UK Data Residency • GDPR Compliance</p>
+        </div>
+      </SlideShell>
+    ),
+  },
+  // 15 — Closing
+  {
+    bg: "from-[hsl(215,53%,16%)] to-[hsl(42,40%,24%)]",
+    content: (
+      <SlideShell center>
+        <div className="flex flex-col items-center justify-center text-center gap-4 sm:gap-6">
+          <img src={LOGO} alt="ChurchConnect logo" className="h-16 w-16 sm:h-24 sm:w-24 object-contain" />
+          <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
+            Thank You
           </h2>
+          <p className="text-white/70 text-sm sm:text-lg max-w-xl">
+            ChurchConnect — one secure platform for people, ministry and growth.
+          </p>
+          <div className="flex items-center gap-2 px-5 py-2 rounded-full font-semibold text-xs sm:text-sm" style={{ background: GOLD, color: "hsl(215,53%,12%)" }}>
+            <Sparkles className="h-4 w-4" />
+            Powered by DomiFort Solutions Limited
+          </div>
+          <p className="text-white/45 text-xs sm:text-sm">Demo Church</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl w-full mt-2">
-          {[
-            { icon: Lock, title: "Role-Based Access", desc: "Super Admin, Admin, Unit Leader, Home Cell Leader, Member — granular permissions for every feature." },
-            { icon: FileText, title: "Audit Logging", desc: "Every significant action is logged with user ID, timestamp, entity type, and details for full accountability." },
-            { icon: Users, title: "User Management", desc: "Create, invite, and manage user accounts. Assign roles and unit leader responsibilities." },
-          ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/10 flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-2xl bg-[hsl(42,68%,54%)]/20 flex items-center justify-center mb-4">
-                <Icon className="h-8 w-8 text-[hsl(42,68%,54%)]" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">{title}</h3>
-              <p className="text-white/70 text-sm leading-relaxed">{desc}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-4 flex flex-col items-center gap-2">
-          <p className="text-[hsl(42,68%,54%)] font-bold text-xl">Built with security-first architecture</p>
-          <p className="text-white/50 text-sm">Row-Level Security • JWT Authentication • GDPR Compliance • Encrypted Communications</p>
-        </div>
-      </div>
+      </SlideShell>
     ),
   },
 ];
@@ -407,8 +372,10 @@ export default function Presentation() {
         {/* Slide */}
         <div
           id="presentation-slide"
-          className={`flex-1 bg-gradient-to-br ${slide.bg} transition-all duration-500 relative overflow-hidden`}
+          className={`flex-1 min-h-0 bg-gradient-to-br ${slide.bg} transition-all duration-500 relative overflow-hidden`}
           onClick={(e) => {
+            // Tap-to-advance only on wider screens so mobile scrolling isn't hijacked
+            if (window.innerWidth < 768) return;
             const rect = e.currentTarget.getBoundingClientRect();
             const x = e.clientX - rect.left;
             if (x > rect.width / 2) goNext(); else goPrev();
@@ -418,12 +385,12 @@ export default function Presentation() {
         </div>
 
         {/* Controls */}
-        <div id="presentation-controls" className="bg-black/80 backdrop-blur-sm px-4 py-3 flex items-center justify-between gap-4">
+        <div id="presentation-controls" className="bg-black/80 backdrop-blur-sm px-3 py-2.5 sm:px-4 sm:py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <button onClick={goPrev} disabled={current === 0} className="text-white/60 hover:text-white disabled:opacity-30 transition-colors p-1">
               <ChevronLeft className="h-6 w-6" />
             </button>
-            <span className="text-white/70 text-sm font-mono min-w-[60px] text-center">
+            <span className="text-white/70 text-xs sm:text-sm font-mono min-w-[54px] text-center">
               {current + 1} / {SLIDES.length}
             </span>
             <button onClick={goNext} disabled={current === SLIDES.length - 1} className="text-white/60 hover:text-white disabled:opacity-30 transition-colors p-1">
@@ -437,7 +404,8 @@ export default function Presentation() {
               <button
                 key={i}
                 onClick={() => setCurrent(i)}
-                className={`h-2 rounded-full transition-all ${i === current ? "w-6 bg-[hsl(42,68%,54%)]" : "w-2 bg-white/30 hover:bg-white/50"}`}
+                className={`h-2 rounded-full transition-all ${i === current ? "w-6" : "w-2 bg-white/30 hover:bg-white/50"}`}
+                style={i === current ? { background: GOLD } : undefined}
               />
             ))}
           </div>
