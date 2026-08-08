@@ -940,45 +940,47 @@ function ExamManagementInner() {
             </div>
 
           )}
-          <LecturerFeedbackReport />
-          <LecturerManager />
-          <RateLecturerDialog open={adminRateOpen} onOpenChange={setAdminRateOpen} />
+          <React.Suspense fallback={<TabFallback />}>
+            <LecturerFeedbackReport />
+            <LecturerManager />
+            {adminRateOpen && <RateLecturerDialog open={adminRateOpen} onOpenChange={setAdminRateOpen} />}
+          </React.Suspense>
         </TabsContent>
 
         <TabsContent value="qc" className="space-y-4 mt-4">
-          <QcReport />
+          <React.Suspense fallback={<TabFallback />}><QcReport /></React.Suspense>
         </TabsContent>
 
         <TabsContent value="applications" className="space-y-4 mt-4">
-          <WoFBIApplicationsTab />
+          <React.Suspense fallback={<TabFallback />}><WoFBIApplicationsTab /></React.Suspense>
         </TabsContent>
 
         <TabsContent value="students" className="space-y-4 mt-4">
-          <StudentsReportTab />
+          <React.Suspense fallback={<TabFallback />}><StudentsReportTab /></React.Suspense>
         </TabsContent>
 
 
 
         <TabsContent value="app-form" className="space-y-4 mt-4">
-          <WoFBIApplicationFormEditor />
+          <React.Suspense fallback={<TabFallback />}><WoFBIApplicationFormEditor /></React.Suspense>
         </TabsContent>
 
         <TabsContent value="feedback-form" className="space-y-4 mt-4">
-          <WoFBIFeedbackFormEditor />
+          <React.Suspense fallback={<TabFallback />}><WoFBIFeedbackFormEditor /></React.Suspense>
         </TabsContent>
 
 
         <TabsContent value="attendance" className="space-y-4 mt-4">
-          <WoFBIAttendanceTab />
+          <React.Suspense fallback={<TabFallback />}><WoFBIAttendanceTab /></React.Suspense>
         </TabsContent>
 
         <TabsContent value="sessions" className="space-y-4 mt-4">
-          <SessionManager />
+          <React.Suspense fallback={<TabFallback />}><SessionManager /></React.Suspense>
         </TabsContent>
 
 
         <TabsContent value="course-report" className="space-y-4 mt-4">
-          <CourseReportTab />
+          <React.Suspense fallback={<TabFallback />}><CourseReportTab /></React.Suspense>
         </TabsContent>
       </Tabs>
     </div>
