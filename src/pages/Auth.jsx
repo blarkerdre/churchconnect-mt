@@ -41,16 +41,17 @@ export default function Auth() {
 
 
   // Fallback: if dataLoaded never flips (e.g., preview proxy hangs Supabase
-  // calls), unblock the redirect after 4s so the user isn't stranded on /auth.
+  // calls), unblock the redirect after 12s so the user isn't stranded on /auth.
   useEffect(() => {
     if (!user || dataLoaded) return;
-    const t = setTimeout(() => setWaitedForData(true), 4000);
+    const t = setTimeout(() => setWaitedForData(true), 12000);
     return () => clearTimeout(t);
   }, [user, dataLoaded]);
 
   // Auto sign-out accounts with no tenant membership. Credentials still
   // authenticate against auth.users, but without a tenant row the account
   // has no access to any church, so we don't leave them signed in.
+  // A *failed* lookup is not the same as "no membership" — never sign out then.
   const didAutoSignOutRef = useRef(false);
   useEffect(() => {
     if (!user) didAutoSignOutRef.current = false;
@@ -58,6 +59,7 @@ export default function Auth() {
   useEffect(() => {
     if (didAutoSignOutRef.current) return;
     if (!user || !dataLoaded) return;
+    if (dataError) return;
     if (tenantSlug) return;
     if (claimToken && !claimDone) return;
     const hasMembership = !!tenantMemberships?.[0]?.tenants?.slug;
@@ -69,7 +71,8 @@ export default function Auth() {
       variant: "destructive",
     });
     signOut();
-  }, [user, dataLoaded, tenantSlug, tenantMemberships, claimToken, claimDone, signOut, toast]);
+  }, [user, dataLoaded, dataError, tenantSlug, tenantMemberships, claimToken, claimDone, signOut, toast]);
+
 
 
   useEffect(() => {
