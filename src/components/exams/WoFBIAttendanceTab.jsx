@@ -63,35 +63,8 @@ function punctualityGrade(score) {
   return { label: "Poor", cls: "bg-red-100 text-red-800" };
 }
 
-// Arrival position helpers (1st, 2nd, 3rd ...)
-function ordinal(n) {
-  if (n == null || !isFinite(n)) return "—";
-  const i = Math.round(n);
-  const mod100 = i % 100;
-  if (mod100 >= 11 && mod100 <= 13) return `${i}th`;
-  switch (i % 10) {
-    case 1: return `${i}st`;
-    case 2: return `${i}nd`;
-    case 3: return `${i}rd`;
-    default: return `${i}th`;
-  }
-}
+// Arrival position helpers live in @/lib/rank-utils (ordinal, PositionBadge)
 
-function positionCls(pos) {
-  if (pos === 1) return "bg-amber-100 text-amber-900 border border-amber-300";
-  if (pos === 2) return "bg-slate-200 text-slate-800 border border-slate-300";
-  if (pos === 3) return "bg-orange-100 text-orange-900 border border-orange-300";
-  return "bg-muted text-muted-foreground";
-}
-
-function PositionBadge({ pos }) {
-  if (!pos) return <span className="text-xs text-muted-foreground">—</span>;
-  return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${positionCls(pos)}`}>
-      {ordinal(pos)}
-    </span>
-  );
-}
 
 // Builds Map<record_id, arrival position within its session>; ties share a position
 function buildPositionMap(records) {
