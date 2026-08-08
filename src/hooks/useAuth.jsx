@@ -288,16 +288,17 @@ export function AuthProvider({ children }) {
   }, [myMember?.church_unit]);
 
   const value = useMemo(() => ({
-    user, profile, roles, loading, dataLoaded, leaderUnits, leaderCentres, myUnits, myMember, tenantMemberships,
+    user, profile, roles, loading, dataLoaded, dataError, leaderUnits, leaderCentres, myUnits, myMember, tenantMemberships,
     signUp, signIn, signOut, resetPassword, updatePassword,
     isAdmin, isUnitLeader, isWSFLeader, isMember, isReportsOfficer, isReadOnly,
     isTenantOwner, isTenantAdmin,
     refreshUser,
     refetchMemberForTenant,
     mfaRequired, refreshMfaStatus,
-  }), [user, profile, roles, loading, dataLoaded, leaderUnits, leaderCentres, myUnits, myMember, tenantMemberships,
+  }), [user, profile, roles, loading, dataLoaded, dataError, leaderUnits, leaderCentres, myUnits, myMember, tenantMemberships,
        isAdmin, isUnitLeader, isWSFLeader, isMember, isReportsOfficer, isReadOnly, isTenantOwner, isTenantAdmin,
        refreshUser, refetchMemberForTenant, mfaRequired, refreshMfaStatus]);
+
 
 
 
