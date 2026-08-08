@@ -1264,7 +1264,9 @@ export default function WoFBIAttendanceTab() {
                 <TableRow>
                   <TableHead>Student</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Arrival</TableHead>
                   <TableHead>Time in</TableHead>
+
                   <TableHead>Time out</TableHead>
                   <TableHead>Duration</TableHead>
                   <TableHead>Punctuality</TableHead>
