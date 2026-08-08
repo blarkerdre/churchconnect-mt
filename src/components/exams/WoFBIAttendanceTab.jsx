@@ -1290,7 +1290,11 @@ export default function WoFBIAttendanceTab() {
                         {status === "late" && <Badge className="bg-amber-100 text-amber-800 gap-1"><Clock className="h-3 w-3" /> Late</Badge>}
                         {status === "absent" && <Badge variant="secondary" className="gap-1"><XCircle className="h-3 w-3" /> Absent</Badge>}
                       </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <PositionBadge pos={rec ? rosterPositions.get(rec.id) : null} />
+                      </TableCell>
                       <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_in_at)}</TableCell>
+
                       <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_out_at)}</TableCell>
                       <TableCell className="text-xs whitespace-nowrap">{fmtDuration(rec?.duration_minutes)}</TableCell>
                       <TableCell>
