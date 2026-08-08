@@ -733,10 +733,12 @@ export default function WoFBIAttendanceTab() {
         `${reg.members?.first_name || ""} ${reg.members?.last_name || ""}`.trim(),
         reg.student_number || "—",
         status,
+        rec && positionByRecord.get(rec.id) ? ordinal(positionByRecord.get(rec.id)) : "—",
         fmtTime(rec?.checked_in_at),
         fmtTime(rec?.checked_out_at),
         fmtDuration(rec?.duration_minutes),
       ];
+
     });
     const present = rows.filter((r) => r[3] === "Present").length;
     const late = rows.filter((r) => r[3] === "Late").length;
