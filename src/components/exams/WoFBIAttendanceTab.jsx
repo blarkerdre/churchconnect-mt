@@ -762,7 +762,7 @@ export default function WoFBIAttendanceTab() {
         ["Absent", rows.length - present - late],
         ["Rate", rows.length ? `${Math.round(((present + late) / rows.length) * 100)}%` : "0%"],
       ],
-      headers: ["#", "Name", "Student no.", "Status", "Time in", "Time out", "Duration"],
+      headers: ["#", "Name", "Student no.", "Status", "Arrival", "Time in", "Time out", "Duration"],
       rows,
       filename: `roster-${courseForExport?.name || "course"}-${session.title || "session"}-${session.session_date}`,
     };
