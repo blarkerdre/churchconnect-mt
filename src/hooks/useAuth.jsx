@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { isMfaChallengeRequired, clearMfaPassed } from "@/hooks/useMfa";
+import { withClockSkewRetry, isClockSkewError } from "@/lib/supabase-retry";
+
 
 
 const noop = async () => ({ data: null, error: new Error("Auth not initialized") });
