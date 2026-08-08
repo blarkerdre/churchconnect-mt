@@ -779,9 +779,12 @@ export default function WoFBIAttendanceTab() {
       s.totalSessions,
       `${s.percent}%`,
       `${s.punctualityScore}% (${punctualityGrade(s.punctualityScore).label})`,
+      s.avgPosition != null ? s.avgPosition : "—",
+      s.punctualityRank ? ordinal(s.punctualityRank) : "—",
       (s.totalMinutes / 60).toFixed(2),
       s.missingCheckouts,
     ]);
+
     const fullyPresent = perStudent.filter((s) => s.absent === 0).length;
     return {
       title: `Attendance Roster — ${courseForExport?.name || "Course"}${isAllEditions ? " (all sessions)" : ` — ${editionName}`}`,
