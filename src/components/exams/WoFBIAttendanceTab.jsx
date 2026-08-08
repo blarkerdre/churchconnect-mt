@@ -63,6 +63,60 @@ function punctualityGrade(score) {
   return { label: "Poor", cls: "bg-red-100 text-red-800" };
 }
 
+// Arrival position helpers (1st, 2nd, 3rd ...)
+function ordinal(n) {
+  if (n == null || !isFinite(n)) return "—";
+  const i = Math.round(n);
+  const mod100 = i % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${i}th`;
+  switch (i % 10) {
+    case 1: return `${i}st`;
+    case 2: return `${i}nd`;
+    case 3: return `${i}rd`;
+    default: return `${i}th`;
+  }
+}
+
+function positionCls(pos) {
+  if (pos === 1) return "bg-amber-100 text-amber-900 border border-amber-300";
+  if (pos === 2) return "bg-slate-200 text-slate-800 border border-slate-300";
+  if (pos === 3) return "bg-orange-100 text-orange-900 border border-orange-300";
+  return "bg-muted text-muted-foreground";
+}
+
+function PositionBadge({ pos }) {
+  if (!pos) return <span className="text-xs text-muted-foreground">—</span>;
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${positionCls(pos)}`}>
+      {ordinal(pos)}
+    </span>
+  );
+}
+
+// Builds Map<record_id, arrival position within its session>; ties share a position
+function buildPositionMap(records) {
+  const bySession = new Map();
+  for (const r of records) {
+    if (!r.checked_in_at) continue;
+    if (!bySession.has(r.session_id)) bySession.set(r.session_id, []);
+    bySession.get(r.session_id).push(r);
+  }
+  const map = new Map();
+  for (const list of bySession.values()) {
+    list.sort((a, b) => new Date(a.checked_in_at) - new Date(b.checked_in_at));
+    let pos = 0;
+    let prev = null;
+    list.forEach((r, idx) => {
+      const t = new Date(r.checked_in_at).getTime();
+      if (prev === null || t !== prev) { pos = idx + 1; prev = t; }
+      map.set(r.id, pos);
+    });
+  }
+  return map;
+}
+
+
+
 function StarRating({ value, onChange, disabled }) {
   return (
     <div className="inline-flex items-center gap-0.5">
@@ -586,10 +640,15 @@ export default function WoFBIAttendanceTab() {
     });
   };
 
+  // Arrival position per attendance record (1st, 2nd, 3rd ... within each session)
+  const positionByRecord = useMemo(() => buildPositionMap(allRecords), [allRecords]);
+  const rosterPositions = useMemo(() => buildPositionMap(rosterRecords), [rosterRecords]);
+
+
   // Attendance % per student
   const perStudent = useMemo(() => {
     const totalSessions = sessions.length;
-    return roster.map((r) => {
+    const list = roster.map((r) => {
       const recs = allRecords.filter((x) => x.registration_id === r.id);
       const present = recs.filter((x) => x.status === "present").length;
       const late = recs.filter((x) => x.status === "late").length;
@@ -604,6 +663,10 @@ export default function WoFBIAttendanceTab() {
       const manualRating = rated.length
         ? Math.round((rated.reduce((sum, x) => sum + x.punctuality_rating, 0) / rated.length) * 10) / 10
         : null;
+      const positions = recs.map((x) => positionByRecord.get(x.id)).filter(Boolean);
+      const avgPosition = positions.length
+        ? Math.round((positions.reduce((sum, p) => sum + p, 0) / positions.length) * 10) / 10
+        : null;
       return {
         registration: r,
         present,
@@ -614,13 +677,24 @@ export default function WoFBIAttendanceTab() {
         missingCheckouts,
         punctualityScore,
         manualRating,
+        avgPosition,
+        positionsCount: positions.length,
         percent: totalSessions ? Math.round((attended / totalSessions) * 100) : 0,
       };
     });
-  }, [roster, allRecords, sessions.length]);
+    // Dense rank on avgPosition (lower is better); un-ranked students go last
+    const ranked = list.filter((s) => s.avgPosition != null).sort((a, b) => a.avgPosition - b.avgPosition);
+    let rank = 0;
+    let prev = null;
+    ranked.forEach((s, idx) => {
+      if (prev === null || s.avgPosition !== prev) { rank = idx + 1; prev = s.avgPosition; }
+      s.punctualityRank = rank;
+    });
+    return list;
+  }, [roster, allRecords, sessions.length, positionByRecord]);
 
   const exportCsv = () => {
-    const header = ["Student number", "Name", "Present", "Late", "Absent", "Total sessions", "Attendance %", "Punctuality %", "Punctuality grade", "Punctuality rating", "Total hours", "Missing check-outs"];
+    const header = ["Student number", "Name", "Present", "Late", "Absent", "Total sessions", "Attendance %", "Punctuality %", "Punctuality grade", "Punctuality rating", "Avg. arrival position", "Punctuality rank", "Total hours", "Missing check-outs"];
     const rows = perStudent.map((s) => [
       s.registration.student_number || "",
       `${s.registration.members?.first_name || ""} ${s.registration.members?.last_name || ""}`.trim(),
@@ -632,9 +706,12 @@ export default function WoFBIAttendanceTab() {
       s.punctualityScore,
       punctualityGrade(s.punctualityScore).label,
       s.manualRating != null ? `${s.manualRating}/5` : "",
+      s.avgPosition != null ? s.avgPosition : "",
+      s.punctualityRank ? ordinal(s.punctualityRank) : "",
       (s.totalMinutes / 60).toFixed(2),
       s.missingCheckouts,
     ]);
+
     const csv = [header, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
@@ -658,10 +735,12 @@ export default function WoFBIAttendanceTab() {
         `${reg.members?.first_name || ""} ${reg.members?.last_name || ""}`.trim(),
         reg.student_number || "—",
         status,
+        rec && positionByRecord.get(rec.id) ? ordinal(positionByRecord.get(rec.id)) : "—",
         fmtTime(rec?.checked_in_at),
         fmtTime(rec?.checked_out_at),
         fmtDuration(rec?.duration_minutes),
       ];
+
     });
     const present = rows.filter((r) => r[3] === "Present").length;
     const late = rows.filter((r) => r[3] === "Late").length;
@@ -685,7 +764,7 @@ export default function WoFBIAttendanceTab() {
         ["Absent", rows.length - present - late],
         ["Rate", rows.length ? `${Math.round(((present + late) / rows.length) * 100)}%` : "0%"],
       ],
-      headers: ["#", "Name", "Student no.", "Status", "Time in", "Time out", "Duration"],
+      headers: ["#", "Name", "Student no.", "Status", "Arrival", "Time in", "Time out", "Duration"],
       rows,
       filename: `roster-${courseForExport?.name || "course"}-${session.title || "session"}-${session.session_date}`,
     };
@@ -702,9 +781,12 @@ export default function WoFBIAttendanceTab() {
       s.totalSessions,
       `${s.percent}%`,
       `${s.punctualityScore}% (${punctualityGrade(s.punctualityScore).label})`,
+      s.avgPosition != null ? s.avgPosition : "—",
+      s.punctualityRank ? ordinal(s.punctualityRank) : "—",
       (s.totalMinutes / 60).toFixed(2),
       s.missingCheckouts,
     ]);
+
     const fullyPresent = perStudent.filter((s) => s.absent === 0).length;
     return {
       title: `Attendance Roster — ${courseForExport?.name || "Course"}${isAllEditions ? " (all sessions)" : ` — ${editionName}`}`,
@@ -721,7 +803,7 @@ export default function WoFBIAttendanceTab() {
         ["Sessions", sessions.length],
         ["Full attendance", fullyPresent],
       ],
-      headers: ["#", "Name", "Student no.", "Present", "Late", "Absent", "Sessions", "Attendance", "Punctuality", "Hours", "Missing check-outs"],
+      headers: ["#", "Name", "Student no.", "Present", "Late", "Absent", "Sessions", "Attendance", "Punctuality", "Avg. position", "Rank", "Hours", "Missing check-outs"],
       rows,
       filename: `roster-${courseForExport?.name || "course"}${isAllEditions ? "" : `-${editionName}`}-summary`,
     };
@@ -919,6 +1001,9 @@ export default function WoFBIAttendanceTab() {
                   <TableHead>Missing out</TableHead>
                   <TableHead>Attendance %</TableHead>
                   <TableHead>Punctuality</TableHead>
+                  <TableHead className="whitespace-nowrap">Avg. position</TableHead>
+                  <TableHead className="whitespace-nowrap">Punctuality rank</TableHead>
+
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -963,10 +1048,17 @@ export default function WoFBIAttendanceTab() {
                             )}
                           </div>
                         </TableCell>
+                        <TableCell className="whitespace-nowrap text-sm">
+                          {s.avgPosition != null ? s.avgPosition : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <PositionBadge pos={s.punctualityRank} />
+                        </TableCell>
                       </TableRow>
                       {expanded && (
                         <TableRow className="bg-muted/30 hover:bg-muted/30">
-                          <TableCell colSpan={10} className="p-0">
+                          <TableCell colSpan={12} className="p-0">
+
                             <div className="p-3 overflow-x-auto">
                               <Table className="min-w-[560px]">
 
@@ -975,7 +1067,9 @@ export default function WoFBIAttendanceTab() {
                                     <TableHead>Date</TableHead>
                                     <TableHead>Session</TableHead>
                                     <TableHead>Status</TableHead>
+                                    <TableHead>Arrival</TableHead>
                                     <TableHead>Time in</TableHead>
+
                                     <TableHead>Time out</TableHead>
                                     <TableHead>Duration</TableHead>
                                     <TableHead>Punctuality</TableHead>
@@ -995,7 +1089,11 @@ export default function WoFBIAttendanceTab() {
                                           {status === "late" && <Badge className="bg-amber-100 text-amber-800">Late</Badge>}
                                           {status === "absent" && <Badge variant="secondary">Absent</Badge>}
                                         </TableCell>
+                                        <TableCell className="whitespace-nowrap">
+                                          <PositionBadge pos={rec ? positionByRecord.get(rec.id) : null} />
+                                        </TableCell>
                                         <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_in_at)}</TableCell>
+
                                         <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_out_at)}</TableCell>
                                         <TableCell className="text-xs whitespace-nowrap">{fmtDuration(rec?.duration_minutes)}</TableCell>
                                         <TableCell className="text-xs whitespace-nowrap">
@@ -1168,7 +1266,9 @@ export default function WoFBIAttendanceTab() {
                 <TableRow>
                   <TableHead>Student</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Arrival</TableHead>
                   <TableHead>Time in</TableHead>
+
                   <TableHead>Time out</TableHead>
                   <TableHead>Duration</TableHead>
                   <TableHead>Punctuality</TableHead>
@@ -1192,7 +1292,11 @@ export default function WoFBIAttendanceTab() {
                         {status === "late" && <Badge className="bg-amber-100 text-amber-800 gap-1"><Clock className="h-3 w-3" /> Late</Badge>}
                         {status === "absent" && <Badge variant="secondary" className="gap-1"><XCircle className="h-3 w-3" /> Absent</Badge>}
                       </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <PositionBadge pos={rec ? rosterPositions.get(rec.id) : null} />
+                      </TableCell>
                       <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_in_at)}</TableCell>
+
                       <TableCell className="text-xs whitespace-nowrap">{fmtTime(rec?.checked_out_at)}</TableCell>
                       <TableCell className="text-xs whitespace-nowrap">{fmtDuration(rec?.duration_minutes)}</TableCell>
                       <TableCell>
