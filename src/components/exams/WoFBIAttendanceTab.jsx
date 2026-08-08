@@ -18,6 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, QrCode, Trash2, Download, CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Pencil, Star } from "lucide-react";
 import WoFBIPersistentQRDialog from "./WoFBIPersistentQRDialog";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import { ordinal, PositionBadge } from "@/lib/rank-utils";
+
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import { useTenant } from "@/contexts/TenantContext";
 import { downloadRosterCsv, printRosterPdf } from "@/lib/attendance-roster";
