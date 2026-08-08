@@ -28,31 +28,21 @@ import { useTenant } from "@/contexts/TenantContext";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { getGradeClassification, DEFAULT_GRADE_CLASSIFICATIONS, LETTER_GRADE_BANDS } from "@/lib/grade-utils";
 import StatementOfResult from "@/components/exams/StatementOfResult";
+import LecturerManager from "@/components/exams/LecturerManager";
+import LecturerFeedbackReport from "@/components/exams/LecturerFeedbackReport";
+import RateLecturerDialog from "@/components/exams/RateLecturerDialog";
+import QcReport from "@/components/exams/QcReport";
+import WoFBIApplicationsTab from "@/components/exams/WoFBIApplicationsTab";
+import StudentsReportTab from "@/components/exams/StudentsReportTab";
 import MessageFilteredMembersDialog from "@/components/analytics/MessageFilteredMembersDialog";
+import WoFBIApplicationFormEditor from "@/components/exams/WoFBIApplicationFormEditor";
+import WoFBIFeedbackFormEditor from "@/components/exams/WoFBIFeedbackFormEditor";
+import CourseReportTab from "@/components/exams/CourseReportTab";
 import WoFBIFeedbackDialog from "@/components/exams/WoFBIFeedbackDialog";
+
+import WoFBIAttendanceTab from "@/components/exams/WoFBIAttendanceTab";
+import SessionManager from "@/components/exams/SessionManager";
 import SessionFilterBar from "@/components/exams/SessionFilterBar";
-
-// Heavy tab bodies are loaded only when their tab is opened, so the page's
-// first paint doesn't wait for every report/editor bundle.
-const LecturerManager = React.lazy(() => import("@/components/exams/LecturerManager"));
-const LecturerFeedbackReport = React.lazy(() => import("@/components/exams/LecturerFeedbackReport"));
-const RateLecturerDialog = React.lazy(() => import("@/components/exams/RateLecturerDialog"));
-const QcReport = React.lazy(() => import("@/components/exams/QcReport"));
-const WoFBIApplicationsTab = React.lazy(() => import("@/components/exams/WoFBIApplicationsTab"));
-const StudentsReportTab = React.lazy(() => import("@/components/exams/StudentsReportTab"));
-const WoFBIApplicationFormEditor = React.lazy(() => import("@/components/exams/WoFBIApplicationFormEditor"));
-const WoFBIFeedbackFormEditor = React.lazy(() => import("@/components/exams/WoFBIFeedbackFormEditor"));
-const CourseReportTab = React.lazy(() => import("@/components/exams/CourseReportTab"));
-const WoFBIAttendanceTab = React.lazy(() => import("@/components/exams/WoFBIAttendanceTab"));
-const SessionManager = React.lazy(() => import("@/components/exams/SessionManager"));
-
-function TabFallback() {
-  return (
-    <div className="flex items-center justify-center py-16">
-      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-    </div>
-  );
-}
 import { ExamSessionFilterProvider, useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
 import ModuleTour from "@/components/tour/ModuleTour";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -940,47 +930,45 @@ function ExamManagementInner() {
             </div>
 
           )}
-          <React.Suspense fallback={<TabFallback />}>
-            <LecturerFeedbackReport />
-            <LecturerManager />
-            {adminRateOpen && <RateLecturerDialog open={adminRateOpen} onOpenChange={setAdminRateOpen} />}
-          </React.Suspense>
+          <LecturerFeedbackReport />
+          <LecturerManager />
+          <RateLecturerDialog open={adminRateOpen} onOpenChange={setAdminRateOpen} />
         </TabsContent>
 
         <TabsContent value="qc" className="space-y-4 mt-4">
-          <React.Suspense fallback={<TabFallback />}><QcReport /></React.Suspense>
+          <QcReport />
         </TabsContent>
 
         <TabsContent value="applications" className="space-y-4 mt-4">
-          <React.Suspense fallback={<TabFallback />}><WoFBIApplicationsTab /></React.Suspense>
+          <WoFBIApplicationsTab />
         </TabsContent>
 
         <TabsContent value="students" className="space-y-4 mt-4">
-          <React.Suspense fallback={<TabFallback />}><StudentsReportTab /></React.Suspense>
+          <StudentsReportTab />
         </TabsContent>
 
 
 
         <TabsContent value="app-form" className="space-y-4 mt-4">
-          <React.Suspense fallback={<TabFallback />}><WoFBIApplicationFormEditor /></React.Suspense>
+          <WoFBIApplicationFormEditor />
         </TabsContent>
 
         <TabsContent value="feedback-form" className="space-y-4 mt-4">
-          <React.Suspense fallback={<TabFallback />}><WoFBIFeedbackFormEditor /></React.Suspense>
+          <WoFBIFeedbackFormEditor />
         </TabsContent>
 
 
         <TabsContent value="attendance" className="space-y-4 mt-4">
-          <React.Suspense fallback={<TabFallback />}><WoFBIAttendanceTab /></React.Suspense>
+          <WoFBIAttendanceTab />
         </TabsContent>
 
         <TabsContent value="sessions" className="space-y-4 mt-4">
-          <React.Suspense fallback={<TabFallback />}><SessionManager /></React.Suspense>
+          <SessionManager />
         </TabsContent>
 
 
         <TabsContent value="course-report" className="space-y-4 mt-4">
-          <React.Suspense fallback={<TabFallback />}><CourseReportTab /></React.Suspense>
+          <CourseReportTab />
         </TabsContent>
       </Tabs>
     </div>
