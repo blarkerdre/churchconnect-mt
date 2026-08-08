@@ -200,32 +200,38 @@ export default function CourseResultsView({ course }) {
 
   const buildPrintRows = () => ({
     title: `${course.name} — Course Results`,
-    headers: ["Member", ...subjects.map(s => s.name), "Total", "%", "Status"],
-    rows: members.map(m => [
-      m.name,
-      ...subjects.map(s => {
-        const sub = m.subjects[s.id];
-        return sub ? `${sub.score}/${sub.total_points}` : "—";
-      }),
-      `${m.totalScore}/${m.totalPoints}`,
-      `${Math.round(m.percentage)}%`,
-      m.passed && m.subjectsTaken === subjects.length ? "Passed" : "Incomplete",
-    ]),
+    headers: ["Position", "Member", ...subjects.map(s => s.name), "Total", "%", "Status"],
+    rows: [...members]
+      .sort((a, b) => (positionByMember.get(a.id) ?? 9999) - (positionByMember.get(b.id) ?? 9999))
+      .map(m => [
+        positionByMember.get(m.id) ? ordinal(positionByMember.get(m.id)) : "—",
+        m.name,
+        ...subjects.map(s => {
+          const sub = m.subjects[s.id];
+          return sub ? `${sub.score}/${sub.total_points}` : "—";
+        }),
+        `${m.totalScore}/${m.totalPoints}`,
+        `${Math.round(m.percentage)}%`,
+        m.passed && m.subjectsTaken === subjects.length ? "Passed" : "Incomplete",
+      ]),
   });
 
   const handleDownloadCourseCSV = () => {
-    const headers = ["Member", ...subjects.map(s => s.name), "Total Score", "Total Points", "%", "Status"];
-    const rows = members.map(m => [
-      m.name,
-      ...subjects.map(s => {
-        const sub = m.subjects[s.id];
-        return sub ? `${sub.score}/${sub.total_points}` : "—";
-      }),
-      m.totalScore,
-      m.totalPoints,
-      `${Math.round(m.percentage)}%`,
-      m.passed && m.subjectsTaken === subjects.length ? "Passed" : "Incomplete",
-    ]);
+    const headers = ["Position", "Member", ...subjects.map(s => s.name), "Total Score", "Total Points", "%", "Status"];
+    const rows = [...members]
+      .sort((a, b) => (positionByMember.get(a.id) ?? 9999) - (positionByMember.get(b.id) ?? 9999))
+      .map(m => [
+        positionByMember.get(m.id) ? ordinal(positionByMember.get(m.id)) : "",
+        m.name,
+        ...subjects.map(s => {
+          const sub = m.subjects[s.id];
+          return sub ? `${sub.score}/${sub.total_points}` : "—";
+        }),
+        m.totalScore,
+        m.totalPoints,
+        `${Math.round(m.percentage)}%`,
+        m.passed && m.subjectsTaken === subjects.length ? "Passed" : "Incomplete",
+      ]);
     downloadCSV(`${course.name}_results.csv`, headers, rows);
   };
 
@@ -249,12 +255,22 @@ export default function CourseResultsView({ course }) {
         existing.passed = pct >= (subject.pass_mark_percentage ?? 50);
       }
     });
-    const headers = ["Member", "Score", "Total Points", "%", "Pass Mark", "Status"];
-    const rows = subjectMembers.map(m => [
-      m.name, m.score, m.totalPoints, `${Math.round(m.pct)}%`, `${subject.pass_mark_percentage ?? 50}%`, m.passed ? "Passed" : "Failed",
-    ]);
+    const subjectPositions = buildRankMap(
+      subjectMembers,
+      (m) => m.memberId,
+      (m) => (m.totalPoints > 0 ? m.pct : null),
+      "desc"
+    );
+    const headers = ["Position", "Member", "Score", "Total Points", "%", "Pass Mark", "Status"];
+    const rows = [...subjectMembers]
+      .sort((a, b) => (subjectPositions.get(a.memberId) ?? 9999) - (subjectPositions.get(b.memberId) ?? 9999))
+      .map(m => [
+        subjectPositions.get(m.memberId) ? ordinal(subjectPositions.get(m.memberId)) : "",
+        m.name, m.score, m.totalPoints, `${Math.round(m.pct)}%`, `${subject.pass_mark_percentage ?? 50}%`, m.passed ? "Passed" : "Failed",
+      ]);
     downloadCSV(`${course.name}_${subject.name}_results.csv`, headers, rows);
   };
+
 
   const completedMembers = useMemo(() => members.filter(m => m.subjectsTaken === subjects.length), [members, subjects.length]);
   const passedMembers = useMemo(() => completedMembers.filter(m => m.passed), [completedMembers]);
