@@ -22,7 +22,7 @@ export default function Auth() {
     import("@/pages/Dashboard").catch(() => {});
   }, []);
 
-  const { user, loading, dataLoaded, signIn, signUp, signOut, resetPassword, tenantMemberships } = useAuth();
+  const { user, loading, dataLoaded, dataError, signIn, signUp, signOut, resetPassword, tenantMemberships, refreshUser } = useAuth();
   const { toast } = useToast();
   const { tenantSlug } = useParams();
   const canSignup = !!tenantSlug;
@@ -41,16 +41,17 @@ export default function Auth() {
 
 
   // Fallback: if dataLoaded never flips (e.g., preview proxy hangs Supabase
-  // calls), unblock the redirect after 4s so the user isn't stranded on /auth.
+  // calls), unblock the redirect after 12s so the user isn't stranded on /auth.
   useEffect(() => {
     if (!user || dataLoaded) return;
-    const t = setTimeout(() => setWaitedForData(true), 4000);
+    const t = setTimeout(() => setWaitedForData(true), 12000);
     return () => clearTimeout(t);
   }, [user, dataLoaded]);
 
   // Auto sign-out accounts with no tenant membership. Credentials still
   // authenticate against auth.users, but without a tenant row the account
   // has no access to any church, so we don't leave them signed in.
+  // A *failed* lookup is not the same as "no membership" — never sign out then.
   const didAutoSignOutRef = useRef(false);
   useEffect(() => {
     if (!user) didAutoSignOutRef.current = false;
@@ -58,6 +59,7 @@ export default function Auth() {
   useEffect(() => {
     if (didAutoSignOutRef.current) return;
     if (!user || !dataLoaded) return;
+    if (dataError) return;
     if (tenantSlug) return;
     if (claimToken && !claimDone) return;
     const hasMembership = !!tenantMemberships?.[0]?.tenants?.slug;
@@ -69,7 +71,8 @@ export default function Auth() {
       variant: "destructive",
     });
     signOut();
-  }, [user, dataLoaded, tenantSlug, tenantMemberships, claimToken, claimDone, signOut, toast]);
+  }, [user, dataLoaded, dataError, tenantSlug, tenantMemberships, claimToken, claimDone, signOut, toast]);
+
 
 
   useEffect(() => {
@@ -170,7 +173,31 @@ export default function Auth() {
     if (slug) {
       return <Navigate to={`/t/${slug}`} replace />;
     }
-    // Signed in but no tenant — force sign-out (safety net if the effect didn't fire).
+    // Couldn't load the account (network / transient auth error) — keep the
+    // session and let the user retry instead of forcing a sign-out.
+    if (dataError || !dataLoaded) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+          <Card className="w-full max-w-sm">
+            <CardHeader>
+              <CardTitle className="font-display">We couldn't verify your account</CardTitle>
+              <CardDescription>
+                Your sign-in worked, but loading your church access failed. This is usually temporary.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button className="w-full" onClick={() => { setWaitedForData(false); refreshUser(); }}>
+                Try again
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={signOut}>
+                Sign out
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+    // Signed in but genuinely no tenant — force sign-out (safety net).
     if (!didAutoSignOutRef.current) {
       didAutoSignOutRef.current = true;
       signOut();
@@ -180,6 +207,8 @@ export default function Auth() {
         <div className="animate-pulse text-muted-foreground">Signing out…</div>
       </div>
     );
+
+
 
   }
 

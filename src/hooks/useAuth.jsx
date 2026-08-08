@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { isMfaChallengeRequired, clearMfaPassed } from "@/hooks/useMfa";
+import { withClockSkewRetry, isClockSkewError } from "@/lib/supabase-retry";
+
 
 
 const noop = async () => ({ data: null, error: new Error("Auth not initialized") });
@@ -17,7 +19,9 @@ const withTimeout = (promise, timeoutMs, message) => {
 
 const AuthContext = createContext({
   user: null, profile: null, roles: [], loading: true, leaderUnits: [], leaderCentres: [], myUnits: [], myMember: null,
+  dataError: null,
   tenantMemberships: [],
+
   signUp: noop, signIn: noop, signOut: noop, resetPassword: noop, updatePassword: noop,
   isAdmin: false, isUnitLeader: false, isWSFLeader: false, isMember: false, isReportsOfficer: false, isReadOnly: false,
   isTenantOwner: false, isTenantAdmin: false,
@@ -37,7 +41,9 @@ export function AuthProvider({ children }) {
   const [tenantMemberships, setTenantMemberships] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [dataError, setDataError] = useState(null);
   const [mfaRequired, setMfaRequired] = useState(false);
+
 
   const refreshMfaStatus = useCallback(async () => {
     const required = await isMfaChallengeRequired();
@@ -52,8 +58,11 @@ export function AuthProvider({ children }) {
         if (session?.user) {
           setLoading(false);
           setDataLoaded(false);
-          setTimeout(() => fetchUserData(session.user.id, session.user.email), 0);
-          setTimeout(() => { refreshMfaStatus(); }, 0);
+          setDataError(null);
+          // Small delay: a freshly minted token can be a second ahead of the
+          // API clock, which PostgREST rejects as "JWT issued at future".
+          setTimeout(() => fetchUserData(session.user.id, session.user.email), 300);
+          setTimeout(() => { refreshMfaStatus(); }, 300);
         } else {
           setProfile(null);
           setRoles([]);
@@ -63,8 +72,10 @@ export function AuthProvider({ children }) {
           setTenantMemberships([]);
           setLoading(false);
           setDataLoaded(true);
+          setDataError(null);
           setMfaRequired(false);
         }
+
       }
     );
 
@@ -79,11 +90,13 @@ export function AuthProvider({ children }) {
         setLoading(false);
         if (session?.user) {
           setDataLoaded(false);
+          setDataError(null);
           fetchUserData(session.user.id, session.user.email);
           refreshMfaStatus();
         } else {
           setDataLoaded(true);
         }
+
 
       })
       .catch((err) => {
@@ -104,26 +117,40 @@ export function AuthProvider({ children }) {
 
   async function fetchUserData(userId, userEmail) {
     // Hard safety net: if Supabase calls hang (e.g., preview proxy issues),
-    // unblock the UI after 5s so /auth can redirect instead of stalling.
+    // unblock the UI after 12s. Treat it as an error, never as "no access".
     const safetyTimer = setTimeout(() => {
       setLoading(false);
+      setDataError(new Error("Timed out loading your account."));
       setDataLoaded(true);
-    }, 5000);
+    }, 12000);
 
     try {
+      const q = (fn) => withClockSkewRetry(fn);
       const [profileRes, rolesRes, unitsRes, memberRes, tmRes] = await Promise.allSettled([
-        supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
-        supabase.from("user_roles").select("role").eq("user_id", userId),
-        supabase.from("unit_leader_assignments").select("unit_name").eq("user_id", userId),
-        supabase.from("members").select("*, wsf_centres!fk_members_wsf_centre(name)").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-        supabase.from("tenant_memberships").select("tenant_id, role, tenants(slug)").eq("user_id", userId),
+        q(() => supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle()),
+        q(() => supabase.from("user_roles").select("role").eq("user_id", userId)),
+        q(() => supabase.from("unit_leader_assignments").select("unit_name").eq("user_id", userId)),
+        q(() => supabase.from("members").select("*, wsf_centres!fk_members_wsf_centre(name)").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle()),
+        q(() => supabase.from("tenant_memberships").select("tenant_id, role, tenants(slug)").eq("user_id", userId)),
       ]);
 
-      const profileData = profileRes.status === "fulfilled" ? profileRes.value.data : null;
-      const rolesData = rolesRes.status === "fulfilled" ? rolesRes.value.data : null;
-      const unitsData = unitsRes.status === "fulfilled" ? unitsRes.value.data : null;
-      const memberData = memberRes.status === "fulfilled" ? memberRes.value.data : null;
-      const tmData = tmRes.status === "fulfilled" ? tmRes.value.data : null;
+      const profileData = profileRes.status === "fulfilled" ? profileRes.value?.data : null;
+      const rolesData = rolesRes.status === "fulfilled" ? rolesRes.value?.data : null;
+      const unitsData = unitsRes.status === "fulfilled" ? unitsRes.value?.data : null;
+      const memberData = memberRes.status === "fulfilled" ? memberRes.value?.data : null;
+      const tmData = tmRes.status === "fulfilled" ? tmRes.value?.data : null;
+
+      // The membership lookup decides whether the account has church access,
+      // so a failure there must never be read as "no membership".
+      const tmError = tmRes.status === "rejected"
+        ? (tmRes.reason || new Error("Could not load your church access."))
+        : tmRes.value?.error || null;
+      if (tmError) {
+        console.warn("tenant_memberships lookup failed:", tmError.message || tmError);
+        setDataError(tmError);
+      } else {
+        setDataError(null);
+      }
 
       setProfile(profileData);
       setRoles(rolesData?.map((r) => r.role) || []);
@@ -147,6 +174,7 @@ export function AuthProvider({ children }) {
       }
     } catch (err) {
       console.error("Error fetching user data:", err);
+      setDataError(err);
     } finally {
       clearTimeout(safetyTimer);
       setLoading(false);
@@ -154,18 +182,24 @@ export function AuthProvider({ children }) {
     }
   }
 
+
   // Refetch the member record scoped to a specific tenant. Called by TenantContext
   // once the active tenant is known, so `myMember` reflects the current tenant even
   // when the user has member rows in multiple tenants.
   const refetchMemberForTenant = useCallback(async (tenantId) => {
     if (!user?.id || !tenantId) return;
     try {
-      const { data } = await supabase
+      const { data, error } = await withClockSkewRetry(() => supabase
         .from("members")
         .select("*, wsf_centres!fk_members_wsf_centre(name)")
         .eq("user_id", user.id)
         .eq("tenant_id", tenantId)
-        .maybeSingle();
+        .maybeSingle());
+      // A transient failure must not wipe the member record we already have.
+      if (error) {
+        console.warn("refetchMemberForTenant error:", error.message || error);
+        return;
+      }
       setMyMember(data);
       if (data?.id) {
         const { data: centres } = await supabase
@@ -185,6 +219,7 @@ export function AuthProvider({ children }) {
   const refreshUser = useCallback(() => {
     if (user) fetchUserData(user.id, user.email);
   }, [user]);
+
 
   const signUp = async (email, password, fullName, tenantSlug) => {
     const { data, error } = await supabase.auth.signUp({
@@ -255,16 +290,17 @@ export function AuthProvider({ children }) {
   }, [myMember?.church_unit]);
 
   const value = useMemo(() => ({
-    user, profile, roles, loading, dataLoaded, leaderUnits, leaderCentres, myUnits, myMember, tenantMemberships,
+    user, profile, roles, loading, dataLoaded, dataError, leaderUnits, leaderCentres, myUnits, myMember, tenantMemberships,
     signUp, signIn, signOut, resetPassword, updatePassword,
     isAdmin, isUnitLeader, isWSFLeader, isMember, isReportsOfficer, isReadOnly,
     isTenantOwner, isTenantAdmin,
     refreshUser,
     refetchMemberForTenant,
     mfaRequired, refreshMfaStatus,
-  }), [user, profile, roles, loading, dataLoaded, leaderUnits, leaderCentres, myUnits, myMember, tenantMemberships,
+  }), [user, profile, roles, loading, dataLoaded, dataError, leaderUnits, leaderCentres, myUnits, myMember, tenantMemberships,
        isAdmin, isUnitLeader, isWSFLeader, isMember, isReportsOfficer, isReadOnly, isTenantOwner, isTenantAdmin,
        refreshUser, refetchMemberForTenant, mfaRequired, refreshMfaStatus]);
+
 
 
 
