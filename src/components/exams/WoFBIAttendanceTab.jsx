@@ -640,10 +640,13 @@ export default function WoFBIAttendanceTab() {
     });
   };
 
+  // Arrival position per attendance record (1st, 2nd, 3rd ... within each session)
+  const positionByRecord = useMemo(() => buildPositionMap(allRecords), [allRecords]);
+
   // Attendance % per student
   const perStudent = useMemo(() => {
     const totalSessions = sessions.length;
-    return roster.map((r) => {
+    const list = roster.map((r) => {
       const recs = allRecords.filter((x) => x.registration_id === r.id);
       const present = recs.filter((x) => x.status === "present").length;
       const late = recs.filter((x) => x.status === "late").length;
@@ -658,6 +661,10 @@ export default function WoFBIAttendanceTab() {
       const manualRating = rated.length
         ? Math.round((rated.reduce((sum, x) => sum + x.punctuality_rating, 0) / rated.length) * 10) / 10
         : null;
+      const positions = recs.map((x) => positionByRecord.get(x.id)).filter(Boolean);
+      const avgPosition = positions.length
+        ? Math.round((positions.reduce((sum, p) => sum + p, 0) / positions.length) * 10) / 10
+        : null;
       return {
         registration: r,
         present,
@@ -668,13 +675,24 @@ export default function WoFBIAttendanceTab() {
         missingCheckouts,
         punctualityScore,
         manualRating,
+        avgPosition,
+        positionsCount: positions.length,
         percent: totalSessions ? Math.round((attended / totalSessions) * 100) : 0,
       };
     });
-  }, [roster, allRecords, sessions.length]);
+    // Dense rank on avgPosition (lower is better); un-ranked students go last
+    const ranked = list.filter((s) => s.avgPosition != null).sort((a, b) => a.avgPosition - b.avgPosition);
+    let rank = 0;
+    let prev = null;
+    ranked.forEach((s, idx) => {
+      if (prev === null || s.avgPosition !== prev) { rank = idx + 1; prev = s.avgPosition; }
+      s.punctualityRank = rank;
+    });
+    return list;
+  }, [roster, allRecords, sessions.length, positionByRecord]);
 
   const exportCsv = () => {
-    const header = ["Student number", "Name", "Present", "Late", "Absent", "Total sessions", "Attendance %", "Punctuality %", "Punctuality grade", "Punctuality rating", "Total hours", "Missing check-outs"];
+    const header = ["Student number", "Name", "Present", "Late", "Absent", "Total sessions", "Attendance %", "Punctuality %", "Punctuality grade", "Punctuality rating", "Avg. arrival position", "Punctuality rank", "Total hours", "Missing check-outs"];
     const rows = perStudent.map((s) => [
       s.registration.student_number || "",
       `${s.registration.members?.first_name || ""} ${s.registration.members?.last_name || ""}`.trim(),
@@ -686,9 +704,12 @@ export default function WoFBIAttendanceTab() {
       s.punctualityScore,
       punctualityGrade(s.punctualityScore).label,
       s.manualRating != null ? `${s.manualRating}/5` : "",
+      s.avgPosition != null ? s.avgPosition : "",
+      s.punctualityRank ? ordinal(s.punctualityRank) : "",
       (s.totalMinutes / 60).toFixed(2),
       s.missingCheckouts,
     ]);
+
     const csv = [header, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
