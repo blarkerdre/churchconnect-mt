@@ -56,8 +56,11 @@ export function AuthProvider({ children }) {
         if (session?.user) {
           setLoading(false);
           setDataLoaded(false);
-          setTimeout(() => fetchUserData(session.user.id, session.user.email), 0);
-          setTimeout(() => { refreshMfaStatus(); }, 0);
+          setDataError(null);
+          // Small delay: a freshly minted token can be a second ahead of the
+          // API clock, which PostgREST rejects as "JWT issued at future".
+          setTimeout(() => fetchUserData(session.user.id, session.user.email), 300);
+          setTimeout(() => { refreshMfaStatus(); }, 300);
         } else {
           setProfile(null);
           setRoles([]);
@@ -67,8 +70,10 @@ export function AuthProvider({ children }) {
           setTenantMemberships([]);
           setLoading(false);
           setDataLoaded(true);
+          setDataError(null);
           setMfaRequired(false);
         }
+
       }
     );
 
