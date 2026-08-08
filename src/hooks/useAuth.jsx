@@ -88,11 +88,13 @@ export function AuthProvider({ children }) {
         setLoading(false);
         if (session?.user) {
           setDataLoaded(false);
+          setDataError(null);
           fetchUserData(session.user.id, session.user.email);
           refreshMfaStatus();
         } else {
           setDataLoaded(true);
         }
+
 
       })
       .catch((err) => {
