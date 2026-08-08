@@ -113,26 +113,40 @@ export function AuthProvider({ children }) {
 
   async function fetchUserData(userId, userEmail) {
     // Hard safety net: if Supabase calls hang (e.g., preview proxy issues),
-    // unblock the UI after 5s so /auth can redirect instead of stalling.
+    // unblock the UI after 12s. Treat it as an error, never as "no access".
     const safetyTimer = setTimeout(() => {
       setLoading(false);
+      setDataError(new Error("Timed out loading your account."));
       setDataLoaded(true);
-    }, 5000);
+    }, 12000);
 
     try {
+      const q = (fn) => withClockSkewRetry(fn);
       const [profileRes, rolesRes, unitsRes, memberRes, tmRes] = await Promise.allSettled([
-        supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle(),
-        supabase.from("user_roles").select("role").eq("user_id", userId),
-        supabase.from("unit_leader_assignments").select("unit_name").eq("user_id", userId),
-        supabase.from("members").select("*, wsf_centres!fk_members_wsf_centre(name)").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-        supabase.from("tenant_memberships").select("tenant_id, role, tenants(slug)").eq("user_id", userId),
+        q(() => supabase.from("profiles").select("*").eq("user_id", userId).maybeSingle()),
+        q(() => supabase.from("user_roles").select("role").eq("user_id", userId)),
+        q(() => supabase.from("unit_leader_assignments").select("unit_name").eq("user_id", userId)),
+        q(() => supabase.from("members").select("*, wsf_centres!fk_members_wsf_centre(name)").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle()),
+        q(() => supabase.from("tenant_memberships").select("tenant_id, role, tenants(slug)").eq("user_id", userId)),
       ]);
 
-      const profileData = profileRes.status === "fulfilled" ? profileRes.value.data : null;
-      const rolesData = rolesRes.status === "fulfilled" ? rolesRes.value.data : null;
-      const unitsData = unitsRes.status === "fulfilled" ? unitsRes.value.data : null;
-      const memberData = memberRes.status === "fulfilled" ? memberRes.value.data : null;
-      const tmData = tmRes.status === "fulfilled" ? tmRes.value.data : null;
+      const profileData = profileRes.status === "fulfilled" ? profileRes.value?.data : null;
+      const rolesData = rolesRes.status === "fulfilled" ? rolesRes.value?.data : null;
+      const unitsData = unitsRes.status === "fulfilled" ? unitsRes.value?.data : null;
+      const memberData = memberRes.status === "fulfilled" ? memberRes.value?.data : null;
+      const tmData = tmRes.status === "fulfilled" ? tmRes.value?.data : null;
+
+      // The membership lookup decides whether the account has church access,
+      // so a failure there must never be read as "no membership".
+      const tmError = tmRes.status === "rejected"
+        ? (tmRes.reason || new Error("Could not load your church access."))
+        : tmRes.value?.error || null;
+      if (tmError) {
+        console.warn("tenant_memberships lookup failed:", tmError.message || tmError);
+        setDataError(tmError);
+      } else {
+        setDataError(null);
+      }
 
       setProfile(profileData);
       setRoles(rolesData?.map((r) => r.role) || []);
@@ -156,12 +170,14 @@ export function AuthProvider({ children }) {
       }
     } catch (err) {
       console.error("Error fetching user data:", err);
+      setDataError(err);
     } finally {
       clearTimeout(safetyTimer);
       setLoading(false);
       setDataLoaded(true);
     }
   }
+
 
   // Refetch the member record scoped to a specific tenant. Called by TenantContext
   // once the active tenant is known, so `myMember` reflects the current tenant even
