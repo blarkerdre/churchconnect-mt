@@ -22,7 +22,7 @@ export default function Auth() {
     import("@/pages/Dashboard").catch(() => {});
   }, []);
 
-  const { user, loading, dataLoaded, signIn, signUp, signOut, resetPassword, tenantMemberships } = useAuth();
+  const { user, loading, dataLoaded, dataError, signIn, signUp, signOut, resetPassword, tenantMemberships, refreshUser } = useAuth();
   const { toast } = useToast();
   const { tenantSlug } = useParams();
   const canSignup = !!tenantSlug;
