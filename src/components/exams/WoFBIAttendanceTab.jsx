@@ -999,6 +999,9 @@ export default function WoFBIAttendanceTab() {
                   <TableHead>Missing out</TableHead>
                   <TableHead>Attendance %</TableHead>
                   <TableHead>Punctuality</TableHead>
+                  <TableHead className="whitespace-nowrap">Avg. position</TableHead>
+                  <TableHead className="whitespace-nowrap">Punctuality rank</TableHead>
+
                 </TableRow>
               </TableHeader>
               <TableBody>
