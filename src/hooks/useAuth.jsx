@@ -39,7 +39,9 @@ export function AuthProvider({ children }) {
   const [tenantMemberships, setTenantMemberships] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [dataError, setDataError] = useState(null);
   const [mfaRequired, setMfaRequired] = useState(false);
+
 
   const refreshMfaStatus = useCallback(async () => {
     const required = await isMfaChallengeRequired();
