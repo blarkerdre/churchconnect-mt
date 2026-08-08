@@ -1046,10 +1046,17 @@ export default function WoFBIAttendanceTab() {
                             )}
                           </div>
                         </TableCell>
+                        <TableCell className="whitespace-nowrap text-sm">
+                          {s.avgPosition != null ? s.avgPosition : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <PositionBadge pos={s.punctualityRank} />
+                        </TableCell>
                       </TableRow>
                       {expanded && (
                         <TableRow className="bg-muted/30 hover:bg-muted/30">
-                          <TableCell colSpan={10} className="p-0">
+                          <TableCell colSpan={12} className="p-0">
+
                             <div className="p-3 overflow-x-auto">
                               <Table className="min-w-[560px]">
 
