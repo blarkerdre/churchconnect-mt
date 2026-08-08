@@ -19,7 +19,9 @@ const withTimeout = (promise, timeoutMs, message) => {
 
 const AuthContext = createContext({
   user: null, profile: null, roles: [], loading: true, leaderUnits: [], leaderCentres: [], myUnits: [], myMember: null,
+  dataError: null,
   tenantMemberships: [],
+
   signUp: noop, signIn: noop, signOut: noop, resetPassword: noop, updatePassword: noop,
   isAdmin: false, isUnitLeader: false, isWSFLeader: false, isMember: false, isReportsOfficer: false, isReadOnly: false,
   isTenantOwner: false, isTenantAdmin: false,
