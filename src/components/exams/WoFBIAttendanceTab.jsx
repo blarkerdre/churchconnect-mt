@@ -801,7 +801,7 @@ export default function WoFBIAttendanceTab() {
         ["Sessions", sessions.length],
         ["Full attendance", fullyPresent],
       ],
-      headers: ["#", "Name", "Student no.", "Present", "Late", "Absent", "Sessions", "Attendance", "Punctuality", "Hours", "Missing check-outs"],
+      headers: ["#", "Name", "Student no.", "Present", "Late", "Absent", "Sessions", "Attendance", "Punctuality", "Avg. position", "Rank", "Hours", "Missing check-outs"],
       rows,
       filename: `roster-${courseForExport?.name || "course"}${isAllEditions ? "" : `-${editionName}`}-summary`,
     };
