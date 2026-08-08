@@ -1,7 +1,8 @@
 // Print / Word export for the Bible School course final report.
 // Layout mirrors the Cardiff WOFBI report template (headings + tables).
 import { FINDING_FIELDS, QC_CHECKLIST_FIELDS } from "@/lib/wofbi-report-defaults";
-import { buildReportDocx } from "@/lib/wofbi-report-docx";
+// buildReportDocx pulls in JSZip; it is imported on demand inside
+// downloadReportDoc so the Bible School page doesn't ship it up front.
 
 export function escHtml(str) {
   return String(str ?? "")
