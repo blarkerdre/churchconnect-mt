@@ -346,7 +346,6 @@ export async function downloadReportDoc(report) {
   const name = reportFileName(report, "docx");
   let blob;
   try {
-  try {
     const { buildReportDocx } = await import("@/lib/wofbi-report-docx");
     blob = await buildReportDocx(report);
   } catch (err) {
