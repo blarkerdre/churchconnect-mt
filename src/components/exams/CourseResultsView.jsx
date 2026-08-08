@@ -187,6 +187,14 @@ export default function CourseResultsView({ course }) {
     grade: getGradeClassification(m.totalPoints > 0 ? (m.totalScore / m.totalPoints) * 100 : 0, classifications),
   }));
 
+  // Overall position (1st, 2nd, 3rd ...) — only students who completed every subject
+  const positionByMember = buildRankMap(
+    members,
+    (m) => m.id,
+    (m) => (subjects.length > 0 && m.subjectsTaken === subjects.length && m.totalPoints > 0 ? m.percentage : null),
+    "desc"
+  );
+
   const totalParticipants = members.length;
   const totalPassed = members.filter(m => m.passed && m.subjectsTaken === subjects.length).length;
 
