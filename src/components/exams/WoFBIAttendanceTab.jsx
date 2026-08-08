@@ -642,6 +642,8 @@ export default function WoFBIAttendanceTab() {
 
   // Arrival position per attendance record (1st, 2nd, 3rd ... within each session)
   const positionByRecord = useMemo(() => buildPositionMap(allRecords), [allRecords]);
+  const rosterPositions = useMemo(() => buildPositionMap(rosterRecords), [rosterRecords]);
+
 
   // Attendance % per student
   const perStudent = useMemo(() => {
