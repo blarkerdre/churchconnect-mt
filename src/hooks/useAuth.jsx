@@ -187,12 +187,17 @@ export function AuthProvider({ children }) {
   const refetchMemberForTenant = useCallback(async (tenantId) => {
     if (!user?.id || !tenantId) return;
     try {
-      const { data } = await supabase
+      const { data, error } = await withClockSkewRetry(() => supabase
         .from("members")
         .select("*, wsf_centres!fk_members_wsf_centre(name)")
         .eq("user_id", user.id)
         .eq("tenant_id", tenantId)
-        .maybeSingle();
+        .maybeSingle());
+      // A transient failure must not wipe the member record we already have.
+      if (error) {
+        console.warn("refetchMemberForTenant error:", error.message || error);
+        return;
+      }
       setMyMember(data);
       if (data?.id) {
         const { data: centres } = await supabase
@@ -212,6 +217,7 @@ export function AuthProvider({ children }) {
   const refreshUser = useCallback(() => {
     if (user) fetchUserData(user.id, user.email);
   }, [user]);
+
 
   const signUp = async (email, password, fullName, tenantSlug) => {
     const { data, error } = await supabase.auth.signUp({
