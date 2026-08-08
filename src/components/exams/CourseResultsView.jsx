@@ -453,6 +453,7 @@ export default function CourseResultsView({ course }) {
                 <TableHeader>
                   <TableRow>
                     {isAdmin && <TableHead className="w-8"></TableHead>}
+                    <TableHead className="whitespace-nowrap">Position</TableHead>
                     <TableHead>Member</TableHead>
                     {subjects.map(s => <TableHead key={s.id} className="text-center text-xs">{s.name}</TableHead>)}
                     <TableHead className="text-center">Total</TableHead>
@@ -461,7 +462,9 @@ export default function CourseResultsView({ course }) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {members.map(m => (
+                  {[...members]
+                    .sort((a, b) => (positionByMember.get(a.id) ?? 9999) - (positionByMember.get(b.id) ?? 9999))
+                    .map(m => (
                     <TableRow key={m.id}>
                       {isAdmin && (
                         <TableCell className="w-8">
@@ -474,6 +477,7 @@ export default function CourseResultsView({ course }) {
                           )}
                         </TableCell>
                       )}
+                      <TableCell><PositionBadge pos={positionByMember.get(m.id)} /></TableCell>
                       <TableCell className="text-sm font-medium">{m.name}</TableCell>
                       {subjects.map(s => {
                         const sub = m.subjects[s.id];
