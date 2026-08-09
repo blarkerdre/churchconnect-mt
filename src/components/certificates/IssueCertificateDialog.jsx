@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Award, CheckCircle2, RotateCw, Download, Eye } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, Award, CheckCircle2, RotateCw, Download, Eye, Send } from "lucide-react";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -29,9 +31,12 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
   const [trainingType, setTrainingType] = useState("");
   const [completionDate, setCompletionDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
+  const [sendNow, setSendNow] = useState(false);
+  const [sendingId, setSendingId] = useState(null);
   const [reissuingId, setReissuingId] = useState(null);
   const [previewingId, setPreviewingId] = useState(null); // completion id or "__new__"
   const [previewData, setPreviewData] = useState(null); // { image, meta, mode, completion? }
+
 
   // Fetch existing completions for this member
   const { data: completions = [] } = useQuery({
@@ -90,6 +95,7 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
           completion_date: completionDate,
           notes: notes || null,
           tenant_id: tenantId,
+          release_to_student: sendNow,
         },
       });
       if (error) throw error;
@@ -101,7 +107,9 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
       queryClient.invalidateQueries({ queryKey: ["members"] });
       toast({
         title: "Certificate issued!",
-        description: `Certificate ${data.student_number || data.certificate_number} has been generated${member.email ? " and emailed" : ""}.`,
+        description: sendNow
+          ? `Certificate ${data.student_number || data.certificate_number} has been generated and sent to the student.`
+          : `Certificate ${data.student_number || data.certificate_number} has been generated. Use "Send" when you're ready to release it to the student.`,
       });
       setTrainingType("");
       setNotes("");
@@ -111,6 +119,34 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
+
+  const sendMutation = useMutation({
+    mutationFn: async (completion) => {
+      setSendingId(completion.id);
+      const { data, error } = await supabase.functions.invoke("issue-certificate", {
+        body: {
+          mode: "send",
+          member_id: member.id,
+          training_type: completion.training_type,
+          tenant_id: completion.tenant_id || tenantId,
+          completion_id: completion.id,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["training-completions"] });
+      toast({ title: "Certificate sent to student" });
+      setSendingId(null);
+    },
+    onError: (err) => {
+      setSendingId(null);
+      toast({ title: "Send failed", description: err.message, variant: "destructive" });
+    },
+  });
+
 
   const reissueMutation = useMutation({
     mutationFn: async (completion) => {
@@ -245,21 +281,40 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
                   {completions.map((c) => {
                     const isReissuing = reissuingId === c.id && reissueMutation.isPending;
                     const isPreviewingThis = previewingId === c.id && previewMutation.isPending;
+                    const isSendingThis = sendingId === c.id && sendMutation.isPending;
                     return (
                       <div key={c.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-chart-3/5">
                         <div className="flex items-center gap-2 min-w-0">
                           <CheckCircle2 className="h-4 w-4 text-chart-3 shrink-0" />
                           <div className="min-w-0">
                             <div className="text-sm font-medium text-foreground truncate">{c.training_type}</div>
-                            <div className="flex items-center gap-2 mt-0.5">
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                               <span className="text-[11px] text-muted-foreground">
                                 {format(new Date(c.completion_date), "dd MMM yyyy")}
                               </span>
                               <Badge variant="outline" className="text-[10px]">{c.student_number || c.certificate_number}</Badge>
+                              {c.sent_to_student_at ? (
+                                <Badge variant="secondary" className="text-[10px]">
+                                  Sent {format(new Date(c.sent_to_student_at), "dd MMM yyyy")}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-600">Not sent</Badge>
+                              )}
                             </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title={c.sent_to_student_at ? "Resend to student" : "Send to student"}
+                            onClick={() => sendMutation.mutate(c)}
+                            disabled={isSendingThis || sendMutation.isPending || isReissuing}
+                          >
+                            {isSendingThis ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                          </Button>
+
                           <Button
                             variant="ghost"
                             size="icon"
@@ -286,7 +341,7 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
                             className="h-8 w-8"
                             title="Reissue certificate"
                             onClick={() => {
-                              if (window.confirm(`Reissue certificate for "${c.training_type}"? The certificate number (${c.certificate_number}) will be kept and the file regenerated${member.email ? " and re-emailed" : ""}.`)) {
+                              if (window.confirm(`Reissue certificate for "${c.training_type}"? The certificate number (${c.certificate_number}) will be kept and the file regenerated. The student is not notified unless you send it.`)) {
                                 reissueMutation.mutate(c);
                               }
                             }}
@@ -342,6 +397,17 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
                     rows={2}
                   />
                 </div>
+
+                <div className="flex items-start gap-2 rounded-lg border p-3">
+                  <Checkbox id="send-now" checked={sendNow} onCheckedChange={(v) => setSendNow(v === true)} className="mt-0.5" />
+                  <div className="space-y-0.5">
+                    <Label htmlFor="send-now" className="cursor-pointer">Send to the student now</Label>
+                    <p className="text-[11px] text-muted-foreground">
+                      Leave unticked to issue privately. The student only sees the certificate once you send it.
+                    </p>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 
-import { Award, Download, RotateCw, Users, TrendingUp } from "lucide-react";
+import { Award, Download, RotateCw, Users, TrendingUp, Send, Loader2 } from "lucide-react";
 import { format, subDays, parseISO } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import PrintReportButton from "@/components/PrintReportButton";
@@ -43,6 +43,8 @@ export default function CertificatesReport() {
   const [search, setSearch] = useState("");
   const [selectedCerts, setSelectedCerts] = useState(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [sendingId, setSendingId] = useState(null);
+  const qc = useQueryClient();
 
 
   // Certificates (training_completions) joined with members
@@ -52,7 +54,7 @@ export default function CertificatesReport() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("training_completions")
-        .select("id, member_id, training_type, completion_date, certificate_number, certificate_url, issued_by, notes, created_at, members:member_id(first_name,last_name,email,unit,status)")
+        .select("id, member_id, training_type, completion_date, certificate_number, certificate_url, issued_by, sent_to_student_at, notes, created_at, members:member_id(first_name,last_name,email,unit,status)")
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -275,6 +277,30 @@ export default function CertificatesReport() {
     }
     window.open(url, "_blank", "noopener,noreferrer");
   };
+
+  const handleSend = async (c) => {
+    setSendingId(c.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("issue-certificate", {
+        body: {
+          mode: "send",
+          member_id: c.member_id,
+          training_type: c.training_type,
+          tenant_id: tenantId,
+          completion_id: c.id,
+        },
+      });
+      if (error || !data?.success) throw new Error(error?.message || data?.error || "Send failed");
+      toast({ title: "Certificate sent to student" });
+      qc.invalidateQueries({ queryKey: ["cert-report-completions", tenantId] });
+    } catch (e) {
+      toast({ title: "Send failed", description: e.message, variant: "destructive" });
+    } finally {
+      setSendingId(null);
+    }
+  };
+
+
 
   const toggleCert = (id) =>
     setSelectedCerts((prev) => {
@@ -509,13 +535,14 @@ export default function CertificatesReport() {
                     <TableHead>Last Reissued</TableHead>
                     <TableHead className="text-center">Reissues</TableHead>
                     <TableHead>Issued By</TableHead>
+                    <TableHead>Student</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading && <TableRow><TableCell colSpan={10} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>}
+                  {loading && <TableRow><TableCell colSpan={11} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>}
                   {!loading && filteredCerts.length === 0 && (
-                    <TableRow><TableCell colSpan={10} className="text-center py-6 text-muted-foreground">No certificates match the filters.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={11} className="text-center py-6 text-muted-foreground">No certificates match the filters.</TableCell></TableRow>
                   )}
                   {filteredCerts.map((c) => {
                     const stats = reissueStats.get(c.certificate_number) || {};
@@ -541,8 +568,27 @@ export default function CertificatesReport() {
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">{issuerMap.get(c.issued_by) || "—"}</TableCell>
                         <TableCell>
+                          {c.sent_to_student_at ? (
+                            <Badge variant="secondary" className="text-[10px]">
+                              Sent {format(parseISO(c.sent_to_student_at), "dd MMM yyyy")}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px]">Not sent</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(c)} title="Download">
                             <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title={c.sent_to_student_at ? "Resend to student" : "Send to student"}
+                            onClick={() => handleSend(c)}
+                            disabled={sendingId === c.id}
+                          >
+                            {sendingId === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                           </Button>
                         </TableCell>
                       </TableRow>
