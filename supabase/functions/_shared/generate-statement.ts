@@ -1,15 +1,21 @@
-import { buildStatementPdf, deriveStudentNumber } from "./statement-pdf.ts";
+import { buildStatementPdf, deriveStudentNumber, renderStatementOnDoc } from "./statement-pdf.ts";
 import { fetchCourseTemplate, resolveTemplateImages, signIfPrivate } from "./certificate-template.ts";
 
 const BUCKET = "exam-statements";
 const SIGNED_URL_EXPIRES_IN = 60 * 60 * 24 * 30; // 30 days
 
-export async function generateAndUploadStatement(
+export { renderStatementOnDoc };
+
+/**
+ * Gathers everything needed to render one member's Statement of Result.
+ */
+export async function collectStatementInput(
   admin: any,
   tenantId: string,
   courseId: string,
   memberId: string,
 ) {
+
   const { data: member } = await admin
     .from("members")
     .select("id, first_name, last_name, email, tenant_id")
