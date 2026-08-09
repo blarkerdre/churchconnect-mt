@@ -397,6 +397,56 @@ export default function CourseResultsView({ course }) {
     }
   };
 
+  const bulkDownloadCerts = async (mode) => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    setSendingBulk(true);
+    try {
+      const { data, error } = await supabase
+        .from("training_completions")
+        .select("id, member_id, certificate_number, certificate_url")
+        .eq("tenant_id", course.tenant_id)
+        .eq("training_type", course.name)
+        .in("member_id", ids);
+      if (error) throw error;
+
+      const certs = (data || []).filter((c) => c.certificate_url);
+      const missing = ids.length - certs.length;
+      if (certs.length === 0) {
+        toast({
+          title: "No certificates to download",
+          description: "None of the selected students have an issued certificate for this course.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const base = `${course.name.replace(/[^A-Za-z0-9 _-]/g, "").trim().replace(/\s+/g, "-") || "course"}-certificates`;
+      const { downloaded } = await bulkDownloadCertificates({
+        certs,
+        mode,
+        tenantId: course.tenant_id,
+        baseName: base,
+        onProgress: (n, total) => {
+          if (n === 1 || n % 5 === 0) {
+            toast({ title: "Preparing certificates", description: `${n} of ${total}…` });
+          }
+        },
+      });
+
+      toast({
+        title: mode === "zip" ? "Certificates ZIP downloaded" : "Certificates PDF downloaded",
+        description: `${downloaded} certificate(s)${missing ? ` — ${missing} skipped (no certificate issued)` : ""}.`,
+      });
+    } catch (e) {
+      toast({ title: "Bulk download failed", description: e.message, variant: "destructive" });
+    } finally {
+      setSendingBulk(false);
+    }
+  };
+
+
+
 
 
 
