@@ -285,73 +285,25 @@ export default function CertificatesReport() {
 
   const bulkCertificates = async (mode) => {
     const list = selectedList();
-    const withFile = list.filter((c) => c.certificate_url);
-    const skipped = list.length - withFile.length;
-    if (withFile.length === 0) {
+    if (list.every((c) => !c.certificate_url)) {
       toast({ title: "Nothing to download", description: "Selected rows have no stored certificate file.", variant: "destructive" });
       return;
     }
     setBulkBusy(true);
     try {
-      const files = [];
-      let i = 0;
-      for (const c of withFile) {
-        i += 1;
-        if (i % 5 === 0 || i === 1) {
-          toast({ title: "Preparing certificates", description: `${i} of ${withFile.length}…` });
-        }
-        const url = await signedUrlFor(c);
-        if (!url) continue;
-        const res = await fetch(url);
-        if (!res.ok) continue;
-        files.push({ cert: c, blob: await res.blob() });
-      }
-      if (files.length === 0) throw new Error("No certificate files could be fetched");
-
-      if (mode === "zip") {
-        const { default: JSZip } = await import("jszip");
-        const zip = new JSZip();
-        for (const f of files) {
-          zip.file(`${f.cert.certificate_number || f.cert.id}.png`, f.blob);
-        }
-        const blob = await zip.generateAsync({ type: "blob" });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `certificates-${fromDate}-to-${toDate}.zip`;
-        a.click();
-        URL.revokeObjectURL(a.href);
-      } else {
-        const { jsPDF } = await import("jspdf");
-        const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
-        const pw = doc.internal.pageSize.getWidth();
-        const ph = doc.internal.pageSize.getHeight();
-        let first = true;
-        for (const f of files) {
-          const dataUrl = await new Promise((resolve) => {
-            const fr = new FileReader();
-            fr.onload = () => resolve(fr.result);
-            fr.onerror = () => resolve(null);
-            fr.readAsDataURL(f.blob);
-          });
-          if (!dataUrl) continue;
-          if (!first) doc.addPage();
-          first = false;
-          const props = doc.getImageProperties(dataUrl);
-          const ratio = props.width / props.height;
-          let w = pw - 10;
-          let h = w / ratio;
-          if (h > ph - 10) {
-            h = ph - 10;
-            w = h * ratio;
+      const { downloaded, skipped } = await bulkDownloadCertificates({
+        certs: list,
+        mode,
+        baseName: `certificates-${fromDate}-to-${toDate}`,
+        onProgress: (i, total) => {
+          if (i === 1 || i % 5 === 0) {
+            toast({ title: "Preparing certificates", description: `${i} of ${total}…` });
           }
-          doc.addImage(dataUrl, (pw - w) / 2, (ph - h) / 2, w, h);
-        }
-        doc.save(`certificates-${fromDate}-to-${toDate}.pdf`);
-      }
-
+        },
+      });
       toast({
         title: mode === "zip" ? "ZIP downloaded" : "Merged PDF downloaded",
-        description: `${files.length} certificate(s)${skipped ? ` — ${skipped} skipped (no file issued)` : ""}.`,
+        description: `${downloaded} certificate(s)${skipped ? ` — ${skipped} skipped (no file issued)` : ""}.`,
       });
     } catch (e) {
       toast({ title: "Bulk download failed", description: e.message, variant: "destructive" });
@@ -359,6 +311,7 @@ export default function CertificatesReport() {
       setBulkBusy(false);
     }
   };
+
 
 
   const exportCertsCSV = () => {
