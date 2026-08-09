@@ -744,7 +744,12 @@ export default function TenantAdmin() {
         <TabsContent value="broadcast">
           <BroadcastAlertSection />
         </TabsContent>
+
+        <TabsContent value="reviews">
+          <TrustpilotReviewsManager />
+        </TabsContent>
       </Tabs>
+
 
       {/* ============ PERMANENT DELETE DIALOG (multi-step) ============ */}
       <Dialog open={!!deleteTenant} onOpenChange={(open) => { if (!open) resetDeleteState(); }}>
