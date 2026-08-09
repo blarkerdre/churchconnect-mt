@@ -67,8 +67,8 @@ export async function unenrolFactor(factorId) {
  * session has not been elevated to aal2 yet.
  */
 export async function isMfaChallengeRequired() {
-  if (hasMfaPassed()) return false;
   try {
+
     const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
     if (error) return false;
     return data?.currentLevel === "aal1" && data?.nextLevel === "aal2";
