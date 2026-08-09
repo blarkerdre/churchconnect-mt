@@ -105,16 +105,21 @@ export default function TrustpilotReviewsManager() {
     onError: (e) => toast({ title: "Update failed", description: e.message, variant: "destructive" }),
   });
 
-  const removeReview = (r) =>
-    confirmDelete({
+  const removeReview = async (r) => {
+    const ok = await confirmDelete({
       title: "Delete review",
       description: `Remove the review by ${r.reviewer_name} from the public site?`,
-      onConfirm: async () => {
-        const { error } = await supabase.from("trustpilot_reviews").delete().eq("id", r.id);
-        if (error) throw error;
-        qc.invalidateQueries({ queryKey: ["trustpilot-reviews"] });
-      },
     });
+    if (!ok) return;
+    const { error } = await supabase.from("trustpilot_reviews").delete().eq("id", r.id);
+    if (error) {
+      toast({ title: "Delete failed", description: error.message, variant: "destructive" });
+      return;
+    }
+    qc.invalidateQueries({ queryKey: ["trustpilot-reviews"] });
+    toast({ title: "Deleted", description: "Review removed." });
+  };
+
 
   return (
     <div className="space-y-4">
