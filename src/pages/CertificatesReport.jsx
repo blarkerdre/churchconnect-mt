@@ -535,13 +535,14 @@ export default function CertificatesReport() {
                     <TableHead>Last Reissued</TableHead>
                     <TableHead className="text-center">Reissues</TableHead>
                     <TableHead>Issued By</TableHead>
+                    <TableHead>Student</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading && <TableRow><TableCell colSpan={10} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>}
+                  {loading && <TableRow><TableCell colSpan={11} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>}
                   {!loading && filteredCerts.length === 0 && (
-                    <TableRow><TableCell colSpan={10} className="text-center py-6 text-muted-foreground">No certificates match the filters.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={11} className="text-center py-6 text-muted-foreground">No certificates match the filters.</TableCell></TableRow>
                   )}
                   {filteredCerts.map((c) => {
                     const stats = reissueStats.get(c.certificate_number) || {};
@@ -567,8 +568,27 @@ export default function CertificatesReport() {
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">{issuerMap.get(c.issued_by) || "—"}</TableCell>
                         <TableCell>
+                          {c.sent_to_student_at ? (
+                            <Badge variant="secondary" className="text-[10px]">
+                              Sent {format(parseISO(c.sent_to_student_at), "dd MMM yyyy")}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px]">Not sent</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(c)} title="Download">
                             <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title={c.sent_to_student_at ? "Resend to student" : "Send to student"}
+                            onClick={() => handleSend(c)}
+                            disabled={sendingId === c.id}
+                          >
+                            {sendingId === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                           </Button>
                         </TableCell>
                       </TableRow>
