@@ -310,7 +310,94 @@ export default function CourseResultsView({ course }) {
     }
   };
 
+  // Generate certificates without notifying the student.
+  const issueCertificates = async (memberIds) => {
+    const eligible = memberIds.filter(id => passedMembers.some(pm => pm.id === id));
+    if (eligible.length === 0) {
+      toast({ title: "No eligible members", description: "Certificates can only be issued to members who passed the course.", variant: "destructive" });
+      return;
+    }
+    setSendingBulk(true);
+    try {
+      const { data: existing } = await supabase
+        .from("training_completions")
+        .select("member_id")
+        .eq("training_type", course.name)
+        .eq("tenant_id", course.tenant_id)
+        .in("member_id", eligible);
+      const existingSet = new Set((existing || []).map(r => r.member_id));
+
+      let ok = 0, fail = 0;
+      for (const id of eligible) {
+        try {
+          const { data, error } = await supabase.functions.invoke("issue-certificate", {
+            body: {
+              member_id: id,
+              training_type: course.name,
+              tenant_id: course.tenant_id,
+              reissue: existingSet.has(id),
+              release_to_student: false,
+            },
+          });
+          if (error || !data?.success) fail++; else ok++;
+        } catch { fail++; }
+      }
+      qc.invalidateQueries({ queryKey: ["training-completions"] });
+      toast({
+        title: fail === 0 ? "Certificates issued" : "Certificates partially issued",
+        description: `${ok} issued (not sent to students)${fail ? `, ${fail} failed` : ""}`,
+        variant: fail && !ok ? "destructive" : undefined,
+      });
+      clearSelection();
+    } finally {
+      setSendingBulk(false);
+    }
+  };
+
+  // Release already-issued certificates to the students.
+  const releaseCertificates = async (memberIds) => {
+    setSendingBulk(true);
+    try {
+      const { data: existing } = await supabase
+        .from("training_completions")
+        .select("id, member_id, training_type")
+        .eq("training_type", course.name)
+        .eq("tenant_id", course.tenant_id)
+        .in("member_id", memberIds);
+      if (!existing || existing.length === 0) {
+        toast({ title: "Nothing to send", description: "Issue the certificates first.", variant: "destructive" });
+        return;
+      }
+      let ok = 0, fail = 0;
+      for (const row of existing) {
+        try {
+          const { data, error } = await supabase.functions.invoke("issue-certificate", {
+            body: {
+              mode: "send",
+              member_id: row.member_id,
+              training_type: row.training_type,
+              tenant_id: course.tenant_id,
+              completion_id: row.id,
+            },
+          });
+          if (error || !data?.success) fail++; else ok++;
+        } catch { fail++; }
+      }
+      qc.invalidateQueries({ queryKey: ["training-completions"] });
+      const skipped = memberIds.length - existing.length;
+      toast({
+        title: fail === 0 ? "Certificates sent" : "Certificates partially sent",
+        description: `${ok} sent${fail ? `, ${fail} failed` : ""}${skipped ? ` (${skipped} skipped — not issued yet)` : ""}`,
+        variant: fail && !ok ? "destructive" : undefined,
+      });
+      clearSelection();
+    } finally {
+      setSendingBulk(false);
+    }
+  };
+
   const sendCertificates = async (memberIds) => {
+
     const eligible = memberIds.filter(id => passedMembers.some(pm => pm.id === id));
     if (eligible.length === 0) {
       toast({ title: "No eligible members", description: "Certificates can only be sent to members who passed the course.", variant: "destructive" });
