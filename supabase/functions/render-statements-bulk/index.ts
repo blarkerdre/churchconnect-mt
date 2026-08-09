@@ -122,7 +122,8 @@ Deno.serve(async (req) => {
     }
 
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const path = `${tenantId}/${courseId}/bulk/${stamp}-statements.${ext}`;
+    const baseName = ext === "zip" ? "statements-of-result" : "statement-of-result-merged";
+    const path = `${tenantId}/${courseId}/bulk/${stamp}-${baseName}.${ext}`;
 
     const { error: uploadErr } = await admin.storage
       .from(BUCKET)
@@ -132,7 +133,7 @@ Deno.serve(async (req) => {
     const { data: signed, error: signErr } = await admin.storage
       .from(BUCKET)
       .createSignedUrl(path, SIGNED_URL_EXPIRES_IN, {
-        download: `statements-of-result.${ext}`,
+        download: `${baseName}.${ext}`,
       });
     if (signErr || !signed?.signedUrl) throw new Error(`Signed URL failed: ${signErr?.message}`);
 
