@@ -135,7 +135,11 @@ Deno.serve(async (req) => {
     }
 
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const baseName = ext === "zip" ? "statements-of-result" : "statement-of-result-merged";
+    const partSuffix = Number(body?.part_total) > 1 && Number(body?.part) > 0
+      ? `-${Number(body.part)}of${Number(body.part_total)}`
+      : "";
+    const baseName =
+      `${ext === "zip" ? "statements-of-result" : "statement-of-result-merged"}${partSuffix}`;
     const path = `${tenantId}/${courseId}/bulk/${stamp}-${baseName}.${ext}`;
 
     const { error: uploadErr } = await admin.storage
