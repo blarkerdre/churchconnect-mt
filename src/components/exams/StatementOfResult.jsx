@@ -449,12 +449,14 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
     const pending = Array.from(doc.images || []).filter((i) => !i.complete);
     const go = () => {
       try {
+        if (typeof win.__fitOnePage === "function") win.__fitOnePage();
         win.focus();
         win.print();
       } catch {
         /* user can print manually */
       }
     };
+
     if (!pending.length) {
       setTimeout(go, 150);
     } else {
