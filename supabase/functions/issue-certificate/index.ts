@@ -479,13 +479,14 @@ Deno.serve(async (req) => {
   <!-- Certify line -->
   <text x="421" y="165" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="20" fill="${titleColor}">This is to certify that</text>
   <!-- Student name -->
-  <text x="421" y="215" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="34" fill="${nameHex}">${escapeXml(memberName)}</text>
+  <text x="421" y="215" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="${fitFontSize(memberName, 34, 660, 0.6, 16)}" fill="${nameHex}">${escapeXml(memberName)}</text>
   <!-- Student number -->
   <text x="421" y="248" text-anchor="middle" font-family="Playfair Display, serif" font-weight="400" font-size="15" fill="${bodyDark}">Student No. <tspan font-style="italic">${escapeXml(idLine)}</tspan></text>
   <!-- Fulfilment line -->
   <text x="421" y="295" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="17" fill="${bodyDark}">has fulfilled the requirement of the institute for the</text>
   <!-- Course name in script -->
-  <text x="421" y="360" text-anchor="middle" font-family="Pinyon Script, cursive" font-weight="400" font-size="48" fill="#111111">${escapeXml(training_type)}</text>
+  <text x="421" y="360" text-anchor="middle" font-family="Pinyon Script, cursive" font-weight="400" font-size="${fitFontSize(training_type, 48, 700, 0.45, 20)}" fill="#111111">${escapeXml(training_type)}</text>
+
   ${gradeClassification ? `
   <!-- Grade line -->
   <text x="330" y="420" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="18" fill="${bodyDark}">with</text>
