@@ -113,7 +113,11 @@ export default function Trust() {
             privacy questions about how the platform is operated. It describes app-visible
             controls and is not a Lovable-issued certification or independent audit.
           </p>
+          <div className="mt-6 flex justify-center">
+            <TrustpilotBadge tone="light" />
+          </div>
         </div>
+
       </section>
 
       <section className="mx-auto max-w-5xl px-4 py-12 sm:py-16">
