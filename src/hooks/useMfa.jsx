@@ -3,24 +3,19 @@ import { supabase } from "@/integrations/supabase/client";
 /**
  * Shared TOTP (authenticator app) helpers.
  *
- * Session flag: once a browser session has satisfied the MFA challenge we
- * remember it. This matters because destructive-action confirmation
- * (PasswordConfirmDialog) re-runs signInWithPassword, which mints a fresh
- * aal1 session — without the flag the user would be re-challenged mid-flow.
+ * The challenge decision is derived ONLY from the server-issued assurance
+ * level (aal) on the access token. No client-side flag can satisfy it, and
+ * the database also enforces aal2 for MFA-enrolled users via RLS, so a
+ * tampered browser cannot reach protected data.
  */
-const PASSED_KEY = "mfa_passed";
+export function markMfaPassed() { /* no-op: assurance level lives in the token */ }
 
-export function markMfaPassed() {
-  try { sessionStorage.setItem(PASSED_KEY, "1"); } catch { /* ignore */ }
-}
-
-export function hasMfaPassed() {
-  try { return sessionStorage.getItem(PASSED_KEY) === "1"; } catch { return false; }
-}
+export function hasMfaPassed() { return false; }
 
 export function clearMfaPassed() {
-  try { sessionStorage.removeItem(PASSED_KEY); } catch { /* ignore */ }
+  try { sessionStorage.removeItem("mfa_passed"); } catch { /* ignore */ }
 }
+
 
 export async function listTotpFactors() {
   const { data, error } = await supabase.auth.mfa.listFactors();
@@ -72,8 +67,8 @@ export async function unenrolFactor(factorId) {
  * session has not been elevated to aal2 yet.
  */
 export async function isMfaChallengeRequired() {
-  if (hasMfaPassed()) return false;
   try {
+
     const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
     if (error) return false;
     return data?.currentLevel === "aal1" && data?.nextLevel === "aal2";

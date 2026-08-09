@@ -24,6 +24,19 @@ Deno.serve(async (req) => {
     const { data: { user: caller } } = await supabase.auth.getUser(token);
     if (!caller) return json({ error: "Unauthorized" }, 401);
 
+    // Require a fully verified (aal2) session when the caller has 2FA enrolled
+    try {
+      const claims = JSON.parse(atob(token.split(".")[1] || ""));
+      const { data: callerFactors } = await supabase.auth.admin.mfa.listFactors({ userId: caller.id });
+      const callerEnrolled = (callerFactors?.factors || []).some((f: any) => f.status === "verified");
+      if (callerEnrolled && claims?.aal !== "aal2") {
+        return json({ error: "Complete two-step verification to perform this action" }, 403);
+      }
+    } catch {
+      return json({ error: "Unauthorized" }, 401);
+    }
+
+
     const { user_id, tenant_id } = await req.json().catch(() => ({}));
     if (!user_id || typeof user_id !== "string") {
       return json({ error: "user_id is required" }, 400);
