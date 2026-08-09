@@ -6143,6 +6143,84 @@ export type Database = {
           },
         ]
       }
+      trustpilot_reviews: {
+        Row: {
+          body: string
+          created_at: string
+          display_order: number
+          id: string
+          is_published: boolean
+          review_date: string | null
+          review_url: string | null
+          reviewer_location: string | null
+          reviewer_name: string
+          stars: number
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_published?: boolean
+          review_date?: string | null
+          review_url?: string | null
+          reviewer_location?: string | null
+          reviewer_name: string
+          stars?: number
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_published?: boolean
+          review_date?: string | null
+          review_url?: string | null
+          reviewer_location?: string | null
+          reviewer_name?: string
+          stars?: number
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      trustpilot_settings: {
+        Row: {
+          created_at: string
+          id: boolean
+          is_enabled: boolean
+          overall_score: number | null
+          profile_url: string | null
+          review_url: string | null
+          total_reviews: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: boolean
+          is_enabled?: boolean
+          overall_score?: number | null
+          profile_url?: string | null
+          review_url?: string | null
+          total_reviews?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: boolean
+          is_enabled?: boolean
+          overall_score?: number | null
+          profile_url?: string | null
+          review_url?: string | null
+          total_reviews?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       unit_join_requests: {
         Row: {
           created_at: string

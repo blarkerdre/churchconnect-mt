@@ -1,10 +1,13 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import TrustpilotReviews from "@/components/reviews/TrustpilotReviews";
+import TrustpilotBadge from "@/components/reviews/TrustpilotBadge";
 import {
   Users, CalendarCheck, Calendar, UserCheck, Heart, MessageSquare,
   BarChart3, Bus, GraduationCap, Church, ArrowRight, MessageCircle,
   Home, ChurchIcon, BookOpen, MessageSquareHeart
 } from "lucide-react";
+
 
 const features = [
   { icon: Users, title: "Member Management", desc: "Track membership, profiles, and spiritual growth milestones in one place." },
@@ -72,8 +75,12 @@ export default function LandingPage() {
               <Link to="/auth">Sign In</Link>
             </Button>
           </div>
+          <div className="mt-6 flex justify-center">
+            <TrustpilotBadge tone="light" />
+          </div>
         </div>
       </section>
+
 
       {/* Features */}
       <section id="features" className="mx-auto max-w-7xl px-4 py-16 sm:py-24">
@@ -97,6 +104,11 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
+
+      {/* Reviews */}
+      <TrustpilotReviews />
+
+
 
       {/* Footer */}
       <footer className="border-t border-border bg-card px-4 py-10">

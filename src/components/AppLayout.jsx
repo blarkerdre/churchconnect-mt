@@ -15,7 +15,9 @@ import AppFeedbackDialog from "@/components/feedback/AppFeedbackDialog";
 import { TourProvider } from "@/components/tour/TourProvider";
 import SignPostInboxDialog from "@/components/followups/SignPostInboxDialog";
 import { useQuery } from "@tanstack/react-query";
-import { Inbox } from "lucide-react";
+import { Inbox, ExternalLink } from "lucide-react";
+import { useTrustpilotSettings } from "@/hooks/useTrustpilot";
+
 import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -75,6 +77,8 @@ export default function Layout({ children }) {
   const [switchPassword, setSwitchPassword] = useState("");
   const [switchLoading, setSwitchLoading] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const { data: trustpilotSettings } = useTrustpilotSettings();
+
   const [signpostInboxOpen, setSignpostInboxOpen] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
   const { isAvailable: installAvailable, isInstalled, canPrompt, isIOSSafari } = useInstallPrompt();
@@ -404,6 +408,20 @@ export default function Layout({ children }) {
             <Star className="h-4 w-4 shrink-0" />
             {!collapsed && "Feedback"}
           </button>
+          {trustpilotSettings?.is_enabled && trustpilotSettings?.review_url && (
+            <a
+              href={trustpilotSettings.review_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setSidebarOpen(false)}
+              title={collapsed ? "Review us on Trustpilot" : undefined}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-muted text-foreground hover:bg-muted/70 transition-colors ${collapsed ? "justify-center" : ""}`}
+            >
+              <ExternalLink className="h-4 w-4 shrink-0" />
+              {!collapsed && "Review us on Trustpilot"}
+            </a>
+          )}
+
           <button
             onClick={signOut}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors ${collapsed ? "justify-center" : ""}`}

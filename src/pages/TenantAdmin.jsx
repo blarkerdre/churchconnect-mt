@@ -23,7 +23,7 @@ import { Alert, AlertTitle, AlertDescription as AlertDesc } from "@/components/u
 import {
   Building2, Users, UserCheck, Plus, CheckCircle2, ArrowRightLeft, Clock, Pencil, Save,
   Image, Palette, Users2, Archive, ArchiveRestore, Trash2, BarChart3, AlertTriangle,
-  ShieldAlert, Eye, Skull, Link, Copy, ExternalLink, Mail, Share2, Lock, Megaphone, FileSignature,
+  ShieldAlert, Eye, Skull, Link, Copy, ExternalLink, Mail, Share2, Lock, Megaphone, FileSignature, Star,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/components/ui/use-toast";
@@ -32,6 +32,8 @@ import TenantAnalyticsTab from "@/components/tenants/TenantAnalyticsTab";
 import TenantBillingTab from "@/components/tenants/TenantBillingTab";
 import DomifortIntegrationSection from "@/components/tenants/DomifortIntegrationSection";
 import BroadcastAlertSection from "@/components/alerts/BroadcastAlertSection";
+import TrustpilotReviewsManager from "@/components/settings/TrustpilotReviewsManager";
+
 import PlatformUsersTab from "@/components/tenants/PlatformUsersTab";
 import PricingTab from "@/components/tenants/PricingTab";
 import SLATemplateAdmin from "@/components/tenants/SLATemplateAdmin";
@@ -455,6 +457,8 @@ export default function TenantAdmin() {
          <TabsTrigger className="whitespace-nowrap" data-tour="ta-integrations" value="integrations"><Link className="h-3.5 w-3.5 mr-1" />Integrations</TabsTrigger>
          <TabsTrigger className="whitespace-nowrap" value="sla"><FileSignature className="h-3.5 w-3.5 mr-1" />SLA</TabsTrigger>
          <TabsTrigger className="whitespace-nowrap" value="broadcast"><Megaphone className="h-3.5 w-3.5 mr-1" />Broadcast</TabsTrigger>
+         <TabsTrigger className="whitespace-nowrap" value="reviews"><Star className="h-3.5 w-3.5 mr-1" />Reviews</TabsTrigger>
+
         </TabsList>
 
         <TabsContent value="tenants">
@@ -740,7 +744,12 @@ export default function TenantAdmin() {
         <TabsContent value="broadcast">
           <BroadcastAlertSection />
         </TabsContent>
+
+        <TabsContent value="reviews">
+          <TrustpilotReviewsManager />
+        </TabsContent>
       </Tabs>
+
 
       {/* ============ PERMANENT DELETE DIALOG (multi-step) ============ */}
       <Dialog open={!!deleteTenant} onOpenChange={(open) => { if (!open) resetDeleteState(); }}>
