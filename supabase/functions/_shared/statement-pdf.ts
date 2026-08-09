@@ -126,6 +126,11 @@ export interface BuildStatementPdfInput {
     signatory_title?: string | null;
   } | null;
   tenant: { name?: string | null; logo_url?: string | null; slug?: string | null };
+  /** Pre-fetched/encoded images so bulk renders don't re-download per student. */
+  images?: {
+    logo?: { dataUrl: string; format: "PNG" | "JPEG" } | null;
+    signature?: { dataUrl: string; format: "PNG" | "JPEG" } | null;
+  } | null;
 }
 
 export function deriveStudentNumber(input: {
