@@ -478,7 +478,7 @@ export default function CourseResultsView({ course }) {
         }
       }
       toast({
-        title: mode === "zip" ? "ZIP ready" : "Merged PDF ready",
+        title: mode === "zip" ? "Statements of Result ZIP ready" : "Statements of Result PDF ready",
         description: `${done} statement(s) generated.`,
       });
     } catch (e) {
