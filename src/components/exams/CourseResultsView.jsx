@@ -485,12 +485,27 @@ export default function CourseResultsView({ course }) {
                 )}
                 <div className="flex-1" />
                 <Button
+                  variant="outline" size="sm" className="h-7 text-xs gap-1"
+                  disabled={selected.size === 0 || sendingBulk}
+                  onClick={() => bulkDownloadStatements("merged")}
+                >
+                  <FileText className="h-3 w-3" /> Merged PDF
+                </Button>
+                <Button
+                  variant="outline" size="sm" className="h-7 text-xs gap-1"
+                  disabled={selected.size === 0 || sendingBulk}
+                  onClick={() => bulkDownloadStatements("zip")}
+                >
+                  <Download className="h-3 w-3" /> ZIP
+                </Button>
+                <Button
                   size="sm" className="h-7 text-xs gap-1"
                   disabled={selected.size === 0 || sendingBulk}
                   onClick={() => setSendDialog({ memberIds: Array.from(selected) })}
                 >
                   <Send className="h-3 w-3" /> Preview & Send…
                 </Button>
+
               </div>
             )}
 
