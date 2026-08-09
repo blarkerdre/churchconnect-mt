@@ -281,21 +281,40 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
                   {completions.map((c) => {
                     const isReissuing = reissuingId === c.id && reissueMutation.isPending;
                     const isPreviewingThis = previewingId === c.id && previewMutation.isPending;
+                    const isSendingThis = sendingId === c.id && sendMutation.isPending;
                     return (
                       <div key={c.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-chart-3/5">
                         <div className="flex items-center gap-2 min-w-0">
                           <CheckCircle2 className="h-4 w-4 text-chart-3 shrink-0" />
                           <div className="min-w-0">
                             <div className="text-sm font-medium text-foreground truncate">{c.training_type}</div>
-                            <div className="flex items-center gap-2 mt-0.5">
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                               <span className="text-[11px] text-muted-foreground">
                                 {format(new Date(c.completion_date), "dd MMM yyyy")}
                               </span>
                               <Badge variant="outline" className="text-[10px]">{c.student_number || c.certificate_number}</Badge>
+                              {c.sent_to_student_at ? (
+                                <Badge variant="secondary" className="text-[10px]">
+                                  Sent {format(new Date(c.sent_to_student_at), "dd MMM yyyy")}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-600">Not sent</Badge>
+                              )}
                             </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title={c.sent_to_student_at ? "Resend to student" : "Send to student"}
+                            onClick={() => sendMutation.mutate(c)}
+                            disabled={isSendingThis || sendMutation.isPending || isReissuing}
+                          >
+                            {isSendingThis ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                          </Button>
+
                           <Button
                             variant="ghost"
                             size="icon"
