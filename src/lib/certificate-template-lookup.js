@@ -17,6 +17,23 @@ function codeFromLabel(label) {
 }
 
 /**
+ * Tolerant comparison between a stored training_type label and a course.
+ * Order: exact -> case/punctuation-insensitive -> course code (in brackets or as a word).
+ */
+export function matchesTrainingType(trainingType, course) {
+  const name = course?.name || "";
+  if (!trainingType || !name) return false;
+  if (trainingType === name) return true;
+  if (norm(trainingType) === norm(name)) return true;
+
+  const code = String(course?.course_code || codeFromLabel(name) || "").trim().toUpperCase();
+  if (!code) return false;
+  if (codeFromLabel(trainingType) === code) return true;
+  return norm(trainingType).split(" ").includes(code.toLowerCase());
+}
+
+
+/**
  * Resolve the certificate template for a Bible School course, tolerating
  * naming drift between exam_titles.name and certificate_templates.training_type.
  * Order: exact match -> case/punctuation-insensitive -> course code match.
