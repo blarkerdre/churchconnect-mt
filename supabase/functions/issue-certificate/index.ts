@@ -869,3 +869,114 @@ function escapeXml(str: string): string {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
 }
+
+/**
+ * Releases a certificate to the student: in-app notification + (optionally) email.
+ * Never throws — delivery problems must not fail the issuing flow.
+ */
+async function deliverCertificate(
+  supabase: any,
+  opts: {
+    tenantId: string;
+    completion: { id?: string | null; training_type?: string; certificate_number?: string; certificate_url?: string | null };
+    member: any;
+    churchName: string;
+    bgColor: string;
+    sentBy: string | null;
+    email?: boolean;
+  },
+) {
+  const { tenantId, completion, member, churchName, bgColor } = opts;
+  const trainingType = completion.training_type || "";
+  const certificateNumber = completion.certificate_number || "";
+  const filePath = completion.certificate_url || "";
+
+  // In-app notification
+  try {
+    if (member?.user_id) {
+      await supabase.from("notifications").insert({
+        user_id: member.user_id,
+        tenant_id: tenantId,
+        type: "certificate",
+        title: "Your certificate is ready",
+        message: `Your ${trainingType} certificate (${certificateNumber}) is now available in your profile.`,
+        reference_id: completion.id ?? null,
+        reference_type: "training_completions",
+      });
+    }
+  } catch (notifyErr) {
+    console.warn("Failed to create certificate notification:", notifyErr);
+  }
+
+  if (opts.email === false || !member?.email || !filePath) return;
+
+  try {
+    const { data: signedUrl } = await supabase.storage
+      .from("church-documents")
+      .createSignedUrl(filePath, 60 * 60 * 24 * 7, { download: `${certificateNumber}.png` }); // 7 days
+
+    const { data: tokenRow } = await supabase
+      .from("email_unsubscribe_tokens")
+      .select("token")
+      .eq("email", member.email)
+      .maybeSingle();
+
+    let unsubToken = tokenRow?.token;
+    if (!unsubToken) {
+      unsubToken = crypto.randomUUID();
+      await supabase.from("email_unsubscribe_tokens").insert({ email: member.email, token: unsubToken });
+    }
+
+    const senderDomain = "notify.app.churchmanagementsuite.org";
+    const messageId = `cert-${crypto.randomUUID()}`;
+    const plainText = `Congratulations, ${member.first_name}!\n\nYou have successfully completed ${trainingType} at ${churchName}.\n\nYour certificate number is: ${certificateNumber}\n\n${signedUrl?.signedUrl ? `Download your certificate: ${signedUrl.signedUrl}\n\n` : ""}You can also download your certificate anytime from your profile page.`;
+
+    const emailPayload = {
+      to: member.email,
+      from: `Winners Chapel Cardiff <noreply@${senderDomain}>`,
+      sender_domain: senderDomain,
+      subject: `Your ${trainingType} Certificate - ${churchName}`,
+      text: plainText,
+      html: `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f5f7;padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#ffffff;border-radius:8px;overflow:hidden;">
+        <tr><td style="background-color:${bgColor};padding:24px 32px;text-align:center;">
+          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">${escapeXml(churchName)}</h1>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <h2 style="margin:0 0 16px;color:${bgColor};font-size:22px;">Congratulations, ${escapeXml(member.first_name || "")}! 🎉</h2>
+          <p style="margin:0 0 12px;color:#333;font-size:15px;line-height:1.6;">You have successfully completed <strong>${escapeXml(trainingType)}</strong> at ${escapeXml(churchName)}.</p>
+          <p style="margin:0 0 24px;color:#333;font-size:15px;">Your certificate number is: <strong>${escapeXml(certificateNumber)}</strong></p>
+          ${signedUrl?.signedUrl ? `<p style="text-align:center;"><a href="${signedUrl.signedUrl}" style="display:inline-block;padding:12px 24px;background-color:${bgColor};color:white;text-decoration:none;border-radius:6px;font-weight:600;">Download Certificate</a></p>` : ""}
+          <p style="margin:24px 0 0;color:#888;font-size:12px;">You can also download your certificate anytime from your profile page.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`,
+      purpose: "transactional",
+      label: "certificate",
+      message_id: messageId,
+      idempotency_key: messageId,
+      queued_at: new Date().toISOString(),
+      unsubscribe_token: unsubToken,
+      ...(tenantId ? { tenant_id: tenantId } : {}),
+    };
+
+    await supabase.rpc("enqueue_email", { queue_name: "transactional_emails", payload: emailPayload });
+
+    await supabase.from("email_send_log").insert({
+      message_id: messageId,
+      template_name: "certificate",
+      recipient_email: member.email,
+      status: "pending",
+      ...(tenantId ? { tenant_id: tenantId } : {}),
+    });
+  } catch (emailErr) {
+    console.warn("Failed to send certificate email:", emailErr);
+  }
+}
