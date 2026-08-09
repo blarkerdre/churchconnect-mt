@@ -510,7 +510,22 @@ export default function CertificatesReport() {
         </TabsList>
 
         <TabsContent value="certificates" className="space-y-3">
-          <div className="flex flex-wrap gap-2 justify-end">
+          <div className="flex flex-wrap items-center gap-2 justify-end">
+            <span className="text-xs text-muted-foreground mr-auto">{selectedCerts.size} selected</span>
+            <Button
+              variant="outline" size="sm"
+              disabled={!selectedCerts.size || bulkBusy}
+              onClick={() => bulkCertificates("merged")}
+            >
+              <Download className="h-4 w-4 mr-2" /> Merged PDF
+            </Button>
+            <Button
+              variant="outline" size="sm"
+              disabled={!selectedCerts.size || bulkBusy}
+              onClick={() => bulkCertificates("zip")}
+            >
+              <Download className="h-4 w-4 mr-2" /> ZIP
+            </Button>
             <Button variant="outline" size="sm" onClick={exportCertsCSV} disabled={!filteredCerts.length}>
               <Download className="h-4 w-4 mr-2" /> Export CSV
             </Button>
@@ -521,6 +536,16 @@ export default function CertificatesReport() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-8">
+                      <Checkbox
+                        checked={filteredCerts.length > 0 && selectedCerts.size === filteredCerts.length}
+                        onCheckedChange={(v) =>
+                          setSelectedCerts(v ? new Set(filteredCerts.map((c) => c.id)) : new Set())
+                        }
+                        disabled={bulkBusy || !filteredCerts.length}
+                        aria-label="Select all certificates"
+                      />
+                    </TableHead>
                     <TableHead>Member</TableHead>
                     <TableHead>Programme</TableHead>
                     <TableHead>Cert No</TableHead>
@@ -533,15 +558,24 @@ export default function CertificatesReport() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading && <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>}
+                  {loading && <TableRow><TableCell colSpan={10} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>}
                   {!loading && filteredCerts.length === 0 && (
-                    <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">No certificates match the filters.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="text-center py-6 text-muted-foreground">No certificates match the filters.</TableCell></TableRow>
                   )}
                   {filteredCerts.map((c) => {
                     const stats = reissueStats.get(c.certificate_number) || {};
                     return (
                       <TableRow key={c.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedCerts.has(c.id)}
+                            onCheckedChange={() => toggleCert(c.id)}
+                            disabled={bulkBusy}
+                            aria-label="Select certificate"
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">{c.members?.first_name} {c.members?.last_name}</TableCell>
+
                         <TableCell>{c.training_type}</TableCell>
                         <TableCell><Badge variant="outline" className="text-[10px]">{c.certificate_number}</Badge></TableCell>
                         <TableCell>{c.completion_date ? format(parseISO(c.completion_date), "dd MMM yyyy") : "—"}</TableCell>
