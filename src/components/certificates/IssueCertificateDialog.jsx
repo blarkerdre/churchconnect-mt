@@ -90,6 +90,7 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
           completion_date: completionDate,
           notes: notes || null,
           tenant_id: tenantId,
+          release_to_student: sendNow,
         },
       });
       if (error) throw error;
@@ -101,7 +102,9 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
       queryClient.invalidateQueries({ queryKey: ["members"] });
       toast({
         title: "Certificate issued!",
-        description: `Certificate ${data.student_number || data.certificate_number} has been generated${member.email ? " and emailed" : ""}.`,
+        description: sendNow
+          ? `Certificate ${data.student_number || data.certificate_number} has been generated and sent to the student.`
+          : `Certificate ${data.student_number || data.certificate_number} has been generated. Use "Send" when you're ready to release it to the student.`,
       });
       setTrainingType("");
       setNotes("");
@@ -111,6 +114,34 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
+
+  const sendMutation = useMutation({
+    mutationFn: async (completion) => {
+      setSendingId(completion.id);
+      const { data, error } = await supabase.functions.invoke("issue-certificate", {
+        body: {
+          mode: "send",
+          member_id: member.id,
+          training_type: completion.training_type,
+          tenant_id: completion.tenant_id || tenantId,
+          completion_id: completion.id,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["training-completions"] });
+      toast({ title: "Certificate sent to student" });
+      setSendingId(null);
+    },
+    onError: (err) => {
+      setSendingId(null);
+      toast({ title: "Send failed", description: err.message, variant: "destructive" });
+    },
+  });
+
 
   const reissueMutation = useMutation({
     mutationFn: async (completion) => {
