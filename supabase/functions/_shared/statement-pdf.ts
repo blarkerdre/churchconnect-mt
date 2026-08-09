@@ -224,10 +224,14 @@ export async function renderStatementOnDoc(doc: any, input: BuildStatementPdfInp
   const contentWidth = pageWidth - marginX * 2;
   const available = pageHeight - marginTop - marginBottom;
 
-  const [logo, sig] = await Promise.all([
-    fetchImageAsDataUrl(logoUrl),
-    fetchImageAsDataUrl(signatureUrl),
-  ]);
+  const preLogo = input.images?.logo;
+  const preSig = input.images?.signature;
+  const [logo, sig] = (preLogo !== undefined || preSig !== undefined)
+    ? [preLogo ?? null, preSig ?? null]
+    : await Promise.all([
+      fetchImageAsDataUrl(logoUrl),
+      fetchImageAsDataUrl(signatureUrl),
+    ]);
 
   // ---- Measure -------------------------------------------------------------
   const colModuleW = contentWidth * 0.75;
