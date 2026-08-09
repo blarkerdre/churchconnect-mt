@@ -140,10 +140,14 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { member_id, training_type, completion_date, notes, tenant_id, reissue, completion_id, preview, grade_classification: gcInput, send_certificate_email, admin_override } = body;
+    const { member_id, training_type, completion_date, notes, tenant_id, reissue, completion_id, preview, grade_classification: gcInput, send_certificate_email, admin_override, mode, release_to_student } = body;
     // Honour per-course email toggle unless an admin manually triggers the send
     const shouldEmail = admin_override === true || send_certificate_email !== false;
+    // Certificates are issued privately by default; they only reach the student
+    // when explicitly released (single "Send to student" or bulk send flows).
+    const shouldRelease = mode === "send" || release_to_student === true || admin_override === true;
     const isPreview = preview === true;
+
 
     if (!member_id || !training_type || !tenant_id) {
       return new Response(
@@ -180,6 +184,84 @@ Deno.serve(async (req) => {
         );
       }
     }
+
+    // ---- Send-only mode: release an already-issued certificate to the student ----
+    if (mode === "send") {
+      if (!completion_id) {
+        return new Response(JSON.stringify({ error: "completion_id is required to send a certificate" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: comp } = await supabase
+        .from("training_completions")
+        .select("*")
+        .eq("id", completion_id)
+        .eq("tenant_id", tenant_id)
+        .maybeSingle();
+      if (!comp) {
+        return new Response(JSON.stringify({ error: "Certificate not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (!comp.certificate_url) {
+        return new Response(JSON.stringify({ error: "Certificate file not generated yet — issue it first" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: sendMember } = await supabase
+        .from("members")
+        .select("id, first_name, last_name, email, user_id")
+        .eq("id", comp.member_id)
+        .eq("tenant_id", tenant_id)
+        .maybeSingle();
+      const { data: tpl } = await supabase
+        .from("certificate_templates")
+        .select("church_name, background_color")
+        .eq("tenant_id", tenant_id)
+        .ilike("training_type", String(comp.training_type || "").trim())
+        .maybeSingle();
+
+      await deliverCertificate(supabase, {
+        tenantId: tenant_id,
+        completion: comp,
+        member: sendMember,
+        churchName: tpl?.church_name || "Winners Chapel International Cardiff",
+        bgColor: tpl?.background_color || "#1a2d4d",
+        sentBy: userId,
+      });
+
+      const { data: updated } = await supabase
+        .from("training_completions")
+        .update({ sent_to_student_at: new Date().toISOString(), sent_by: userId })
+        .eq("id", comp.id)
+        .eq("tenant_id", tenant_id)
+        .select()
+        .single();
+
+      await writeAudit(supabase, {
+        tenant_id,
+        user_id: userId,
+        action: comp.sent_to_student_at ? "certificate_resent" : "certificate_sent",
+        entity_type: "training_completions",
+        entity_id: comp.id,
+        details: {
+          member_id: comp.member_id,
+          training_type: comp.training_type,
+          certificate_number: comp.certificate_number,
+          source: "issue-certificate",
+        },
+      });
+
+      return new Response(
+        JSON.stringify({ success: true, completion: updated || comp, sent: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+
 
     // Look up existing completion. For reissue prefer completion_id (robust against
     // tenant-context drift); otherwise use tenant-scoped (member, training_type).
@@ -628,10 +710,12 @@ Deno.serve(async (req) => {
           completion_date: certDate,
           certificate_url: filePath,
           issued_by: userId,
+          ...(shouldRelease ? { sent_to_student_at: new Date().toISOString(), sent_by: userId } : {}),
           ...(notes !== undefined ? { notes: notes || null } : {}),
           ...(studentNumber ? { student_number: studentNumber } : {}),
           ...(gradeClassification ? { grade_classification: gradeClassification } : {}),
         })
+
         .eq("id", existing.id)
         .eq("tenant_id", tenant_id)
         .select()
@@ -653,9 +737,11 @@ Deno.serve(async (req) => {
             issued_by: userId,
             notes: notes || null,
             tenant_id,
+            ...(shouldRelease ? { sent_to_student_at: new Date().toISOString(), sent_by: userId } : {}),
             ...(studentNumber ? { student_number: studentNumber } : {}),
             ...(gradeClassification ? { grade_classification: gradeClassification } : {}),
           })
+
           .select()
           .single();
         if (!error) {
@@ -701,86 +787,24 @@ Deno.serve(async (req) => {
         .eq("id", member_id);
     }
 
-    // Email certificate to member if they have an email AND the toggle allows it (or admin override)
-    if (member.email && shouldEmail) {
-      try {
-        const { data: signedUrl } = await supabase.storage
-          .from("church-documents")
-          .createSignedUrl(filePath, 60 * 60 * 24 * 7, { download: `${certificateNumber}.png` }); // 7 days
-
-        // Lookup or create unsubscribe token
-        const { data: tokenRow } = await supabase
-          .from("email_unsubscribe_tokens")
-          .select("token")
-          .eq("email", member.email)
-          .maybeSingle();
-
-        let unsubToken = tokenRow?.token;
-        if (!unsubToken) {
-          unsubToken = crypto.randomUUID();
-          await supabase.from("email_unsubscribe_tokens").insert({
-            email: member.email,
-            token: unsubToken,
-          });
-        }
-
-        const senderDomain = "notify.app.churchmanagementsuite.org";
-        const messageId = `cert-${crypto.randomUUID()}`;
-        const plainText = `Congratulations, ${member.first_name}!\n\nYou have successfully completed ${training_type} at ${churchName}.\n\nYour certificate number is: ${certificateNumber}\n\n${signedUrl?.signedUrl ? `Download your certificate: ${signedUrl.signedUrl}\n\n` : ""}You can also download your certificate anytime from your profile page.`;
-
-        const emailPayload = {
-          to: member.email,
-          from: `Winners Chapel Cardiff <noreply@${senderDomain}>`,
-          sender_domain: senderDomain,
-          subject: `Your ${training_type} Certificate - ${churchName}`,
-          text: plainText,
-          html: `
-<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background-color:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f5f7;padding:32px 16px;">
-    <tr><td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#ffffff;border-radius:8px;overflow:hidden;">
-        <tr><td style="background-color:${bgColor};padding:24px 32px;text-align:center;">
-          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">${escapeXml(churchName)}</h1>
-        </td></tr>
-        <tr><td style="padding:32px;">
-          <h2 style="margin:0 0 16px;color:${bgColor};font-size:22px;">Congratulations, ${escapeXml(member.first_name)}! 🎉</h2>
-          <p style="margin:0 0 12px;color:#333;font-size:15px;line-height:1.6;">You have successfully completed <strong>${escapeXml(training_type)}</strong> at ${escapeXml(churchName)}.</p>
-          <p style="margin:0 0 24px;color:#333;font-size:15px;">Your certificate number is: <strong>${certificateNumber}</strong></p>
-          ${signedUrl?.signedUrl ? `<p style="text-align:center;"><a href="${signedUrl.signedUrl}" style="display:inline-block;padding:12px 24px;background-color:${bgColor};color:white;text-decoration:none;border-radius:6px;font-weight:600;">Download Certificate</a></p>` : ""}
-          <p style="margin:24px 0 0;color:#888;font-size:12px;">You can also download your certificate anytime from your profile page.</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`,
-          purpose: "transactional",
-          label: "certificate",
-          message_id: messageId,
-          idempotency_key: messageId,
-          queued_at: new Date().toISOString(),
-          unsubscribe_token: unsubToken,
-          ...(tenant_id ? { tenant_id } : {}),
-        };
-
-        await supabase.rpc("enqueue_email", {
-          queue_name: "transactional_emails",
-          payload: emailPayload,
-        });
-
-        await supabase.from("email_send_log").insert({
-          message_id: messageId,
-          template_name: "certificate",
-          recipient_email: member.email,
-          status: "pending",
-          ...(tenant_id ? { tenant_id } : {}),
-        });
-      } catch (emailErr) {
-        console.warn("Failed to send certificate email:", emailErr);
-        // Don't fail the whole operation
-      }
+    // Deliver to the student only when this issue was explicitly released.
+    if (shouldRelease) {
+      await deliverCertificate(supabase, {
+        tenantId: tenant_id,
+        completion: {
+          id: (completion as { id?: string } | null)?.id ?? existing?.id ?? null,
+          training_type,
+          certificate_number: certificateNumber,
+          certificate_url: filePath,
+        },
+        member,
+        churchName,
+        bgColor,
+        sentBy: userId,
+        email: shouldEmail,
+      });
     }
+
 
     await writeAudit(supabase, {
       tenant_id,
@@ -794,6 +818,7 @@ Deno.serve(async (req) => {
         completion_date,
         certificate_number: certificateNumber,
         notes,
+        sent_to_student: shouldRelease,
         source: "issue-certificate",
       },
     });
@@ -804,7 +829,9 @@ Deno.serve(async (req) => {
         completion,
         certificate_number: certificateNumber,
         student_number: studentNumber,
+        sent: shouldRelease,
       }),
+
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
@@ -841,4 +868,115 @@ function escapeXml(str: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
+}
+
+/**
+ * Releases a certificate to the student: in-app notification + (optionally) email.
+ * Never throws — delivery problems must not fail the issuing flow.
+ */
+async function deliverCertificate(
+  supabase: any,
+  opts: {
+    tenantId: string;
+    completion: { id?: string | null; training_type?: string; certificate_number?: string; certificate_url?: string | null };
+    member: any;
+    churchName: string;
+    bgColor: string;
+    sentBy: string | null;
+    email?: boolean;
+  },
+) {
+  const { tenantId, completion, member, churchName, bgColor } = opts;
+  const trainingType = completion.training_type || "";
+  const certificateNumber = completion.certificate_number || "";
+  const filePath = completion.certificate_url || "";
+
+  // In-app notification
+  try {
+    if (member?.user_id) {
+      await supabase.from("notifications").insert({
+        user_id: member.user_id,
+        tenant_id: tenantId,
+        type: "certificate",
+        title: "Your certificate is ready",
+        message: `Your ${trainingType} certificate (${certificateNumber}) is now available in your profile.`,
+        reference_id: completion.id ?? null,
+        reference_type: "training_completions",
+      });
+    }
+  } catch (notifyErr) {
+    console.warn("Failed to create certificate notification:", notifyErr);
+  }
+
+  if (opts.email === false || !member?.email || !filePath) return;
+
+  try {
+    const { data: signedUrl } = await supabase.storage
+      .from("church-documents")
+      .createSignedUrl(filePath, 60 * 60 * 24 * 7, { download: `${certificateNumber}.png` }); // 7 days
+
+    const { data: tokenRow } = await supabase
+      .from("email_unsubscribe_tokens")
+      .select("token")
+      .eq("email", member.email)
+      .maybeSingle();
+
+    let unsubToken = tokenRow?.token;
+    if (!unsubToken) {
+      unsubToken = crypto.randomUUID();
+      await supabase.from("email_unsubscribe_tokens").insert({ email: member.email, token: unsubToken });
+    }
+
+    const senderDomain = "notify.app.churchmanagementsuite.org";
+    const messageId = `cert-${crypto.randomUUID()}`;
+    const plainText = `Congratulations, ${member.first_name}!\n\nYou have successfully completed ${trainingType} at ${churchName}.\n\nYour certificate number is: ${certificateNumber}\n\n${signedUrl?.signedUrl ? `Download your certificate: ${signedUrl.signedUrl}\n\n` : ""}You can also download your certificate anytime from your profile page.`;
+
+    const emailPayload = {
+      to: member.email,
+      from: `Winners Chapel Cardiff <noreply@${senderDomain}>`,
+      sender_domain: senderDomain,
+      subject: `Your ${trainingType} Certificate - ${churchName}`,
+      text: plainText,
+      html: `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f5f7;padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#ffffff;border-radius:8px;overflow:hidden;">
+        <tr><td style="background-color:${bgColor};padding:24px 32px;text-align:center;">
+          <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">${escapeXml(churchName)}</h1>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <h2 style="margin:0 0 16px;color:${bgColor};font-size:22px;">Congratulations, ${escapeXml(member.first_name || "")}! 🎉</h2>
+          <p style="margin:0 0 12px;color:#333;font-size:15px;line-height:1.6;">You have successfully completed <strong>${escapeXml(trainingType)}</strong> at ${escapeXml(churchName)}.</p>
+          <p style="margin:0 0 24px;color:#333;font-size:15px;">Your certificate number is: <strong>${escapeXml(certificateNumber)}</strong></p>
+          ${signedUrl?.signedUrl ? `<p style="text-align:center;"><a href="${signedUrl.signedUrl}" style="display:inline-block;padding:12px 24px;background-color:${bgColor};color:white;text-decoration:none;border-radius:6px;font-weight:600;">Download Certificate</a></p>` : ""}
+          <p style="margin:24px 0 0;color:#888;font-size:12px;">You can also download your certificate anytime from your profile page.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`,
+      purpose: "transactional",
+      label: "certificate",
+      message_id: messageId,
+      idempotency_key: messageId,
+      queued_at: new Date().toISOString(),
+      unsubscribe_token: unsubToken,
+      ...(tenantId ? { tenant_id: tenantId } : {}),
+    };
+
+    await supabase.rpc("enqueue_email", { queue_name: "transactional_emails", payload: emailPayload });
+
+    await supabase.from("email_send_log").insert({
+      message_id: messageId,
+      template_name: "certificate",
+      recipient_email: member.email,
+      status: "pending",
+      ...(tenantId ? { tenant_id: tenantId } : {}),
+    });
+  } catch (emailErr) {
+    console.warn("Failed to send certificate email:", emailErr);
+  }
 }

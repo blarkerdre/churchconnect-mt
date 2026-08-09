@@ -5905,6 +5905,8 @@ export type Database = {
           issued_by: string | null
           member_id: string
           notes: string | null
+          sent_by: string | null
+          sent_to_student_at: string | null
           student_number: string | null
           tenant_id: string | null
           training_type: string
@@ -5919,6 +5921,8 @@ export type Database = {
           issued_by?: string | null
           member_id: string
           notes?: string | null
+          sent_by?: string | null
+          sent_to_student_at?: string | null
           student_number?: string | null
           tenant_id?: string | null
           training_type: string
@@ -5933,6 +5937,8 @@ export type Database = {
           issued_by?: string | null
           member_id?: string
           notes?: string | null
+          sent_by?: string | null
+          sent_to_student_at?: string | null
           student_number?: string | null
           tenant_id?: string | null
           training_type?: string
