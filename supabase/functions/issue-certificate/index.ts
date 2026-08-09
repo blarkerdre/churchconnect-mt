@@ -550,11 +550,12 @@ Deno.serve(async (req) => {
   <!-- Custom message -->
   <text x="421" y="220" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="12" fill="#888">${customMessage}</text>
   <!-- Member name -->
-  <text x="421" y="280" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="32" fill="${bgColor}">${escapeXml(memberName)}</text>
+  <text x="421" y="280" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="${fitFontSize(memberName, 32, 660, 0.6, 16)}" fill="${bgColor}">${escapeXml(memberName)}</text>
   <!-- Underline -->
   <line x1="221" y1="295" x2="621" y2="295" stroke="${accentColor}" stroke-width="1.5"/>
   <!-- Training type -->
-  <text x="421" y="340" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="18" fill="${bgColor}">${escapeXml(training_type)}</text>
+  <text x="421" y="340" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="${fitFontSize(training_type, 18, 700, 0.55, 11)}" fill="${bgColor}">${escapeXml(training_type)}</text>
+
   <!-- Date -->
   <text x="421" y="380" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="13" fill="#666">Completed on ${formattedDate}</text>
   <!-- Certificate number -->
