@@ -737,9 +737,11 @@ Deno.serve(async (req) => {
             issued_by: userId,
             notes: notes || null,
             tenant_id,
+            ...(shouldRelease ? { sent_to_student_at: new Date().toISOString(), sent_by: userId } : {}),
             ...(studentNumber ? { student_number: studentNumber } : {}),
             ...(gradeClassification ? { grade_classification: gradeClassification } : {}),
           })
+
           .select()
           .single();
         if (!error) {
