@@ -80,7 +80,7 @@ function formatSessionLabel(session: any) {
   return `${now.toLocaleString("en-GB", { month: "long" }).toUpperCase()} ${now.getFullYear()}`;
 }
 
-async function fetchImageAsDataUrl(
+export async function fetchImageAsDataUrl(
   url: string | null | undefined,
 ): Promise<{ dataUrl: string; format: "PNG" | "JPEG" } | null> {
   if (!url) return null;
