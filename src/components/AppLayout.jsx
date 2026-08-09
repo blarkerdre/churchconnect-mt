@@ -77,6 +77,8 @@ export default function Layout({ children }) {
   const [switchPassword, setSwitchPassword] = useState("");
   const [switchLoading, setSwitchLoading] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const { data: trustpilotSettings } = useTrustpilotSettings();
+
   const [signpostInboxOpen, setSignpostInboxOpen] = useState(false);
   const [installOpen, setInstallOpen] = useState(false);
   const { isAvailable: installAvailable, isInstalled, canPrompt, isIOSSafari } = useInstallPrompt();
