@@ -75,8 +75,12 @@ export default function LandingPage() {
               <Link to="/auth">Sign In</Link>
             </Button>
           </div>
+          <div className="mt-6 flex justify-center">
+            <TrustpilotBadge tone="light" />
+          </div>
         </div>
       </section>
+
 
       {/* Features */}
       <section id="features" className="mx-auto max-w-7xl px-4 py-16 sm:py-24">
