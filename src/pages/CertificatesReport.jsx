@@ -278,6 +278,30 @@ export default function CertificatesReport() {
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
+  const handleSend = async (c) => {
+    setSendingId(c.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("issue-certificate", {
+        body: {
+          mode: "send",
+          member_id: c.member_id,
+          training_type: c.training_type,
+          tenant_id: tenantId,
+          completion_id: c.id,
+        },
+      });
+      if (error || !data?.success) throw new Error(error?.message || data?.error || "Send failed");
+      toast({ title: "Certificate sent to student" });
+      qc.invalidateQueries({ queryKey: ["cert-report-completions", tenantId] });
+    } catch (e) {
+      toast({ title: "Send failed", description: e.message, variant: "destructive" });
+    } finally {
+      setSendingId(null);
+    }
+  };
+
+
+
   const toggleCert = (id) =>
     setSelectedCerts((prev) => {
       const next = new Set(prev);
