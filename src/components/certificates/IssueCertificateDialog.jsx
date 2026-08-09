@@ -397,6 +397,17 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
                     rows={2}
                   />
                 </div>
+
+                <div className="flex items-start gap-2 rounded-lg border p-3">
+                  <Checkbox id="send-now" checked={sendNow} onCheckedChange={(v) => setSendNow(v === true)} className="mt-0.5" />
+                  <div className="space-y-0.5">
+                    <Label htmlFor="send-now" className="cursor-pointer">Send to the student now</Label>
+                    <p className="text-[11px] text-muted-foreground">
+                      Leave unticked to issue privately. The student only sees the certificate once you send it.
+                    </p>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
