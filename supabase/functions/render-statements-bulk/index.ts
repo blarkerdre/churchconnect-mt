@@ -74,24 +74,31 @@ Deno.serve(async (req) => {
       });
     }
 
-    const failed: Array<{ member_id: string; error: string }> = [];
     let generated = 0;
     let bytes: Uint8Array | null = null;
     let contentType = "application/pdf";
     let ext = "pdf";
 
+    const shared = await buildStatementSharedContext(admin, tenantId, courseId);
+    const { items, failed } = await collectStatementInputsBulk(
+      admin,
+      tenantId,
+      courseId,
+      memberIds,
+      shared,
+    );
+
     if (mode === "merged") {
       const doc = new jsPDF({ unit: "mm", format: "a4" });
       let first = true;
-      for (const mid of memberIds) {
+      for (const item of items) {
         try {
-          const collected = await collectStatementInput(admin, tenantId, courseId, mid);
           if (!first) doc.addPage();
           first = false;
-          await renderStatementOnDoc(doc, collected.statementInput);
+          await renderStatementOnDoc(doc, item.statementInput);
           generated += 1;
         } catch (e) {
-          failed.push({ member_id: mid, error: (e as Error).message });
+          failed.push({ member_id: item.memberId, error: (e as Error).message });
         }
       }
       if (generated === 0) {
@@ -103,14 +110,17 @@ Deno.serve(async (req) => {
       bytes = new Uint8Array(doc.output("arraybuffer"));
     } else {
       const zip = new JSZip();
-      for (const mid of memberIds) {
+      for (const item of items) {
         try {
-          const collected = await collectStatementInput(admin, tenantId, courseId, mid);
-          const pdf = await buildStatementPdf(collected.statementInput);
-          zip.file(`${safeName(collected.memberName)}_statement.pdf`, pdf);
+          const doc = new jsPDF({ unit: "mm", format: "a4" });
+          await renderStatementOnDoc(doc, item.statementInput);
+          zip.file(
+            `${safeName(item.memberName)}_statement.pdf`,
+            new Uint8Array(doc.output("arraybuffer")),
+          );
           generated += 1;
         } catch (e) {
-          failed.push({ member_id: mid, error: (e as Error).message });
+          failed.push({ member_id: item.memberId, error: (e as Error).message });
         }
       }
       if (generated === 0) {
