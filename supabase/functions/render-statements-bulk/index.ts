@@ -1,8 +1,11 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { jsPDF } from "npm:jspdf@2.5.1";
 import JSZip from "npm:jszip@3.10.1";
-import { collectStatementInput, renderStatementOnDoc } from "../_shared/generate-statement.ts";
-import { buildStatementPdf } from "../_shared/statement-pdf.ts";
+import {
+  buildStatementSharedContext,
+  collectStatementInputsBulk,
+  renderStatementOnDoc,
+} from "../_shared/generate-statement.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,7 +15,7 @@ const corsHeaders = {
 
 const BUCKET = "exam-statements";
 const SIGNED_URL_EXPIRES_IN = 60 * 60 * 24; // 24 hours
-const MAX_MEMBERS = 50;
+const MAX_MEMBERS = 15;
 
 function safeName(s: string) {
   return String(s || "student").replace(/[^A-Za-z0-9 _-]/g, "").trim().replace(/\s+/g, "_") ||
