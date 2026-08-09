@@ -457,6 +457,8 @@ export default function TenantAdmin() {
          <TabsTrigger className="whitespace-nowrap" data-tour="ta-integrations" value="integrations"><Link className="h-3.5 w-3.5 mr-1" />Integrations</TabsTrigger>
          <TabsTrigger className="whitespace-nowrap" value="sla"><FileSignature className="h-3.5 w-3.5 mr-1" />SLA</TabsTrigger>
          <TabsTrigger className="whitespace-nowrap" value="broadcast"><Megaphone className="h-3.5 w-3.5 mr-1" />Broadcast</TabsTrigger>
+         <TabsTrigger className="whitespace-nowrap" value="reviews"><Star className="h-3.5 w-3.5 mr-1" />Reviews</TabsTrigger>
+
         </TabsList>
 
         <TabsContent value="tenants">
