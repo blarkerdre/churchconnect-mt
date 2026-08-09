@@ -129,16 +129,34 @@ export async function collectStatementInput(
     seq,
   });
 
-  const pdfBytes = await buildStatementPdf({
-    member: { id: member.id, name: memberName },
-    course,
-    subjects: subjects || [],
-    memberSubjects,
-    session,
+  return {
+    statementInput: {
+      member: { id: member.id, name: memberName },
+      course,
+      subjects: subjects || [],
+      memberSubjects,
+      session,
+      studentNumber,
+      template,
+      tenant: { ...(tenant || {}), logo_url: tenantLogo },
+    },
+    memberName,
+    memberEmail: (member.email as string | null) ?? null,
+    courseName: course.name as string,
     studentNumber,
-    template,
-    tenant: { ...(tenant || {}), logo_url: tenantLogo },
-  });
+    session,
+  };
+}
+
+export async function generateAndUploadStatement(
+  admin: any,
+  tenantId: string,
+  courseId: string,
+  memberId: string,
+) {
+  const collected = await collectStatementInput(admin, tenantId, courseId, memberId);
+
+  const pdfBytes = await buildStatementPdf(collected.statementInput);
 
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -165,10 +183,11 @@ export async function collectStatementInput(
     path,
     signed_url: signed.signedUrl,
     expires_at: expiresAt,
-    member_name: memberName,
-    member_email: member.email as string | null,
-    course_name: course.name as string,
-    student_number: studentNumber,
-    session_label_source: session,
+    member_name: collected.memberName,
+    member_email: collected.memberEmail,
+    course_name: collected.courseName,
+    student_number: collected.studentNumber,
+    session_label_source: collected.session,
   };
 }
+
