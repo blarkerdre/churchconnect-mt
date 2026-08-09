@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Award, CheckCircle2, RotateCw, Download, Eye } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, Award, CheckCircle2, RotateCw, Download, Eye, Send } from "lucide-react";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
