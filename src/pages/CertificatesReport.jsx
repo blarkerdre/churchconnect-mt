@@ -37,6 +37,9 @@ export default function CertificatesReport() {
   const [programme, setProgramme] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [selectedCerts, setSelectedCerts] = useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
 
   // Certificates (training_completions) joined with members
   const { data: completions = [], isLoading: loadingCerts } = useQuery({
