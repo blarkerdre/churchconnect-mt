@@ -479,13 +479,14 @@ Deno.serve(async (req) => {
   <!-- Certify line -->
   <text x="421" y="165" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="20" fill="${titleColor}">This is to certify that</text>
   <!-- Student name -->
-  <text x="421" y="215" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="34" fill="${nameHex}">${escapeXml(memberName)}</text>
+  <text x="421" y="215" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="${fitFontSize(memberName, 34, 660, 0.6, 16)}" fill="${nameHex}">${escapeXml(memberName)}</text>
   <!-- Student number -->
   <text x="421" y="248" text-anchor="middle" font-family="Playfair Display, serif" font-weight="400" font-size="15" fill="${bodyDark}">Student No. <tspan font-style="italic">${escapeXml(idLine)}</tspan></text>
   <!-- Fulfilment line -->
   <text x="421" y="295" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="17" fill="${bodyDark}">has fulfilled the requirement of the institute for the</text>
   <!-- Course name in script -->
-  <text x="421" y="360" text-anchor="middle" font-family="Pinyon Script, cursive" font-weight="400" font-size="48" fill="#111111">${escapeXml(training_type)}</text>
+  <text x="421" y="360" text-anchor="middle" font-family="Pinyon Script, cursive" font-weight="400" font-size="${fitFontSize(training_type, 48, 700, 0.45, 20)}" fill="#111111">${escapeXml(training_type)}</text>
+
   ${gradeClassification ? `
   <!-- Grade line -->
   <text x="330" y="420" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="18" fill="${bodyDark}">with</text>
@@ -514,9 +515,10 @@ Deno.serve(async (req) => {
   
   ${bgDataUri ? `<image href="${bgDataUri}" width="842" height="595" preserveAspectRatio="xMidYMid slice"/>` : `<rect width="842" height="595" fill="${bgColor}"/>`}
   <!-- Member name -->
-  <text x="421" y="${nameY}" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="32" fill="${textColor}" stroke="rgba(255,255,255,0.35)" stroke-width="0.6" paint-order="stroke">${escapeXml(memberName)}</text>
+  <text x="421" y="${nameY}" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="${fitFontSize(memberName, 32, 660, 0.6, 16)}" fill="${textColor}" stroke="rgba(255,255,255,0.35)" stroke-width="0.6" paint-order="stroke">${escapeXml(memberName)}</text>
   <!-- Training type -->
-  <text x="421" y="${trainingY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="18" fill="${textColor}">${escapeXml(training_type)}</text>
+  <text x="421" y="${trainingY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="${fitFontSize(training_type, 18, 700, 0.55, 11)}" fill="${textColor}">${escapeXml(training_type)}</text>
+
   <!-- Date -->
   <text x="421" y="${dateY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="13" fill="${textColor}" opacity="0.75">Completed on ${formattedDate}</text>
   <!-- Certificate number -->
@@ -548,11 +550,12 @@ Deno.serve(async (req) => {
   <!-- Custom message -->
   <text x="421" y="220" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="12" fill="#888">${customMessage}</text>
   <!-- Member name -->
-  <text x="421" y="280" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="32" fill="${bgColor}">${escapeXml(memberName)}</text>
+  <text x="421" y="280" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="${fitFontSize(memberName, 32, 660, 0.6, 16)}" fill="${bgColor}">${escapeXml(memberName)}</text>
   <!-- Underline -->
   <line x1="221" y1="295" x2="621" y2="295" stroke="${accentColor}" stroke-width="1.5"/>
   <!-- Training type -->
-  <text x="421" y="340" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="18" fill="${bgColor}">${escapeXml(training_type)}</text>
+  <text x="421" y="340" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="${fitFontSize(training_type, 18, 700, 0.55, 11)}" fill="${bgColor}">${escapeXml(training_type)}</text>
+
   <!-- Date -->
   <text x="421" y="380" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="13" fill="#666">Completed on ${formattedDate}</text>
   <!-- Certificate number -->
@@ -813,7 +816,25 @@ Deno.serve(async (req) => {
   }
 });
 
+/**
+ * Shrinks a font size so `text` stays inside `maxWidth` px on the certificate canvas.
+ * widthFactor ~= average glyph width relative to the font size.
+ */
+function fitFontSize(
+  text: string,
+  baseSize: number,
+  maxWidth: number,
+  widthFactor = 0.55,
+  minSize = 12,
+): number {
+  const len = (text || "").length || 1;
+  const estimated = len * baseSize * widthFactor;
+  if (estimated <= maxWidth) return baseSize;
+  return Math.max(minSize, Math.floor((maxWidth / (len * widthFactor)) * 10) / 10);
+}
+
 function escapeXml(str: string): string {
+
   return str
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
