@@ -32,6 +32,8 @@ import TenantAnalyticsTab from "@/components/tenants/TenantAnalyticsTab";
 import TenantBillingTab from "@/components/tenants/TenantBillingTab";
 import DomifortIntegrationSection from "@/components/tenants/DomifortIntegrationSection";
 import BroadcastAlertSection from "@/components/alerts/BroadcastAlertSection";
+import TrustpilotReviewsManager from "@/components/settings/TrustpilotReviewsManager";
+
 import PlatformUsersTab from "@/components/tenants/PlatformUsersTab";
 import PricingTab from "@/components/tenants/PricingTab";
 import SLATemplateAdmin from "@/components/tenants/SLATemplateAdmin";
