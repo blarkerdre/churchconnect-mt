@@ -304,7 +304,7 @@ export async function renderStatementOnDoc(doc: any, input: BuildStatementPdfInp
         logoW = maxW;
         logoH = logoW / ratio;
       }
-      doc.addImage(logo.dataUrl, logo.format, pageWidth / 2 - logoW / 2, y, logoW, logoH);
+      doc.addImage(logo.dataUrl, logo.format, pageWidth / 2 - logoW / 2, y, logoW, logoH, "stmt-logo", "FAST");
       y += logoH + sp(base.logoGap);
     } catch {
       // ignore
@@ -446,7 +446,7 @@ export async function renderStatementOnDoc(doc: any, input: BuildStatementPdfInp
         sW = 50;
         sH = sW / sRatio;
       }
-      doc.addImage(sig.dataUrl, sig.format, marginX, sigBaseline - sH, sW, sH);
+      doc.addImage(sig.dataUrl, sig.format, marginX, sigBaseline - sH, sW, sH, "stmt-sig", "FAST");
     } catch {
       // ignore
     }
