@@ -448,11 +448,14 @@ export default function CourseResultsView({ course }) {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
     setSendingBulk(true);
+    const CHUNK = 15;
     const chunks = [];
-    for (let i = 0; i < ids.length; i += 50) chunks.push(ids.slice(i, i + 50));
+    for (let i = 0; i < ids.length; i += CHUNK) chunks.push(ids.slice(i, i + CHUNK));
     try {
       let done = 0;
+      let part = 0;
       for (const chunk of chunks) {
+        part += 1;
         toast({
           title: "Preparing statements",
           description: `${done} of ${ids.length}…`,
@@ -463,10 +466,20 @@ export default function CourseResultsView({ course }) {
             course_id: course.id,
             member_ids: chunk,
             mode,
+            part,
+            part_total: chunks.length,
           },
         });
         if (error) throw error;
-        if (data?.signed_url) window.open(data.signed_url, "_blank");
+        if (data?.signed_url) {
+          const a = document.createElement("a");
+          a.href = data.signed_url;
+          a.download = "";
+          a.rel = "noopener";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        }
         done += data?.generated ?? chunk.length;
         const skipped = (data?.failed || []).length;
         if (skipped) {
@@ -479,10 +492,19 @@ export default function CourseResultsView({ course }) {
       }
       toast({
         title: mode === "zip" ? "Statements of Result ZIP ready" : "Statements of Result PDF ready",
-        description: `${done} statement(s) generated.`,
+        description: chunks.length > 1
+          ? `${done} statement(s) generated across ${chunks.length} files.`
+          : `${done} statement(s) generated.`,
       });
     } catch (e) {
-      toast({ title: "Bulk download failed", description: e.message, variant: "destructive" });
+      const msg = String(e?.message || "");
+      toast({
+        title: "Bulk download failed",
+        description: /timeout|cpu|non-2xx|Failed to send/i.test(msg)
+          ? "The download timed out. Try selecting fewer students and downloading again."
+          : msg,
+        variant: "destructive",
+      });
     } finally {
       setSendingBulk(false);
     }

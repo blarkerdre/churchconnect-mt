@@ -80,7 +80,7 @@ function formatSessionLabel(session: any) {
   return `${now.toLocaleString("en-GB", { month: "long" }).toUpperCase()} ${now.getFullYear()}`;
 }
 
-async function fetchImageAsDataUrl(
+export async function fetchImageAsDataUrl(
   url: string | null | undefined,
 ): Promise<{ dataUrl: string; format: "PNG" | "JPEG" } | null> {
   if (!url) return null;
@@ -126,6 +126,11 @@ export interface BuildStatementPdfInput {
     signatory_title?: string | null;
   } | null;
   tenant: { name?: string | null; logo_url?: string | null; slug?: string | null };
+  /** Pre-fetched/encoded images so bulk renders don't re-download per student. */
+  images?: {
+    logo?: { dataUrl: string; format: "PNG" | "JPEG" } | null;
+    signature?: { dataUrl: string; format: "PNG" | "JPEG" } | null;
+  } | null;
 }
 
 export function deriveStudentNumber(input: {
@@ -219,10 +224,14 @@ export async function renderStatementOnDoc(doc: any, input: BuildStatementPdfInp
   const contentWidth = pageWidth - marginX * 2;
   const available = pageHeight - marginTop - marginBottom;
 
-  const [logo, sig] = await Promise.all([
-    fetchImageAsDataUrl(logoUrl),
-    fetchImageAsDataUrl(signatureUrl),
-  ]);
+  const preLogo = input.images?.logo;
+  const preSig = input.images?.signature;
+  const [logo, sig] = (preLogo !== undefined || preSig !== undefined)
+    ? [preLogo ?? null, preSig ?? null]
+    : await Promise.all([
+      fetchImageAsDataUrl(logoUrl),
+      fetchImageAsDataUrl(signatureUrl),
+    ]);
 
   // ---- Measure -------------------------------------------------------------
   const colModuleW = contentWidth * 0.75;
@@ -295,7 +304,7 @@ export async function renderStatementOnDoc(doc: any, input: BuildStatementPdfInp
         logoW = maxW;
         logoH = logoW / ratio;
       }
-      doc.addImage(logo.dataUrl, logo.format, pageWidth / 2 - logoW / 2, y, logoW, logoH);
+      doc.addImage(logo.dataUrl, logo.format, pageWidth / 2 - logoW / 2, y, logoW, logoH, "stmt-logo", "FAST");
       y += logoH + sp(base.logoGap);
     } catch {
       // ignore
@@ -437,7 +446,7 @@ export async function renderStatementOnDoc(doc: any, input: BuildStatementPdfInp
         sW = 50;
         sH = sW / sRatio;
       }
-      doc.addImage(sig.dataUrl, sig.format, marginX, sigBaseline - sH, sW, sH);
+      doc.addImage(sig.dataUrl, sig.format, marginX, sigBaseline - sH, sW, sH, "stmt-sig", "FAST");
     } catch {
       // ignore
     }

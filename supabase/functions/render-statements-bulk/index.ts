@@ -1,8 +1,11 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { jsPDF } from "npm:jspdf@2.5.1";
 import JSZip from "npm:jszip@3.10.1";
-import { collectStatementInput, renderStatementOnDoc } from "../_shared/generate-statement.ts";
-import { buildStatementPdf } from "../_shared/statement-pdf.ts";
+import {
+  buildStatementSharedContext,
+  collectStatementInputsBulk,
+  renderStatementOnDoc,
+} from "../_shared/generate-statement.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,7 +15,7 @@ const corsHeaders = {
 
 const BUCKET = "exam-statements";
 const SIGNED_URL_EXPIRES_IN = 60 * 60 * 24; // 24 hours
-const MAX_MEMBERS = 50;
+const MAX_MEMBERS = 15;
 
 function safeName(s: string) {
   return String(s || "student").replace(/[^A-Za-z0-9 _-]/g, "").trim().replace(/\s+/g, "_") ||
@@ -71,24 +74,31 @@ Deno.serve(async (req) => {
       });
     }
 
-    const failed: Array<{ member_id: string; error: string }> = [];
     let generated = 0;
     let bytes: Uint8Array | null = null;
     let contentType = "application/pdf";
     let ext = "pdf";
 
+    const shared = await buildStatementSharedContext(admin, tenantId, courseId);
+    const { items, failed } = await collectStatementInputsBulk(
+      admin,
+      tenantId,
+      courseId,
+      memberIds,
+      shared,
+    );
+
     if (mode === "merged") {
       const doc = new jsPDF({ unit: "mm", format: "a4" });
       let first = true;
-      for (const mid of memberIds) {
+      for (const item of items) {
         try {
-          const collected = await collectStatementInput(admin, tenantId, courseId, mid);
           if (!first) doc.addPage();
           first = false;
-          await renderStatementOnDoc(doc, collected.statementInput);
+          await renderStatementOnDoc(doc, item.statementInput);
           generated += 1;
         } catch (e) {
-          failed.push({ member_id: mid, error: (e as Error).message });
+          failed.push({ member_id: item.memberId, error: (e as Error).message });
         }
       }
       if (generated === 0) {
@@ -100,14 +110,17 @@ Deno.serve(async (req) => {
       bytes = new Uint8Array(doc.output("arraybuffer"));
     } else {
       const zip = new JSZip();
-      for (const mid of memberIds) {
+      for (const item of items) {
         try {
-          const collected = await collectStatementInput(admin, tenantId, courseId, mid);
-          const pdf = await buildStatementPdf(collected.statementInput);
-          zip.file(`${safeName(collected.memberName)}_statement.pdf`, pdf);
+          const doc = new jsPDF({ unit: "mm", format: "a4" });
+          await renderStatementOnDoc(doc, item.statementInput);
+          zip.file(
+            `${safeName(item.memberName)}_statement.pdf`,
+            new Uint8Array(doc.output("arraybuffer")),
+          );
           generated += 1;
         } catch (e) {
-          failed.push({ member_id: mid, error: (e as Error).message });
+          failed.push({ member_id: item.memberId, error: (e as Error).message });
         }
       }
       if (generated === 0) {
@@ -122,7 +135,11 @@ Deno.serve(async (req) => {
     }
 
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const baseName = ext === "zip" ? "statements-of-result" : "statement-of-result-merged";
+    const partSuffix = Number(body?.part_total) > 1 && Number(body?.part) > 0
+      ? `-${Number(body.part)}of${Number(body.part_total)}`
+      : "";
+    const baseName =
+      `${ext === "zip" ? "statements-of-result" : "statement-of-result-merged"}${partSuffix}`;
     const path = `${tenantId}/${courseId}/bulk/${stamp}-${baseName}.${ext}`;
 
     const { error: uploadErr } = await admin.storage
