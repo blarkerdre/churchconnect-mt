@@ -1,15 +1,21 @@
-import { buildStatementPdf, deriveStudentNumber } from "./statement-pdf.ts";
+import { buildStatementPdf, deriveStudentNumber, renderStatementOnDoc } from "./statement-pdf.ts";
 import { fetchCourseTemplate, resolveTemplateImages, signIfPrivate } from "./certificate-template.ts";
 
 const BUCKET = "exam-statements";
 const SIGNED_URL_EXPIRES_IN = 60 * 60 * 24 * 30; // 30 days
 
-export async function generateAndUploadStatement(
+export { renderStatementOnDoc };
+
+/**
+ * Gathers everything needed to render one member's Statement of Result.
+ */
+export async function collectStatementInput(
   admin: any,
   tenantId: string,
   courseId: string,
   memberId: string,
 ) {
+
   const { data: member } = await admin
     .from("members")
     .select("id, first_name, last_name, email, tenant_id")
@@ -123,16 +129,34 @@ export async function generateAndUploadStatement(
     seq,
   });
 
-  const pdfBytes = await buildStatementPdf({
-    member: { id: member.id, name: memberName },
-    course,
-    subjects: subjects || [],
-    memberSubjects,
-    session,
+  return {
+    statementInput: {
+      member: { id: member.id, name: memberName },
+      course,
+      subjects: subjects || [],
+      memberSubjects,
+      session,
+      studentNumber,
+      template,
+      tenant: { ...(tenant || {}), logo_url: tenantLogo },
+    },
+    memberName,
+    memberEmail: (member.email as string | null) ?? null,
+    courseName: course.name as string,
     studentNumber,
-    template,
-    tenant: { ...(tenant || {}), logo_url: tenantLogo },
-  });
+    session,
+  };
+}
+
+export async function generateAndUploadStatement(
+  admin: any,
+  tenantId: string,
+  courseId: string,
+  memberId: string,
+) {
+  const collected = await collectStatementInput(admin, tenantId, courseId, memberId);
+
+  const pdfBytes = await buildStatementPdf(collected.statementInput);
 
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -159,10 +183,11 @@ export async function generateAndUploadStatement(
     path,
     signed_url: signed.signedUrl,
     expires_at: expiresAt,
-    member_name: memberName,
-    member_email: member.email as string | null,
-    course_name: course.name as string,
-    student_number: studentNumber,
-    session_label_source: session,
+    member_name: collected.memberName,
+    member_email: collected.memberEmail,
+    course_name: collected.courseName,
+    student_number: collected.studentNumber,
+    session_label_source: collected.session,
   };
 }
+

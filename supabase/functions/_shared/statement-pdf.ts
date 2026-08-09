@@ -147,6 +147,17 @@ export function deriveStudentNumber(input: {
 export { formatSessionLabel, resolveLetterGradeBands, getLetterGrade, getClassification };
 
 export async function buildStatementPdf(input: BuildStatementPdfInput): Promise<Uint8Array> {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  await renderStatementOnDoc(doc, input);
+  const ab = doc.output("arraybuffer");
+  return new Uint8Array(ab);
+}
+
+/**
+ * Draws one Statement of Result onto the current page of `doc`.
+ * The layout auto-scales so it always fits a single A4 page.
+ */
+export async function renderStatementOnDoc(doc: any, input: BuildStatementPdfInput) {
   const {
     member,
     course,
@@ -200,32 +211,83 @@ export async function buildStatementPdf(input: BuildStatementPdfInput): Promise<
   const signatureUrl = template?.dean_signature_url || "";
   const isBibleSchool = /bible school|wofbi|bcc|bfc|lcc|ldc/i.test(course.name || "");
 
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
   const marginX = 20;
+  const marginTop = 16;
+  const marginBottom = 14;
   const contentWidth = pageWidth - marginX * 2;
+  const available = pageHeight - marginTop - marginBottom;
 
-  // Watermark — light-gray text (avoids GState compatibility issues in Deno)
+  const [logo, sig] = await Promise.all([
+    fetchImageAsDataUrl(logoUrl),
+    fetchImageAsDataUrl(signatureUrl),
+  ]);
+
+  // ---- Measure -------------------------------------------------------------
+  const colModuleW = contentWidth * 0.75;
+  const colGradeW = contentWidth * 0.25;
+
+  // Module titles may wrap onto (at most) two lines.
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  const moduleLines = rows.map((r) => {
+    const lines = doc.splitTextToSize((r.name || "").toUpperCase(), colModuleW - 8) as string[];
+    return lines.slice(0, 2);
+  });
+
+  doc.setFontSize(11);
+  const courseLine = `${(course.name || "").toUpperCase()} ${sessionLabel}`;
+  const courseLines = doc.splitTextToSize(courseLine, contentWidth) as string[];
+
+  const base = {
+    logoH: logo ? 26 : 0,
+    logoGap: logo ? 4 : 0,
+    churchH: 8,
+    centreH: centreName ? 6 : 0,
+    titleH: 5,
+    courseH: 5 * courseLines.length + 8,
+    nameH: 8,
+    tableGap: 2,
+    headerH: 8,
+    rowH: 6.5,
+    footerH: 8,
+    afterTable: 8,
+    notesTitleH: 5,
+    notesHeadH: 4,
+    notesRowH: 4,
+    afterNotes: 8,
+    sigH: 15,
+    sigNameH: 4,
+    sigTitleH: 4,
+  };
+
+  const rowsHeight = moduleLines.reduce((sum, l) => sum + base.rowH * (l.length > 1 ? 1.7 : 1), 0);
+  const needed = base.logoH + base.logoGap + base.churchH + base.centreH + base.titleH +
+    base.courseH + base.nameH + base.tableGap + base.headerH + rowsHeight + base.footerH +
+    base.afterTable + base.notesTitleH + base.notesHeadH + letterBands.length * base.notesRowH +
+    base.afterNotes + base.sigH + base.sigNameH + base.sigTitleH;
+
+  const scale = Math.max(0.55, Math.min(1, available / Math.max(needed, 1)));
+  const fs = (pt: number, floor = 6.5) => Math.max(floor, pt * Math.max(scale, 0.72));
+  const sp = (mm: number) => mm * scale;
+
+  // ---- Draw ---------------------------------------------------------------
   if (isBibleSchool) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(120);
     doc.setTextColor(230, 230, 230);
-    doc.text("WOFBI", pageWidth / 2, 170, {
-      align: "center",
-      angle: 35,
-    } as any);
+    doc.text("WOFBI", pageWidth / 2, 170, { align: "center", angle: 35 } as any);
     doc.setTextColor(0, 0, 0);
   }
 
-  let y = 18;
+  let y = marginTop;
 
-  // Logo — fit inside a 60 x 28 mm box, preserving aspect ratio
-  const logo = await fetchImageAsDataUrl(logoUrl);
   if (logo) {
     try {
       const props = doc.getImageProperties(logo.dataUrl);
       const maxW = 60;
-      const maxH = 28;
+      const maxH = sp(base.logoH);
       const ratio = props?.width && props?.height ? props.width / props.height : 1;
       let logoH = maxH;
       let logoW = logoH * ratio;
@@ -234,159 +296,166 @@ export async function buildStatementPdf(input: BuildStatementPdfInput): Promise<
         logoH = logoW / ratio;
       }
       doc.addImage(logo.dataUrl, logo.format, pageWidth / 2 - logoW / 2, y, logoW, logoH);
-      y += logoH + 4;
+      y += logoH + sp(base.logoGap);
     } catch {
       // ignore
     }
   }
 
-  // Church name
   doc.setTextColor(0, 0, 0);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(22);
-  doc.text((churchName || "").toUpperCase(), pageWidth / 2, y, { align: "center" });
-  y += 8;
+  const churchSize = fs(22, 12);
+  doc.setFontSize(churchSize);
+  const churchLines = (doc.splitTextToSize((churchName || "").toUpperCase(), contentWidth) as string[])
+    .slice(0, 2);
+  y += churchSize * 0.35;
+  churchLines.forEach((line, i) => {
+    doc.text(line, pageWidth / 2, y + i * (churchSize * 0.42), { align: "center" });
+  });
+  y += (churchLines.length - 1) * (churchSize * 0.42) + sp(base.churchH) * 0.5;
 
   if (centreName) {
-    doc.setFontSize(12);
+    doc.setFontSize(fs(12, 8));
     doc.text(centreName.toUpperCase(), pageWidth / 2, y, { align: "center" });
-    y += 6;
+    y += sp(base.centreH);
   }
 
-  doc.setFontSize(11);
+  doc.setFontSize(fs(11, 8));
   doc.text("STATEMENT OF RESULT", pageWidth / 2, y, { align: "center" });
-  y += 5;
+  y += sp(base.titleH);
 
-  doc.setFontSize(11);
-  doc.text(
-    `${(course.name || "").toUpperCase()} ${sessionLabel}`,
-    pageWidth / 2,
-    y,
-    { align: "center" },
-  );
-  y += 10;
+  courseLines.forEach((line, i) => {
+    doc.text(line, pageWidth / 2, y + i * sp(5), { align: "center" });
+  });
+  y += (courseLines.length - 1) * sp(5) + sp(8);
 
   // Name row
-  doc.setFontSize(10);
+  doc.setFontSize(fs(10, 8));
   doc.setFont("helvetica", "bold");
   doc.text("NAME:", marginX, y);
+  const nameLabelW = doc.getTextWidth("NAME: ");
   doc.setFont("times", "italic");
-  doc.setFontSize(14);
+  doc.setFontSize(fs(14, 10));
   doc.setTextColor(107, 63, 160);
-  doc.text(member.name, marginX + 16, y);
+  const nameMaxW = contentWidth - nameLabelW - 45;
+  const nameText = (doc.splitTextToSize(member.name, nameMaxW) as string[])[0] || member.name;
+  doc.text(nameText, marginX + nameLabelW, y);
   doc.setTextColor(0, 0, 0);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
+  doc.setFontSize(fs(9, 7));
   const stuNumWidth = doc.getTextWidth(studentNumber);
   doc.text(studentNumber, pageWidth - marginX, y, { align: "right" });
-  // underline
   doc.setLineWidth(0.3);
   doc.line(pageWidth - marginX - stuNumWidth, y + 1, pageWidth - marginX, y + 1);
-  y += 6;
+  y += sp(6);
 
   // Modules table
-  const tableStartY = y + 2;
-  const colModuleW = contentWidth * 0.75;
-  const colGradeW = contentWidth * 0.25;
-  const rowH = 7;
-  const headerH = 8;
+  const tableStartY = y + sp(base.tableGap);
+  const rowH = sp(base.rowH);
+  const headerH = sp(base.headerH);
+  const tableFs = fs(10, 7);
 
-  // Header
   doc.setFillColor(219, 229, 241);
   doc.rect(marginX, tableStartY, contentWidth, headerH, "F");
   doc.setDrawColor(183, 199, 217);
   doc.setLineWidth(0.2);
   doc.line(marginX, tableStartY + headerH, marginX + contentWidth, tableStartY + headerH);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
+  doc.setFontSize(tableFs);
   doc.setTextColor(0, 0, 0);
-  doc.text("Module Title", marginX + 3, tableStartY + headerH - 2.5);
-  doc.text("Grades", marginX + contentWidth - 3, tableStartY + headerH - 2.5, { align: "right" });
+  doc.text("Module Title", marginX + 3, tableStartY + headerH - headerH * 0.3);
+  doc.text("Grades", marginX + contentWidth - 3, tableStartY + headerH - headerH * 0.3, {
+    align: "right",
+  });
 
   let rowY = tableStartY + headerH;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  for (const r of rows) {
-    doc.text((r.name || "").toUpperCase(), marginX + 3, rowY + rowH - 2);
+  doc.setFontSize(tableFs);
+  rows.forEach((r, i) => {
+    const lines = moduleLines[i];
+    const thisRowH = rowH * (lines.length > 1 ? 1.7 : 1);
+    doc.setFont("helvetica", "normal");
+    lines.forEach((line, li) => {
+      doc.text(line, marginX + 3, rowY + rowH - rowH * 0.3 + li * (rowH * 0.7));
+    });
     doc.setFont("helvetica", "bold");
-    doc.text(r.taken ? r.letter : "—", marginX + contentWidth - 3, rowY + rowH - 2, {
+    doc.text(r.taken ? r.letter : "—", marginX + contentWidth - 3, rowY + rowH - rowH * 0.3, {
       align: "right",
     });
-    doc.setFont("helvetica", "normal");
-    rowY += rowH;
-  }
+    rowY += thisRowH;
+  });
 
-  // Footer row (overall)
   doc.setFillColor(219, 229, 241);
   doc.rect(marginX, rowY, contentWidth, headerH, "F");
   doc.setLineWidth(0.2);
   doc.line(marginX, rowY, marginX + contentWidth, rowY);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
+  doc.setFontSize(tableFs);
   doc.text(
     `Overall Result:  ${overallGrade}`,
     marginX + contentWidth - 3,
-    rowY + headerH - 2.5,
+    rowY + headerH - headerH * 0.3,
     { align: "right" },
   );
-  rowY += headerH + 8;
+  rowY += headerH + sp(base.afterTable);
 
   // Explanatory Notes
   doc.setFont("helvetica", "bolditalic");
-  doc.setFontSize(10);
+  doc.setFontSize(fs(10, 7.5));
   doc.text("Explanatory Notes", marginX, rowY);
-  // underline
   const notesTitleW = doc.getTextWidth("Explanatory Notes");
   doc.setLineWidth(0.2);
   doc.line(marginX, rowY + 0.8, marginX + notesTitleW, rowY + 0.8);
-  rowY += 5;
+  rowY += sp(base.notesTitleH);
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
+  doc.setFontSize(fs(9, 6.5));
   doc.text("Result", marginX, rowY);
   doc.text("Grades", marginX + 60, rowY);
-  rowY += 4;
+  rowY += sp(base.notesRowH);
   doc.setFont("helvetica", "normal");
   for (const b of letterBands) {
     doc.text(String(b.label ?? ""), marginX, rowY);
     doc.text(`${b.letter}   ${b.min}-${b.max}`, marginX + 60, rowY);
-    rowY += 4;
+    rowY += sp(base.notesRowH);
   }
-  rowY += 10;
 
-  // Signature block
-  const sig = await fetchImageAsDataUrl(signatureUrl);
+  // Signature block — anchored near the bottom, but never overlapping the notes
+  const sigBlockH = sp(base.sigH) + sp(base.sigNameH) + sp(base.sigTitleH);
+  let sigTop = Math.max(rowY + sp(6), pageHeight - marginBottom - sigBlockH);
+  if (sigTop + sigBlockH > pageHeight - marginBottom) {
+    sigTop = pageHeight - marginBottom - sigBlockH;
+  }
+
+  let sigBaseline = sigTop + sp(base.sigH);
   if (sig) {
     try {
-      const sp = doc.getImageProperties(sig.dataUrl);
-      const sRatio = sp?.width && sp?.height ? sp.width / sp.height : 40 / 14;
-      let sH = 14;
+      const sp2 = doc.getImageProperties(sig.dataUrl);
+      const sRatio = sp2?.width && sp2?.height ? sp2.width / sp2.height : 40 / 14;
+      let sH = sp(14);
       let sW = sH * sRatio;
       if (sW > 50) {
         sW = 50;
         sH = sW / sRatio;
       }
-      doc.addImage(sig.dataUrl, sig.format, marginX, rowY - 10, sW, sH);
+      doc.addImage(sig.dataUrl, sig.format, marginX, sigBaseline - sH, sW, sH);
     } catch {
       // ignore
     }
   } else {
     doc.setLineWidth(0.3);
-    doc.line(marginX, rowY, marginX + 50, rowY);
+    doc.line(marginX, sigBaseline, marginX + 50, sigBaseline);
   }
-  rowY += 4;
+  sigBaseline += sp(4);
   if (signatoryName) {
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.text(signatoryName, marginX, rowY);
-    rowY += 4;
+    doc.setFontSize(fs(9, 7));
+    doc.text(signatoryName, marginX, sigBaseline);
+    sigBaseline += sp(4);
   }
   if (signatoryTitle) {
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.text(signatoryTitle, marginX, rowY);
+    doc.setFontSize(fs(9, 7));
+    doc.text(signatoryTitle, marginX, sigBaseline);
   }
-
-  const ab = doc.output("arraybuffer");
-  return new Uint8Array(ab);
 }
+

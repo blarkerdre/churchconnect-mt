@@ -340,39 +340,43 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
 
     const html = `<!DOCTYPE html><html><head><title>Statement of Result — ${escHtml(member.name)}</title>
       <style>
-        @page { size: A4; margin: 18mm 20mm; }
-        body { font-family: 'Cambria', 'Georgia', serif; color:#111; margin:0; position:relative; }
+        @page { size: A4; margin: 14mm 18mm; }
+        html, body { margin:0; padding:0; }
+        body { font-family: 'Cambria', 'Georgia', serif; color:#111; position:relative; }
+        #sheet-wrap { width:100%; }
+        #sheet { transform-origin: top left; page-break-inside: avoid; break-inside: avoid; }
         .watermark { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) rotate(-35deg); font-family:'Impact','Arial Black',sans-serif; font-size:180px; color:rgba(0,0,0,0.07); letter-spacing:10px; z-index:0; pointer-events:none; }
         .header, .name-row, table.modules, .notes, .signature { position:relative; z-index:1; }
-        .header { text-align:center; margin-bottom:18px; }
-        .header h1 { font-family: 'Impact', 'Arial Black', sans-serif; font-size:38px; margin:4px 0; letter-spacing:1px; }
-        .centre { font-size:16px; font-weight:bold; margin-top:8px; }
-        .title { font-size:15px; font-weight:bold; margin-top:2px; }
-        .course-line { font-size:15px; font-weight:bold; margin-top:2px; }
-        .name-row { display:flex; justify-content:space-between; align-items:baseline; margin: 18px 0 6px; font-size:14px; }
+        .header { text-align:center; margin-bottom:14px; }
+        .header h1 { font-family: 'Impact', 'Arial Black', sans-serif; font-size:34px; margin:4px 0; letter-spacing:1px; word-break:break-word; }
+        .centre { font-size:15px; font-weight:bold; margin-top:6px; }
+        .title { font-size:14px; font-weight:bold; margin-top:2px; }
+        .course-line { font-size:14px; font-weight:bold; margin-top:2px; }
+        .name-row { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin: 14px 0 6px; font-size:14px; }
         .name-row .label { font-weight:bold; }
-        .name-row .name { font-size:22px; color:#6b3fa0; font-family: 'Georgia', serif; margin-left:6px; }
-        .name-row .ref { text-decoration:underline; font-weight:bold; }
-        table.modules { width:100%; border-collapse:collapse; margin-top:4px; }
+        .name-row .name { font-size:21px; color:#6b3fa0; font-family: 'Georgia', serif; margin-left:6px; word-break:break-word; }
+        .name-row .ref { text-decoration:underline; font-weight:bold; white-space:nowrap; }
+        table.modules { width:100%; border-collapse:collapse; margin-top:4px; table-layout:fixed; }
         table.modules thead th {
           background:#dbe5f1; color:#000; text-align:left;
-          padding:8px 10px; font-size:13px; border-bottom:1px solid #b7c7d9;
+          padding:7px 10px; font-size:13px; border-bottom:1px solid #b7c7d9;
         }
-        table.modules thead th.grade { text-align:right; }
-        table.modules td { padding:6px 10px; font-size:13px; }
-        table.modules td.grade { text-align:right; font-weight:bold; white-space:nowrap; }
+        table.modules thead th.grade, table.modules col.grade { text-align:right; }
+        table.modules td { padding:5px 10px; font-size:13px; word-break:break-word; }
+        table.modules td.grade { text-align:right; font-weight:bold; white-space:nowrap; width:22%; }
         table.modules tfoot td {
-          background:#dbe5f1; font-weight:bold; padding:8px 10px; font-size:13px;
+          background:#dbe5f1; font-weight:bold; padding:7px 10px; font-size:13px;
           border-top:1px solid #b7c7d9;
         }
-        .notes { margin-top:18px; }
-        .notes .heading { font-style:italic; font-weight:bold; text-decoration:underline; margin-bottom:6px; }
+        .notes { margin-top:14px; }
+        .notes .heading { font-style:italic; font-weight:bold; text-decoration:underline; margin-bottom:5px; }
         table.notes-table td { padding:2px 24px 2px 0; font-size:12px; }
-        .signature { margin-top:36px; display:flex; align-items:flex-end; gap:16px; }
+        .signature { margin-top:26px; display:flex; align-items:flex-end; gap:16px; }
         .signature .who { font-size:12px; }
         @media print { body { margin:0; } }
       </style></head><body>
       ${watermarkHtml}
+      <div id="sheet-wrap"><div id="sheet">
       <div class="header">
         ${logoHtml}
         <h1>${escHtml((churchName || "").toUpperCase())}</h1>
@@ -413,7 +417,24 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
           </div>
         </div>
       </div>
+      </div></div>
+      <script>
+        window.__fitOnePage = function () {
+          var sheet = document.getElementById('sheet');
+          if (!sheet) return;
+          sheet.style.transform = '';
+          // A4 height (297mm) minus 14mm top/bottom margins, at 96dpi.
+          var maxPx = (297 - 28) / 25.4 * 96;
+          var h = sheet.scrollHeight;
+          if (h > maxPx) {
+            var s = Math.max(0.5, maxPx / h);
+            sheet.style.transform = 'scale(' + s + ')';
+            sheet.style.width = (100 / s) + '%';
+          }
+        };
+      <\/script>
     </body></html>`;
+
 
     const win = window.open("", "_blank", "width=900,height=1100");
     if (!win) {
@@ -428,12 +449,14 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
     const pending = Array.from(doc.images || []).filter((i) => !i.complete);
     const go = () => {
       try {
+        if (typeof win.__fitOnePage === "function") win.__fitOnePage();
         win.focus();
         win.print();
       } catch {
         /* user can print manually */
       }
     };
+
     if (!pending.length) {
       setTimeout(go, 150);
     } else {

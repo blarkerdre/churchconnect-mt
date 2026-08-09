@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+
 import { Award, Download, RotateCw, Users, TrendingUp } from "lucide-react";
 import { format, subDays, parseISO } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
@@ -37,6 +39,9 @@ export default function CertificatesReport() {
   const [programme, setProgramme] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [selectedCerts, setSelectedCerts] = useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
 
   // Certificates (training_completions) joined with members
   const { data: completions = [], isLoading: loadingCerts } = useQuery({
@@ -248,20 +253,113 @@ export default function CertificatesReport() {
     })).sort((a, b) => b.issued - a.issued);
   }, [filteredCerts, reissueStats]);
 
+  const signedUrlFor = async (c, download) => {
+    if (!c.certificate_url) return null;
+    const { data } = await supabase.storage
+      .from("church-documents")
+      .createSignedUrl(c.certificate_url, 600, download ? { download } : undefined);
+    return data?.signedUrl || null;
+  };
+
   const handleDownload = async (c) => {
     if (!c.certificate_url) {
       toast({ title: "No file available", variant: "destructive" });
       return;
     }
-    const { data, error } = await supabase.storage
-      .from("church-documents")
-      .createSignedUrl(c.certificate_url, 300, { download: `${c.certificate_number}.png` });
-    if (error || !data?.signedUrl) {
-      toast({ title: "Download failed", description: error?.message, variant: "destructive" });
+    const url = await signedUrlFor(c, `${c.certificate_number}.png`);
+    if (!url) {
+      toast({ title: "Download failed", variant: "destructive" });
       return;
     }
-    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    window.open(url, "_blank", "noopener,noreferrer");
   };
+
+  const toggleCert = (id) =>
+    setSelectedCerts((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+
+  const selectedList = () => filteredCerts.filter((c) => selectedCerts.has(c.id));
+
+  const bulkCertificates = async (mode) => {
+    const list = selectedList();
+    const withFile = list.filter((c) => c.certificate_url);
+    const skipped = list.length - withFile.length;
+    if (withFile.length === 0) {
+      toast({ title: "Nothing to download", description: "Selected rows have no stored certificate file.", variant: "destructive" });
+      return;
+    }
+    setBulkBusy(true);
+    try {
+      const files = [];
+      let i = 0;
+      for (const c of withFile) {
+        i += 1;
+        if (i % 5 === 0 || i === 1) {
+          toast({ title: "Preparing certificates", description: `${i} of ${withFile.length}…` });
+        }
+        const url = await signedUrlFor(c);
+        if (!url) continue;
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        files.push({ cert: c, blob: await res.blob() });
+      }
+      if (files.length === 0) throw new Error("No certificate files could be fetched");
+
+      if (mode === "zip") {
+        const { default: JSZip } = await import("jszip");
+        const zip = new JSZip();
+        for (const f of files) {
+          zip.file(`${f.cert.certificate_number || f.cert.id}.png`, f.blob);
+        }
+        const blob = await zip.generateAsync({ type: "blob" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `certificates-${fromDate}-to-${toDate}.zip`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      } else {
+        const { jsPDF } = await import("jspdf");
+        const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
+        const pw = doc.internal.pageSize.getWidth();
+        const ph = doc.internal.pageSize.getHeight();
+        let first = true;
+        for (const f of files) {
+          const dataUrl = await new Promise((resolve) => {
+            const fr = new FileReader();
+            fr.onload = () => resolve(fr.result);
+            fr.onerror = () => resolve(null);
+            fr.readAsDataURL(f.blob);
+          });
+          if (!dataUrl) continue;
+          if (!first) doc.addPage();
+          first = false;
+          const props = doc.getImageProperties(dataUrl);
+          const ratio = props.width / props.height;
+          let w = pw - 10;
+          let h = w / ratio;
+          if (h > ph - 10) {
+            h = ph - 10;
+            w = h * ratio;
+          }
+          doc.addImage(dataUrl, (pw - w) / 2, (ph - h) / 2, w, h);
+        }
+        doc.save(`certificates-${fromDate}-to-${toDate}.pdf`);
+      }
+
+      toast({
+        title: mode === "zip" ? "ZIP downloaded" : "Merged PDF downloaded",
+        description: `${files.length} certificate(s)${skipped ? ` — ${skipped} skipped (no file issued)` : ""}.`,
+      });
+    } catch (e) {
+      toast({ title: "Bulk download failed", description: e.message, variant: "destructive" });
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
 
   const exportCertsCSV = () => {
     downloadCSV(
@@ -412,7 +510,22 @@ export default function CertificatesReport() {
         </TabsList>
 
         <TabsContent value="certificates" className="space-y-3">
-          <div className="flex flex-wrap gap-2 justify-end">
+          <div className="flex flex-wrap items-center gap-2 justify-end">
+            <span className="text-xs text-muted-foreground mr-auto">{selectedCerts.size} selected</span>
+            <Button
+              variant="outline" size="sm"
+              disabled={!selectedCerts.size || bulkBusy}
+              onClick={() => bulkCertificates("merged")}
+            >
+              <Download className="h-4 w-4 mr-2" /> Merged PDF
+            </Button>
+            <Button
+              variant="outline" size="sm"
+              disabled={!selectedCerts.size || bulkBusy}
+              onClick={() => bulkCertificates("zip")}
+            >
+              <Download className="h-4 w-4 mr-2" /> ZIP
+            </Button>
             <Button variant="outline" size="sm" onClick={exportCertsCSV} disabled={!filteredCerts.length}>
               <Download className="h-4 w-4 mr-2" /> Export CSV
             </Button>
@@ -423,6 +536,16 @@ export default function CertificatesReport() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-8">
+                      <Checkbox
+                        checked={filteredCerts.length > 0 && selectedCerts.size === filteredCerts.length}
+                        onCheckedChange={(v) =>
+                          setSelectedCerts(v ? new Set(filteredCerts.map((c) => c.id)) : new Set())
+                        }
+                        disabled={bulkBusy || !filteredCerts.length}
+                        aria-label="Select all certificates"
+                      />
+                    </TableHead>
                     <TableHead>Member</TableHead>
                     <TableHead>Programme</TableHead>
                     <TableHead>Cert No</TableHead>
@@ -435,15 +558,24 @@ export default function CertificatesReport() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {loading && <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>}
+                  {loading && <TableRow><TableCell colSpan={10} className="text-center py-6 text-muted-foreground">Loading…</TableCell></TableRow>}
                   {!loading && filteredCerts.length === 0 && (
-                    <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">No certificates match the filters.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="text-center py-6 text-muted-foreground">No certificates match the filters.</TableCell></TableRow>
                   )}
                   {filteredCerts.map((c) => {
                     const stats = reissueStats.get(c.certificate_number) || {};
                     return (
                       <TableRow key={c.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedCerts.has(c.id)}
+                            onCheckedChange={() => toggleCert(c.id)}
+                            disabled={bulkBusy}
+                            aria-label="Select certificate"
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">{c.members?.first_name} {c.members?.last_name}</TableCell>
+
                         <TableCell>{c.training_type}</TableCell>
                         <TableCell><Badge variant="outline" className="text-[10px]">{c.certificate_number}</Badge></TableCell>
                         <TableCell>{c.completion_date ? format(parseISO(c.completion_date), "dd MMM yyyy") : "—"}</TableCell>
