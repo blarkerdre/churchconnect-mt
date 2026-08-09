@@ -710,10 +710,12 @@ Deno.serve(async (req) => {
           completion_date: certDate,
           certificate_url: filePath,
           issued_by: userId,
+          ...(shouldRelease ? { sent_to_student_at: new Date().toISOString(), sent_by: userId } : {}),
           ...(notes !== undefined ? { notes: notes || null } : {}),
           ...(studentNumber ? { student_number: studentNumber } : {}),
           ...(gradeClassification ? { grade_classification: gradeClassification } : {}),
         })
+
         .eq("id", existing.id)
         .eq("tenant_id", tenant_id)
         .select()
