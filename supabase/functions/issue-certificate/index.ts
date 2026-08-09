@@ -813,7 +813,25 @@ Deno.serve(async (req) => {
   }
 });
 
+/**
+ * Shrinks a font size so `text` stays inside `maxWidth` px on the certificate canvas.
+ * widthFactor ~= average glyph width relative to the font size.
+ */
+function fitFontSize(
+  text: string,
+  baseSize: number,
+  maxWidth: number,
+  widthFactor = 0.55,
+  minSize = 12,
+): number {
+  const len = (text || "").length || 1;
+  const estimated = len * baseSize * widthFactor;
+  if (estimated <= maxWidth) return baseSize;
+  return Math.max(minSize, Math.floor((maxWidth / (len * widthFactor)) * 10) / 10);
+}
+
 function escapeXml(str: string): string {
+
   return str
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
