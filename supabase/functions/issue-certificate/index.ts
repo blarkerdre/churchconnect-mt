@@ -185,6 +185,84 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ---- Send-only mode: release an already-issued certificate to the student ----
+    if (mode === "send") {
+      if (!completion_id) {
+        return new Response(JSON.stringify({ error: "completion_id is required to send a certificate" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: comp } = await supabase
+        .from("training_completions")
+        .select("*")
+        .eq("id", completion_id)
+        .eq("tenant_id", tenant_id)
+        .maybeSingle();
+      if (!comp) {
+        return new Response(JSON.stringify({ error: "Certificate not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (!comp.certificate_url) {
+        return new Response(JSON.stringify({ error: "Certificate file not generated yet — issue it first" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: sendMember } = await supabase
+        .from("members")
+        .select("id, first_name, last_name, email, user_id")
+        .eq("id", comp.member_id)
+        .eq("tenant_id", tenant_id)
+        .maybeSingle();
+      const { data: tpl } = await supabase
+        .from("certificate_templates")
+        .select("church_name, background_color")
+        .eq("tenant_id", tenant_id)
+        .ilike("training_type", String(comp.training_type || "").trim())
+        .maybeSingle();
+
+      await deliverCertificate(supabase, {
+        tenantId: tenant_id,
+        completion: comp,
+        member: sendMember,
+        churchName: tpl?.church_name || "Winners Chapel International Cardiff",
+        bgColor: tpl?.background_color || "#1a2d4d",
+        sentBy: userId,
+      });
+
+      const { data: updated } = await supabase
+        .from("training_completions")
+        .update({ sent_to_student_at: new Date().toISOString(), sent_by: userId })
+        .eq("id", comp.id)
+        .eq("tenant_id", tenant_id)
+        .select()
+        .single();
+
+      await writeAudit(supabase, {
+        tenant_id,
+        user_id: userId,
+        action: comp.sent_to_student_at ? "certificate_resent" : "certificate_sent",
+        entity_type: "training_completions",
+        entity_id: comp.id,
+        details: {
+          member_id: comp.member_id,
+          training_type: comp.training_type,
+          certificate_number: comp.certificate_number,
+          source: "issue-certificate",
+        },
+      });
+
+      return new Response(
+        JSON.stringify({ success: true, completion: updated || comp, sent: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+
+
     // Look up existing completion. For reissue prefer completion_id (robust against
     // tenant-context drift); otherwise use tenant-scoped (member, training_type).
     let existing: any = null;
