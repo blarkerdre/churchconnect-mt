@@ -515,9 +515,10 @@ Deno.serve(async (req) => {
   
   ${bgDataUri ? `<image href="${bgDataUri}" width="842" height="595" preserveAspectRatio="xMidYMid slice"/>` : `<rect width="842" height="595" fill="${bgColor}"/>`}
   <!-- Member name -->
-  <text x="421" y="${nameY}" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="32" fill="${textColor}" stroke="rgba(255,255,255,0.35)" stroke-width="0.6" paint-order="stroke">${escapeXml(memberName)}</text>
+  <text x="421" y="${nameY}" text-anchor="middle" font-family="Playfair Display, serif" font-weight="700" font-size="${fitFontSize(memberName, 32, 660, 0.6, 16)}" fill="${textColor}" stroke="rgba(255,255,255,0.35)" stroke-width="0.6" paint-order="stroke">${escapeXml(memberName)}</text>
   <!-- Training type -->
-  <text x="421" y="${trainingY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="18" fill="${textColor}">${escapeXml(training_type)}</text>
+  <text x="421" y="${trainingY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="${fitFontSize(training_type, 18, 700, 0.55, 11)}" fill="${textColor}">${escapeXml(training_type)}</text>
+
   <!-- Date -->
   <text x="421" y="${dateY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="13" fill="${textColor}" opacity="0.75">Completed on ${formattedDate}</text>
   <!-- Certificate number -->
