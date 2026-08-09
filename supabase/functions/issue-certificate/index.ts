@@ -818,6 +818,7 @@ Deno.serve(async (req) => {
         completion_date,
         certificate_number: certificateNumber,
         notes,
+        sent_to_student: shouldRelease,
         source: "issue-certificate",
       },
     });
@@ -828,7 +829,9 @@ Deno.serve(async (req) => {
         completion,
         certificate_number: certificateNumber,
         student_number: studentNumber,
+        sent: shouldRelease,
       }),
+
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
