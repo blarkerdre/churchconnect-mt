@@ -140,10 +140,14 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { member_id, training_type, completion_date, notes, tenant_id, reissue, completion_id, preview, grade_classification: gcInput, send_certificate_email, admin_override } = body;
+    const { member_id, training_type, completion_date, notes, tenant_id, reissue, completion_id, preview, grade_classification: gcInput, send_certificate_email, admin_override, mode, release_to_student } = body;
     // Honour per-course email toggle unless an admin manually triggers the send
     const shouldEmail = admin_override === true || send_certificate_email !== false;
+    // Certificates are issued privately by default; they only reach the student
+    // when explicitly released (single "Send to student" or bulk send flows).
+    const shouldRelease = mode === "send" || release_to_student === true || admin_override === true;
     const isPreview = preview === true;
+
 
     if (!member_id || !training_type || !tenant_id) {
       return new Response(
