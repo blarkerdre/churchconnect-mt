@@ -7685,6 +7685,7 @@ export type Database = {
         Args: { _member_id: string; _session_id: string }
         Returns: boolean
       }
+      mfa_satisfied: { Args: never; Returns: boolean }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -7964,6 +7965,7 @@ export type Database = {
         Returns: boolean
       }
       user_has_tenant_access: { Args: { _tenant_id: string }; Returns: boolean }
+      user_has_verified_mfa: { Args: { _user_id: string }; Returns: boolean }
       user_is_followup_unit_member: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
