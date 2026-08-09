@@ -17,6 +17,8 @@ import { format, subDays, parseISO } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import PrintReportButton from "@/components/PrintReportButton";
 import { toast } from "@/components/ui/use-toast";
+import { bulkDownloadCertificates } from "@/lib/bulk-certificates";
+
 
 function downloadCSV(filename, headers, rows) {
   const esc = (v) => {
