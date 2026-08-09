@@ -353,6 +353,52 @@ export default function CourseResultsView({ course }) {
     }
   };
 
+  const bulkDownloadStatements = async (mode) => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    setSendingBulk(true);
+    const chunks = [];
+    for (let i = 0; i < ids.length; i += 50) chunks.push(ids.slice(i, i + 50));
+    try {
+      let done = 0;
+      for (const chunk of chunks) {
+        toast({
+          title: "Preparing statements",
+          description: `${done} of ${ids.length}…`,
+        });
+        const { data, error } = await supabase.functions.invoke("render-statements-bulk", {
+          body: {
+            tenant_id: course.tenant_id,
+            course_id: course.id,
+            member_ids: chunk,
+            mode,
+          },
+        });
+        if (error) throw error;
+        if (data?.signed_url) window.open(data.signed_url, "_blank");
+        done += data?.generated ?? chunk.length;
+        const skipped = (data?.failed || []).length;
+        if (skipped) {
+          toast({
+            title: "Some statements skipped",
+            description: `${skipped} student(s) had no result data.`,
+            variant: "destructive",
+          });
+        }
+      }
+      toast({
+        title: mode === "zip" ? "ZIP ready" : "Merged PDF ready",
+        description: `${done} statement(s) generated.`,
+      });
+    } catch (e) {
+      toast({ title: "Bulk download failed", description: e.message, variant: "destructive" });
+    } finally {
+      setSendingBulk(false);
+    }
+  };
+
+
+
 
   return (
     <>
