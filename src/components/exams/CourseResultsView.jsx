@@ -633,14 +633,14 @@ export default function CourseResultsView({ course }) {
                   disabled={selected.size === 0 || sendingBulk}
                   onClick={() => bulkDownloadStatements("merged")}
                 >
-                  <FileText className="h-3 w-3" /> Merged PDF
+                  <FileText className="h-3 w-3" /> Statements PDF
                 </Button>
                 <Button
                   variant="outline" size="sm" className="h-7 text-xs gap-1"
                   disabled={selected.size === 0 || sendingBulk}
                   onClick={() => bulkDownloadStatements("zip")}
                 >
-                  <Download className="h-3 w-3" /> ZIP
+                  <Download className="h-3 w-3" /> Statements ZIP
                 </Button>
                 <Button
                   variant="outline" size="sm" className="h-7 text-xs gap-1"
