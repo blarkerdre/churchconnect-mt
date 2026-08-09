@@ -341,7 +341,7 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
                             className="h-8 w-8"
                             title="Reissue certificate"
                             onClick={() => {
-                              if (window.confirm(`Reissue certificate for "${c.training_type}"? The certificate number (${c.certificate_number}) will be kept and the file regenerated${member.email ? " and re-emailed" : ""}.`)) {
+                              if (window.confirm(`Reissue certificate for "${c.training_type}"? The certificate number (${c.certificate_number}) will be kept and the file regenerated. The student is not notified unless you send it.`)) {
                                 reissueMutation.mutate(c);
                               }
                             }}
