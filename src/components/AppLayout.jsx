@@ -15,7 +15,9 @@ import AppFeedbackDialog from "@/components/feedback/AppFeedbackDialog";
 import { TourProvider } from "@/components/tour/TourProvider";
 import SignPostInboxDialog from "@/components/followups/SignPostInboxDialog";
 import { useQuery } from "@tanstack/react-query";
-import { Inbox } from "lucide-react";
+import { Inbox, ExternalLink } from "lucide-react";
+import { useTrustpilotSettings } from "@/hooks/useTrustpilot";
+
 import winnersLogo from "@/assets/winners-chapel-logo.png";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
