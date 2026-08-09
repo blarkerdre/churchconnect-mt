@@ -29,9 +29,12 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
   const [trainingType, setTrainingType] = useState("");
   const [completionDate, setCompletionDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
+  const [sendNow, setSendNow] = useState(false);
+  const [sendingId, setSendingId] = useState(null);
   const [reissuingId, setReissuingId] = useState(null);
   const [previewingId, setPreviewingId] = useState(null); // completion id or "__new__"
   const [previewData, setPreviewData] = useState(null); // { image, meta, mode, completion? }
+
 
   // Fetch existing completions for this member
   const { data: completions = [] } = useQuery({
