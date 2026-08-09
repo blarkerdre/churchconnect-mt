@@ -570,12 +570,27 @@ export default function CourseResultsView({ course }) {
                   <Award className="h-3 w-3" /> Certificates ZIP
                 </Button>
                 <Button
+                  variant="outline" size="sm" className="h-7 text-xs gap-1"
+                  disabled={selected.size === 0 || sendingBulk}
+                  onClick={() => issueCertificates(Array.from(selected))}
+                >
+                  <Award className="h-3 w-3" /> Issue certificates
+                </Button>
+                <Button
+                  variant="outline" size="sm" className="h-7 text-xs gap-1"
+                  disabled={selected.size === 0 || sendingBulk}
+                  onClick={() => releaseCertificates(Array.from(selected))}
+                >
+                  <Send className="h-3 w-3" /> Send certificates
+                </Button>
+                <Button
                   size="sm" className="h-7 text-xs gap-1"
                   disabled={selected.size === 0 || sendingBulk}
                   onClick={() => setSendDialog({ memberIds: Array.from(selected) })}
                 >
                   <Send className="h-3 w-3" /> Preview & Send…
                 </Button>
+
 
               </div>
             )}
