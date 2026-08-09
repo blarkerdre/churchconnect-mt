@@ -18,6 +18,8 @@ import { useAuth } from "@/hooks/useAuth";
 import MessageFilteredMembersDialog from "@/components/analytics/MessageFilteredMembersDialog";
 import { ordinal, PositionBadge, buildRankMap } from "@/lib/rank-utils";
 import { bulkDownloadCertificates } from "@/lib/bulk-certificates";
+import { matchesTrainingType } from "@/lib/certificate-template-lookup";
+
 
 
 
@@ -406,22 +408,25 @@ export default function CourseResultsView({ course }) {
     try {
       const { data, error } = await supabase
         .from("training_completions")
-        .select("id, member_id, certificate_number, certificate_url")
+        .select("id, member_id, training_type, certificate_number, certificate_url")
         .eq("tenant_id", course.tenant_id)
-        .eq("training_type", course.name)
         .in("member_id", ids);
       if (error) throw error;
 
-      const certs = (data || []).filter((c) => c.certificate_url);
+      const forCourse = (data || []).filter((c) => matchesTrainingType(c.training_type, course));
+      const certs = forCourse.filter((c) => c.certificate_url);
       const missing = ids.length - certs.length;
       if (certs.length === 0) {
         toast({
           title: "No certificates to download",
-          description: "None of the selected students have an issued certificate for this course.",
+          description: forCourse.length
+            ? `${forCourse.length} student(s) have a certificate record but no stored file.`
+            : "No certificates issued yet — use Preview & Send to issue them first.",
           variant: "destructive",
         });
         return;
       }
+
 
       const base = `${course.name.replace(/[^A-Za-z0-9 _-]/g, "").trim().replace(/\s+/g, "-") || "course"}-certificates`;
       const { downloaded } = await bulkDownloadCertificates({
