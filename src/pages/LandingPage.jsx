@@ -1,10 +1,13 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import TrustpilotReviews from "@/components/reviews/TrustpilotReviews";
+import TrustpilotBadge from "@/components/reviews/TrustpilotBadge";
 import {
   Users, CalendarCheck, Calendar, UserCheck, Heart, MessageSquare,
   BarChart3, Bus, GraduationCap, Church, ArrowRight, MessageCircle,
   Home, ChurchIcon, BookOpen, MessageSquareHeart
 } from "lucide-react";
+
 
 const features = [
   { icon: Users, title: "Member Management", desc: "Track membership, profiles, and spiritual growth milestones in one place." },
