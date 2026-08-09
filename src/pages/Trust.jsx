@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import TrustpilotBadge from "@/components/reviews/TrustpilotBadge";
 import { ShieldCheck, Lock, Database, Users, Cookie, Trash2, Mail, Bug, Building2 } from "lucide-react";
+
 
 const sections = [
   {
