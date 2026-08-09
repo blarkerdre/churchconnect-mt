@@ -551,6 +551,20 @@ export default function CourseResultsView({ course }) {
                   <Download className="h-3 w-3" /> ZIP
                 </Button>
                 <Button
+                  variant="outline" size="sm" className="h-7 text-xs gap-1"
+                  disabled={selected.size === 0 || sendingBulk}
+                  onClick={() => bulkDownloadCerts("merged")}
+                >
+                  <Award className="h-3 w-3" /> Certificates PDF
+                </Button>
+                <Button
+                  variant="outline" size="sm" className="h-7 text-xs gap-1"
+                  disabled={selected.size === 0 || sendingBulk}
+                  onClick={() => bulkDownloadCerts("zip")}
+                >
+                  <Award className="h-3 w-3" /> Certificates ZIP
+                </Button>
+                <Button
                   size="sm" className="h-7 text-xs gap-1"
                   disabled={selected.size === 0 || sendingBulk}
                   onClick={() => setSendDialog({ memberIds: Array.from(selected) })}
