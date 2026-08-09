@@ -17,6 +17,8 @@ import { logAudit } from "@/lib/audit";
 import { useAuth } from "@/hooks/useAuth";
 import MessageFilteredMembersDialog from "@/components/analytics/MessageFilteredMembersDialog";
 import { ordinal, PositionBadge, buildRankMap } from "@/lib/rank-utils";
+import { bulkDownloadCertificates } from "@/lib/bulk-certificates";
+
 
 
 function downloadCSV(filename, headers, rows) {
