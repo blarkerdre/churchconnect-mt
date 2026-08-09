@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 
-import { Award, Download, RotateCw, Users, TrendingUp } from "lucide-react";
+import { Award, Download, RotateCw, Users, TrendingUp, Send, Loader2 } from "lucide-react";
 import { format, subDays, parseISO } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import PrintReportButton from "@/components/PrintReportButton";
@@ -43,6 +43,8 @@ export default function CertificatesReport() {
   const [search, setSearch] = useState("");
   const [selectedCerts, setSelectedCerts] = useState(() => new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [sendingId, setSendingId] = useState(null);
+  const qc = useQueryClient();
 
 
   // Certificates (training_completions) joined with members
@@ -52,7 +54,7 @@ export default function CertificatesReport() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("training_completions")
-        .select("id, member_id, training_type, completion_date, certificate_number, certificate_url, issued_by, notes, created_at, members:member_id(first_name,last_name,email,unit,status)")
+        .select("id, member_id, training_type, completion_date, certificate_number, certificate_url, issued_by, sent_to_student_at, notes, created_at, members:member_id(first_name,last_name,email,unit,status)")
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false });
       if (error) throw error;
