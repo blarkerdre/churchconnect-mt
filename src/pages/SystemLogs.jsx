@@ -670,10 +670,11 @@ function AuditEntry({ log, actor }) {
         <div className="flex-1 min-w-0">
           <p className="text-sm text-foreground">
             <span className="font-medium">{actor.name}</span>{" "}
-            <span>{humanAction(log.action)}</span>{" "}
+            <span>{actionText(log)}</span>{" "}
             {target && <span className="font-medium break-words">{target}</span>}
           </p>
           <div className="flex items-center gap-2 flex-wrap mt-1">
+            <Badge variant="secondary" className="text-xs">{moduleOf(log)}</Badge>
             <Badge variant="outline" className="text-xs">{humanEntity(log.entity_type)}</Badge>
             {actor.email && <span className="text-xs text-muted-foreground truncate">{actor.email}</span>}
           </div>
