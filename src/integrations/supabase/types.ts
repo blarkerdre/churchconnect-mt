@@ -7319,6 +7319,8 @@ export type Database = {
         Args: { p_request_id: string }
         Returns: undefined
       }
+      audit_label_for_table: { Args: { _t: string }; Returns: string }
+      audit_module_for_table: { Args: { _t: string }; Returns: string }
       auto_link_member_by_email:
         | { Args: { _email: string; _user_id: string }; Returns: string }
         | {
