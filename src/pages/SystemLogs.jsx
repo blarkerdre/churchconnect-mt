@@ -639,7 +639,7 @@ function diffFields(details) {
   };
   return keys
     .filter((k) => JSON.stringify(before[k]) !== JSON.stringify(after[k]))
-    .map((k) => ({ field: FIELD_LABELS[k] || k.replace(/_/g, " "), from: fmt(before[k]), to: fmt(after[k]) }));
+    .map((k) => ({ field: prettyField(k), from: fmt(before[k]), to: fmt(after[k]) }));
 }
 
 
