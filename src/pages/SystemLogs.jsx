@@ -573,10 +573,41 @@ const FIELD_LABELS = {
   female_count: "female count",
   total_count: "total count",
   meeting_date: "meeting date",
+  tenant_id: "church",
+  member_id: "member",
+  user_id: "user",
+  created_by: "created by",
+  updated_by: "updated by",
+  is_active: "active",
+  start_date: "start date",
+  end_date: "end date",
 };
+
+const prettyField = (k) =>
+  FIELD_LABELS[k] || String(k || "").replace(/_id$/, "").replace(/_/g, " ");
 
 const humanAction = (a) => ACTION_LABELS[a] || String(a || "").replace(/[._]/g, " ");
 const humanEntity = (e) => String(e || "").replace(/[._]/g, " ");
+
+const VERB_BY_OP = { insert: "created", update: "updated", delete: "deleted" };
+
+// Plain-English sentence for an entry. Falls back to the module/label metadata
+// written by the generic database audit trigger so new tables never render raw
+// SQL names.
+function actionText(log) {
+  if (ACTION_LABELS[log.action]) return ACTION_LABELS[log.action];
+  const d = log.details || {};
+  const verb = VERB_BY_OP[d.action];
+  if (verb && d.label) return `${verb} ${String(d.label).toLowerCase()}`;
+  const m = String(log.action || "").match(/^(.*)_(create|update|delete)$/);
+  if (m) {
+    const v = m[2] === "create" ? "created" : m[2] === "update" ? "updated" : "deleted";
+    return `${v} ${m[1].replace(/_/g, " ")}`;
+  }
+  return String(log.action || "").replace(/[._]/g, " ");
+}
+
+const moduleOf = (log) => (log.details || {}).module || "Other";
 
 const TARGET_KEYS = ["member_name", "target_name", "child_name", "title", "session_title", "tenant_name", "certificate_number", "email", "target"];
 function targetName(log) {
