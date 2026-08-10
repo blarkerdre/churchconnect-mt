@@ -646,7 +646,8 @@ function diffFields(details) {
 const AUDIT_CSV_HEADERS = [
   { label: "Time", fn: r => format(new Date(r.created_at), "yyyy-MM-dd HH:mm:ss") },
   { label: "Actor", fn: r => r._actorName || (isSystemActor(r) ? "System" : r.user_id) },
-  { label: "Action", fn: r => humanAction(r.action) },
+  { label: "Module", fn: r => moduleOf(r) },
+  { label: "Action", fn: r => actionText(r) },
   { label: "Entity Type", fn: r => humanEntity(r.entity_type) },
   { label: "Target", fn: r => targetName(r) },
   { label: "Entity ID", fn: r => r.entity_id || "" },
