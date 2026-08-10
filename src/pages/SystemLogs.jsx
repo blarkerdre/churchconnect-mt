@@ -717,6 +717,7 @@ function AuditLogsPanel() {
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
   const [entityFilter, setEntityFilter] = useState("all");
+  const [moduleFilter, setModuleFilter] = useState("all");
   const [fromDate, setFromDate] = useState(() => subDays(new Date(), 30));
   const [toDate, setToDate] = useState(() => new Date());
   const { tenantId, scopeQuery } = useTenantQuery();
