@@ -754,17 +754,20 @@ function AuditLogsPanel() {
   const filtered = logs.filter(log => {
     const actor = getActor(log);
     const haystack = [
-      actor.name, actor.email, log.action, humanAction(log.action), log.entity_type,
+      actor.name, actor.email, log.action, actionText(log), log.entity_type, moduleOf(log),
       targetName(log), JSON.stringify(log.details || {}),
     ].join(" ").toLowerCase();
     const matchesSearch = search === "" || haystack.includes(search.toLowerCase());
     const matchesAction = actionFilter === "all" || log.action === actionFilter;
     const matchesEntity = entityFilter === "all" || log.entity_type === entityFilter;
-    return matchesSearch && matchesAction && matchesEntity;
+    const matchesModule = moduleFilter === "all" || moduleOf(log) === moduleFilter;
+    return matchesSearch && matchesAction && matchesEntity && matchesModule;
   });
 
-  const uniqueActions = [...new Set(logs.map(l => l.action))].sort();
-  const uniqueEntities = [...new Set(logs.map(l => l.entity_type))].sort();
+  const scoped = moduleFilter === "all" ? logs : logs.filter(l => moduleOf(l) === moduleFilter);
+  const uniqueActions = [...new Set(scoped.map(l => l.action))].sort();
+  const uniqueEntities = [...new Set(scoped.map(l => l.entity_type))].sort();
+  const uniqueModules = [...new Set(logs.map(moduleOf))].sort();
 
   const csvRows = filtered.map(r => ({ ...r, _actorName: getActor(r).name }));
 
@@ -776,6 +779,13 @@ function AuditLogsPanel() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search who, what or record..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
+        <Select value={moduleFilter} onValueChange={(v) => { setModuleFilter(v); setActionFilter("all"); setEntityFilter("all"); }}>
+          <SelectTrigger className="w-44"><SelectValue placeholder="All modules" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All modules</SelectItem>
+            {uniqueModules.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <Select value={actionFilter} onValueChange={setActionFilter}>
           <SelectTrigger className="w-44"><SelectValue placeholder="All actions" /></SelectTrigger>
           <SelectContent>
