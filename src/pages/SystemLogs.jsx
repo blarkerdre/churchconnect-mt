@@ -573,10 +573,41 @@ const FIELD_LABELS = {
   female_count: "female count",
   total_count: "total count",
   meeting_date: "meeting date",
+  tenant_id: "church",
+  member_id: "member",
+  user_id: "user",
+  created_by: "created by",
+  updated_by: "updated by",
+  is_active: "active",
+  start_date: "start date",
+  end_date: "end date",
 };
+
+const prettyField = (k) =>
+  FIELD_LABELS[k] || String(k || "").replace(/_id$/, "").replace(/_/g, " ");
 
 const humanAction = (a) => ACTION_LABELS[a] || String(a || "").replace(/[._]/g, " ");
 const humanEntity = (e) => String(e || "").replace(/[._]/g, " ");
+
+const VERB_BY_OP = { insert: "created", update: "updated", delete: "deleted" };
+
+// Plain-English sentence for an entry. Falls back to the module/label metadata
+// written by the generic database audit trigger so new tables never render raw
+// SQL names.
+function actionText(log) {
+  if (ACTION_LABELS[log.action]) return ACTION_LABELS[log.action];
+  const d = log.details || {};
+  const verb = VERB_BY_OP[d.action];
+  if (verb && d.label) return `${verb} ${String(d.label).toLowerCase()}`;
+  const m = String(log.action || "").match(/^(.*)_(create|update|delete)$/);
+  if (m) {
+    const v = m[2] === "create" ? "created" : m[2] === "update" ? "updated" : "deleted";
+    return `${v} ${m[1].replace(/_/g, " ")}`;
+  }
+  return String(log.action || "").replace(/[._]/g, " ");
+}
+
+const moduleOf = (log) => (log.details || {}).module || "Other";
 
 const TARGET_KEYS = ["member_name", "target_name", "child_name", "title", "session_title", "tenant_name", "certificate_number", "email", "target"];
 function targetName(log) {
@@ -608,14 +639,15 @@ function diffFields(details) {
   };
   return keys
     .filter((k) => JSON.stringify(before[k]) !== JSON.stringify(after[k]))
-    .map((k) => ({ field: FIELD_LABELS[k] || k.replace(/_/g, " "), from: fmt(before[k]), to: fmt(after[k]) }));
+    .map((k) => ({ field: prettyField(k), from: fmt(before[k]), to: fmt(after[k]) }));
 }
 
 
 const AUDIT_CSV_HEADERS = [
   { label: "Time", fn: r => format(new Date(r.created_at), "yyyy-MM-dd HH:mm:ss") },
   { label: "Actor", fn: r => r._actorName || (isSystemActor(r) ? "System" : r.user_id) },
-  { label: "Action", fn: r => humanAction(r.action) },
+  { label: "Module", fn: r => moduleOf(r) },
+  { label: "Action", fn: r => actionText(r) },
   { label: "Entity Type", fn: r => humanEntity(r.entity_type) },
   { label: "Target", fn: r => targetName(r) },
   { label: "Entity ID", fn: r => r.entity_id || "" },
@@ -638,10 +670,11 @@ function AuditEntry({ log, actor }) {
         <div className="flex-1 min-w-0">
           <p className="text-sm text-foreground">
             <span className="font-medium">{actor.name}</span>{" "}
-            <span>{humanAction(log.action)}</span>{" "}
+            <span>{actionText(log)}</span>{" "}
             {target && <span className="font-medium break-words">{target}</span>}
           </p>
           <div className="flex items-center gap-2 flex-wrap mt-1">
+            <Badge variant="secondary" className="text-xs">{moduleOf(log)}</Badge>
             <Badge variant="outline" className="text-xs">{humanEntity(log.entity_type)}</Badge>
             {actor.email && <span className="text-xs text-muted-foreground truncate">{actor.email}</span>}
           </div>
@@ -684,6 +717,7 @@ function AuditLogsPanel() {
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
   const [entityFilter, setEntityFilter] = useState("all");
+  const [moduleFilter, setModuleFilter] = useState("all");
   const [fromDate, setFromDate] = useState(() => subDays(new Date(), 30));
   const [toDate, setToDate] = useState(() => new Date());
   const { tenantId, scopeQuery } = useTenantQuery();
@@ -721,17 +755,20 @@ function AuditLogsPanel() {
   const filtered = logs.filter(log => {
     const actor = getActor(log);
     const haystack = [
-      actor.name, actor.email, log.action, humanAction(log.action), log.entity_type,
+      actor.name, actor.email, log.action, actionText(log), log.entity_type, moduleOf(log),
       targetName(log), JSON.stringify(log.details || {}),
     ].join(" ").toLowerCase();
     const matchesSearch = search === "" || haystack.includes(search.toLowerCase());
     const matchesAction = actionFilter === "all" || log.action === actionFilter;
     const matchesEntity = entityFilter === "all" || log.entity_type === entityFilter;
-    return matchesSearch && matchesAction && matchesEntity;
+    const matchesModule = moduleFilter === "all" || moduleOf(log) === moduleFilter;
+    return matchesSearch && matchesAction && matchesEntity && matchesModule;
   });
 
-  const uniqueActions = [...new Set(logs.map(l => l.action))].sort();
-  const uniqueEntities = [...new Set(logs.map(l => l.entity_type))].sort();
+  const scoped = moduleFilter === "all" ? logs : logs.filter(l => moduleOf(l) === moduleFilter);
+  const uniqueActions = [...new Set(scoped.map(l => l.action))].sort();
+  const uniqueEntities = [...new Set(scoped.map(l => l.entity_type))].sort();
+  const uniqueModules = [...new Set(logs.map(moduleOf))].sort();
 
   const csvRows = filtered.map(r => ({ ...r, _actorName: getActor(r).name }));
 
@@ -743,6 +780,13 @@ function AuditLogsPanel() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search who, what or record..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
+        <Select value={moduleFilter} onValueChange={(v) => { setModuleFilter(v); setActionFilter("all"); setEntityFilter("all"); }}>
+          <SelectTrigger className="w-44"><SelectValue placeholder="All modules" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All modules</SelectItem>
+            {uniqueModules.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <Select value={actionFilter} onValueChange={setActionFilter}>
           <SelectTrigger className="w-44"><SelectValue placeholder="All actions" /></SelectTrigger>
           <SelectContent>
