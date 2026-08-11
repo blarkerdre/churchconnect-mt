@@ -16,6 +16,7 @@ import { logAudit } from "@/lib/audit";
 import UnitLeaderAssignments from "@/components/users/UnitLeaderAssignments";
 import WSFLeaderAssignments from "@/components/users/WSFLeaderAssignments";
 import BulkUnitAssignDialog from "@/components/users/BulkUnitAssignDialog";
+import TenantInvitePanel from "@/components/tenants/TenantInvitePanel";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 import ModuleTour from "@/components/tour/ModuleTour";
@@ -519,6 +520,21 @@ export default function UserManagement() {
           </div>
         </Card>
       )}
+
+      {/* Invitations */}
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-4 space-y-3">
+          <div>
+            <h3 className="text-sm font-display font-bold text-foreground">Invitations</h3>
+            <p className="text-xs text-muted-foreground">
+              Invite someone to join this church by email. They get access once they sign in with that address.
+            </p>
+          </div>
+          <TenantInvitePanel tenantId={tenantId} />
+        </CardContent>
+      </Card>
+
+
 
       {/* Add User Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
