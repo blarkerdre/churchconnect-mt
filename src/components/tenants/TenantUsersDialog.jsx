@@ -26,6 +26,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import TenantInvitePanel from "@/components/tenants/TenantInvitePanel";
 
 const ROLE_CONFIG = {
   owner: { label: "Owner", icon: Crown, color: "text-amber-600 bg-amber-50 border-amber-200" },
@@ -297,32 +298,6 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
             )}
           </TenantDialogHeader>
 
-        {/* Invite User Form */}
-        <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-2 p-3 bg-muted/50 rounded-lg">
-          <div className="flex-1">
-            <Input
-              value={addEmail}
-              onChange={(e) => setAddEmail(e.target.value)}
-              placeholder="Email address to invite"
-              type="email"
-              required
-            />
-          </div>
-          <Select value={addRole} onValueChange={setAddRole}>
-            <SelectTrigger className="w-full sm:w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="member">Member</SelectItem>
-              {canPromoteToAdmin && <SelectItem value="admin">Admin</SelectItem>}
-              {canPromoteToAdmin && <SelectItem value="owner">Owner</SelectItem>}
-            </SelectContent>
-          </Select>
-          <Button type="submit" size="sm" disabled={inviteMutation.isPending}>
-            <Mail className="h-4 w-4 mr-1" />
-            {inviteMutation.isPending ? "Sending..." : "Invite"}
-          </Button>
-        </form>
 
         <Tabs defaultValue="users">
           <TabsList className="w-full grid grid-cols-2">
@@ -487,68 +462,9 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
           </TabsContent>
 
           <TabsContent value="invitations">
-            {invLoading ? (
-              <p className="text-sm text-muted-foreground py-4">Loading invitations...</p>
-            ) : invError ? (
-              <p className="text-sm text-destructive py-4">Failed to load invitations: {invQueryError?.message || "Unknown error"}</p>
-            ) : invitations.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4">No invitations sent yet.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table className="min-w-[640px]">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invitations.map((inv) => (
-                      <TableRow key={inv.id}>
-                        <TableCell>
-                          <p className="text-sm">{inv.email}</p>
-                          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {new Date(inv.created_at).toLocaleDateString()}
-                          </p>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">{inv.role}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {inv.status === "pending" ? (
-                            <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 text-xs">Pending</Badge>
-                          ) : inv.status === "accepted" ? (
-                            <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 text-xs">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />Accepted
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-muted-foreground text-xs">
-                              <XCircle className="h-3 w-3 mr-1" />{inv.status}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {inv.status === "pending" && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-destructive"
-                              onClick={() => cancelInviteMutation.mutate(inv.id)}
-                            >
-                              Cancel
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+            <TenantInvitePanel tenantId={tenant.id} />
           </TabsContent>
+
         </Tabs>
 
         <p className="text-xs text-muted-foreground">
