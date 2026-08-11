@@ -81,8 +81,6 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
   );
   const canPromoteToAdmin = isSuperAdmin || isOwnerOfThisTenant;
   const queryClient = useQueryClient();
-  const [addEmail, setAddEmail] = useState("");
-  const [addRole, setAddRole] = useState("member");
   const [search, setSearch] = useState("");
   const [pendingAction, setPendingAction] = useState(null);
   const [confirmToken, setConfirmToken] = useState("");
