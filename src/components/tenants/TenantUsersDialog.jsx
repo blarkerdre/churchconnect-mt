@@ -111,7 +111,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
     enabled: !!tenant?.id && open,
   });
 
-  const { data: invitations = [], isLoading: invLoading, isError: invError, error: invQueryError } = useQuery({
+  const { data: invitations = [] } = useQuery({
     queryKey: ["tenant-invitations", tenant?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -125,47 +125,6 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
     enabled: !!tenant?.id && open,
   });
 
-  const inviteMutation = useMutation({
-    mutationFn: async ({ email, role }) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-to-tenant`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ tenant_id: tenant.id, email, role }),
-        }
-      );
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error);
-      return result;
-    },
-    onSuccess: (result) => {
-      const title = result.already_member
-        ? "User already belongs to this tenant"
-        : result.reused_pending_invitation
-        ? "Invitation resent"
-        : result.auto_added
-        ? "User added to tenant"
-        : "Invitation sent";
-      toast({
-        title,
-        description: result.email_warning || undefined,
-        variant: result.email_warning ? "destructive" : undefined,
-      });
-      setAddEmail("");
-      setAddRole("member");
-      queryClient.invalidateQueries({ queryKey: ["tenant-users", tenant?.id] });
-      queryClient.invalidateQueries({ queryKey: ["tenant-invitations", tenant?.id] });
-      queryClient.invalidateQueries({ queryKey: ["tenant-stats"] });
-    },
-    onError: (err) => {
-      toast({ title: "Error inviting user", description: err.message, variant: "destructive" });
-    },
-  });
 
   const updateRoleMutation = useMutation({
     mutationFn: async ({ membershipId, role }) => {
@@ -204,27 +163,6 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
     },
   });
 
-  const cancelInviteMutation = useMutation({
-    mutationFn: async (invitationId) => {
-      const { error } = await supabase
-        .from("tenant_invitations")
-        .update({ status: "cancelled" })
-        .eq("id", invitationId)
-        .eq("tenant_id", tenant.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast({ title: "Invitation cancelled" });
-      queryClient.invalidateQueries({ queryKey: ["tenant-invitations", tenant?.id] });
-    },
-    onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
-  });
-
-  const handleInvite = (e) => {
-    e.preventDefault();
-    if (!addEmail.trim()) return;
-    inviteMutation.mutate({ email: addEmail, role: addRole });
-  };
 
   const requestAction = (action) => {
     setConfirmToken("");
