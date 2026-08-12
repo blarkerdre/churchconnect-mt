@@ -125,21 +125,39 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
     <>
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-display flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="text-base font-display flex items-center gap-2 flex-wrap">
               <Layers className="h-4 w-4 text-primary" /> {course.name} — Subjects
+              <Badge variant="secondary" className="text-[10px] h-4">{sessionName}</Badge>
             </CardTitle>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditing(null); setForm({ name: "", code: "", description: "", lecturer_id: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] }); setDialogOpen(true); }}>
-              <Plus className="h-3.5 w-3.5" /> Add Subject
-            </Button>
+            <div className="flex items-center gap-2">
+              {!isAll && !isUnassigned && (
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setCopyOpen(true)}>
+                  <Copy className="h-3.5 w-3.5" /> Copy syllabus
+                </Button>
+              )}
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditing(null); setForm({ name: "", code: "", description: "", lecturer_id: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] }); setDialogOpen(true); }}>
+                <Plus className="h-3.5 w-3.5" /> Add Subject
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : subjects.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">No subjects yet. Add subjects to this course.</p>
+            <div className="text-center py-4 space-y-2">
+              <p className="text-sm text-muted-foreground">
+                No subjects in {sessionName} yet. Add subjects{!isAll && !isUnassigned ? " or copy them from another edition" : ""}.
+              </p>
+              {!isAll && !isUnassigned && (
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setCopyOpen(true)}>
+                  <Copy className="h-3.5 w-3.5" /> Copy syllabus from another edition
+                </Button>
+              )}
+            </div>
           ) : (
+
             <div className="space-y-2">
               {subjects.map((s, idx) => {
                 const expanded = selectedSubjectId === s.id;
