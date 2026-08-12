@@ -187,6 +187,12 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
                       ? <Badge variant="outline" className="text-[9px] h-4 border-primary/40 text-primary">Open</Badge>
                       : <Badge variant="secondary" className="text-[9px] h-4">Closed</Badge>}
                     {!s.is_active && <Badge variant="secondary" className="text-[9px] h-4">Inactive</Badge>}
+                    {isAll && (
+                      <Badge variant="outline" className="text-[9px] h-4">
+                        {s.session_id ? (sessionMap[s.session_id]?.name || "Edition") : "Unassigned edition"}
+                      </Badge>
+                    )}
+
                     <span className="text-[11px] text-muted-foreground w-full sm:w-auto">
                       {s.lecturer_id && lecturerName(s.lecturer_id)
                         ? `Lecturer: ${lecturerName(s.lecturer_id)}`
