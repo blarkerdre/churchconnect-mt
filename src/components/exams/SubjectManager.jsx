@@ -46,20 +46,22 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
   const lecturerName = (id) => lecturers.find((l) => l.id === id)?.name || null;
 
   const { data: subjects = [], isLoading } = useQuery({
-    queryKey: ["exam-subjects", course.id, tenantId],
+    queryKey: ["exam-subjects", course.id, tenantId, sessionId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("exam_subjects")
         .select("*")
         .eq("course_id", course.id)
-        .eq("tenant_id", tenantId)
-        .order("sort_order")
-        .order("created_at");
+        .eq("tenant_id", tenantId);
+      if (isUnassigned) q = q.is("session_id", null);
+      else if (!isAll) q = q.eq("session_id", sessionId);
+      const { data, error } = await q.order("sort_order").order("created_at");
       if (error) throw error;
       return data;
     },
     enabled: !!course.id && !!tenantId,
   });
+
 
   // Question counts per subject — powers the row badge and enables/disables
   // the quick "preview exam" icon.
