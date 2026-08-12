@@ -19,6 +19,8 @@ import MessageFilteredMembersDialog from "@/components/analytics/MessageFiltered
 import { ordinal, PositionBadge, buildRankMap } from "@/lib/rank-utils";
 import { bulkDownloadCertificates } from "@/lib/bulk-certificates";
 import { matchesTrainingType } from "@/lib/certificate-template-lookup";
+import { useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
+
 
 
 
@@ -59,21 +61,26 @@ export default function CourseResultsView({ course }) {
     { label: "Pass", min_percentage: 50 },
   ];
 
+  const { sessionId: editionId, isAll: isAllEditions, isUnassigned: isUnassignedEdition } = useExamSessionFilter();
+
   const { data: subjects = [] } = useQuery({
-    queryKey: ["exam-subjects", course.id],
+    queryKey: ["exam-subjects", course.id, editionId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("exam_subjects")
         .select("*")
         .eq("course_id", course.id)
         .eq("tenant_id", course.tenant_id)
-        .eq("is_active", true)
-        .order("sort_order");
+        .eq("is_active", true);
+      if (isUnassignedEdition) q = q.is("session_id", null);
+      else if (!isAllEditions) q = q.eq("session_id", editionId);
+      const { data, error } = await q.order("sort_order");
       if (error) throw error;
       return data;
     },
     enabled: !!course.id,
   });
+
 
   const subjectIds = subjects.map(s => s.id);
 

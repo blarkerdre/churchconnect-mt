@@ -14,14 +14,19 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
-import { Loader2, Plus, Trash2, Edit, Layers, Eye, ChevronDown, ChevronRight } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit, Layers, Eye, ChevronDown, ChevronRight, Copy } from "lucide-react";
+import { useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
+import CopySyllabusDialog from "@/components/exams/CopySyllabusDialog";
 
 export default function SubjectManager({ course, onSelectSubject, selectedSubjectId, renderSubjectPanel, onAddQuestion, onPreviewSubject }) {
   const qc = useQueryClient();
   const { tenantId, withTenant, scopeQuery } = useTenantQuery();
+  const { sessionId, isAll, isUnassigned, sessionMap, sessionName } = useExamSessionFilter();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [copyOpen, setCopyOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: "", code: "", description: "", lecturer_id: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] });
+
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data: lecturers = [] } = useQuery({
@@ -41,20 +46,22 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
   const lecturerName = (id) => lecturers.find((l) => l.id === id)?.name || null;
 
   const { data: subjects = [], isLoading } = useQuery({
-    queryKey: ["exam-subjects", course.id, tenantId],
+    queryKey: ["exam-subjects", course.id, tenantId, sessionId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("exam_subjects")
         .select("*")
         .eq("course_id", course.id)
-        .eq("tenant_id", tenantId)
-        .order("sort_order")
-        .order("created_at");
+        .eq("tenant_id", tenantId);
+      if (isUnassigned) q = q.is("session_id", null);
+      else if (!isAll) q = q.eq("session_id", sessionId);
+      const { data, error } = await q.order("sort_order").order("created_at");
       if (error) throw error;
       return data;
     },
     enabled: !!course.id && !!tenantId,
   });
+
 
   // Question counts per subject — powers the row badge and enables/disables
   // the quick "preview exam" icon.
@@ -81,7 +88,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
         const { error } = await supabase.from("exam_subjects").update(payload).eq("id", editing.id).eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("exam_subjects").insert(withTenant({ ...payload, course_id: course.id, sort_order: subjects.length }));
+        const { error } = await supabase.from("exam_subjects").insert(withTenant({ ...payload, course_id: course.id, sort_order: subjects.length, ...(isAll || isUnassigned ? {} : { session_id: sessionId }) }));
         if (error) throw error;
       }
     },
@@ -118,21 +125,39 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
     <>
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-display flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="text-base font-display flex items-center gap-2 flex-wrap">
               <Layers className="h-4 w-4 text-primary" /> {course.name} — Subjects
+              <Badge variant="secondary" className="text-[10px] h-4">{sessionName}</Badge>
             </CardTitle>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditing(null); setForm({ name: "", code: "", description: "", lecturer_id: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] }); setDialogOpen(true); }}>
-              <Plus className="h-3.5 w-3.5" /> Add Subject
-            </Button>
+            <div className="flex items-center gap-2">
+              {!isAll && !isUnassigned && (
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setCopyOpen(true)}>
+                  <Copy className="h-3.5 w-3.5" /> Copy syllabus
+                </Button>
+              )}
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setEditing(null); setForm({ name: "", code: "", description: "", lecturer_id: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] }); setDialogOpen(true); }}>
+                <Plus className="h-3.5 w-3.5" /> Add Subject
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : subjects.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">No subjects yet. Add subjects to this course.</p>
+            <div className="text-center py-4 space-y-2">
+              <p className="text-sm text-muted-foreground">
+                No subjects in {sessionName} yet. Add subjects{!isAll && !isUnassigned ? " or copy them from another edition" : ""}.
+              </p>
+              {!isAll && !isUnassigned && (
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setCopyOpen(true)}>
+                  <Copy className="h-3.5 w-3.5" /> Copy syllabus from another edition
+                </Button>
+              )}
+            </div>
           ) : (
+
             <div className="space-y-2">
               {subjects.map((s, idx) => {
                 const expanded = selectedSubjectId === s.id;
@@ -162,6 +187,12 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
                       ? <Badge variant="outline" className="text-[9px] h-4 border-primary/40 text-primary">Open</Badge>
                       : <Badge variant="secondary" className="text-[9px] h-4">Closed</Badge>}
                     {!s.is_active && <Badge variant="secondary" className="text-[9px] h-4">Inactive</Badge>}
+                    {isAll && (
+                      <Badge variant="outline" className="text-[9px] h-4">
+                        {s.session_id ? (sessionMap[s.session_id]?.name || "Edition") : "Unassigned edition"}
+                      </Badge>
+                    )}
+
                     <span className="text-[11px] text-muted-foreground w-full sm:w-auto">
                       {s.lecturer_id && lecturerName(s.lecturer_id)
                         ? `Lecturer: ${lecturerName(s.lecturer_id)}`
@@ -317,18 +348,22 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
         </DialogContent>
       </Dialog>
 
+      <CopySyllabusDialog open={copyOpen} onOpenChange={setCopyOpen} course={course} />
+
       <DangerConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(v) => !v && setDeleteTarget(null)}
         title="Delete Subject"
         entityName={deleteTarget?.name || ""}
         impacts={[
+          "Only this edition's copy of the subject is deleted — other editions keep theirs.",
           "All questions under this subject will be permanently deleted.",
           "All member exam attempts and answers for this subject will be permanently deleted.",
         ]}
         isPending={deleteMutation.isPending}
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
       />
+
     </>
   );
 }
