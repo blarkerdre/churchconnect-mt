@@ -312,7 +312,7 @@ Deno.serve(async (req) => {
   }
 });
 
-async function checkCourseCompletion(adminClient: any, memberId: string, courseName: string, tenantId: string, sendCertificateEmail: boolean) {
+async function checkCourseCompletion(adminClient: any, memberId: string, courseName: string, tenantId: string, sendCertificateEmail: boolean, sessionId: string | null = null) {
   try {
     const { data: course } = await adminClient
       .from("exam_titles")
@@ -321,12 +321,16 @@ async function checkCourseCompletion(adminClient: any, memberId: string, courseN
       .maybeSingle();
     if (!course) return;
 
-    const { data: subjects } = await adminClient
+    // Only this edition's subjects count toward completion.
+    let subjectsQuery = adminClient
       .from("exam_subjects")
       .select("id")
       .eq("course_id", course.id)
       .eq("is_active", true);
+    subjectsQuery = sessionId ? subjectsQuery.eq("session_id", sessionId) : subjectsQuery.is("session_id", null);
+    const { data: subjects } = await subjectsQuery;
     if (!subjects || subjects.length === 0) return;
+
 
     const subjectIds = subjects.map((s: any) => s.id);
     const { data: attempts } = await adminClient
