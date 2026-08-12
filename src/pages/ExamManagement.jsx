@@ -1896,14 +1896,20 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
     enabled: !!memberId,
   });
 
+  const { sessionId: editionId, isAll: isAllEditions, isUnassigned: isUnassignedEdition } = useExamSessionFilter();
+
   const { data: allSubjects = [] } = useQuery({
-    queryKey: ["all-exam-subjects", tenantId],
+    queryKey: ["all-exam-subjects", tenantId, editionId],
     queryFn: async () => {
-      const { data, error } = await scopeQuery(supabase.from("exam_subjects").select("*").eq("is_active", true).order("sort_order"));
+      let q = supabase.from("exam_subjects").select("*").eq("is_active", true);
+      if (isUnassignedEdition) q = q.is("session_id", null);
+      else if (!isAllEditions) q = q.eq("session_id", editionId);
+      const { data, error } = await scopeQuery(q.order("sort_order"));
       if (error) throw error;
       return data;
     },
   });
+
 
   const { data: myAttempts = [] } = useQuery({
     queryKey: ["my-course-attempts", memberId, tenantId],
