@@ -348,18 +348,22 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
         </DialogContent>
       </Dialog>
 
+      <CopySyllabusDialog open={copyOpen} onOpenChange={setCopyOpen} course={course} />
+
       <DangerConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(v) => !v && setDeleteTarget(null)}
         title="Delete Subject"
         entityName={deleteTarget?.name || ""}
         impacts={[
+          "Only this edition's copy of the subject is deleted — other editions keep theirs.",
           "All questions under this subject will be permanently deleted.",
           "All member exam attempts and answers for this subject will be permanently deleted.",
         ]}
         isPending={deleteMutation.isPending}
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
       />
+
     </>
   );
 }
