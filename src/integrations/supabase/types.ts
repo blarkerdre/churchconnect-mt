@@ -1945,6 +1945,7 @@ export type Database = {
           id: string
           is_correct: boolean | null
           question_id: string
+          question_snapshot: Json | null
           selected_answer: string | null
           tenant_id: string | null
         }
@@ -1954,6 +1955,7 @@ export type Database = {
           id?: string
           is_correct?: boolean | null
           question_id: string
+          question_snapshot?: Json | null
           selected_answer?: string | null
           tenant_id?: string | null
         }
@@ -1963,6 +1965,7 @@ export type Database = {
           id?: string
           is_correct?: boolean | null
           question_id?: string
+          question_snapshot?: Json | null
           selected_answer?: string | null
           tenant_id?: string | null
         }
@@ -2003,6 +2006,7 @@ export type Database = {
           session_id: string | null
           started_at: string
           subject_id: string | null
+          subject_snapshot: Json | null
           tenant_id: string | null
           total_points: number | null
           training_type: string
@@ -2019,6 +2023,7 @@ export type Database = {
           session_id?: string | null
           started_at?: string
           subject_id?: string | null
+          subject_snapshot?: Json | null
           tenant_id?: string | null
           total_points?: number | null
           training_type: string
@@ -2035,6 +2040,7 @@ export type Database = {
           session_id?: string | null
           started_at?: string
           subject_id?: string | null
+          subject_snapshot?: Json | null
           tenant_id?: string | null
           total_points?: number | null
           training_type?: string
@@ -2119,6 +2125,7 @@ export type Database = {
           points: number
           question_text: string
           question_type: string
+          session_id: string | null
           sort_order: number
           subject_id: string | null
           tenant_id: string | null
@@ -2136,6 +2143,7 @@ export type Database = {
           points?: number
           question_text: string
           question_type?: string
+          session_id?: string | null
           sort_order?: number
           subject_id?: string | null
           tenant_id?: string | null
@@ -2153,12 +2161,20 @@ export type Database = {
           points?: number
           question_text?: string
           question_type?: string
+          session_id?: string | null
           sort_order?: number
           subject_id?: string | null
           tenant_id?: string | null
           training_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "exam_questions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "exam_sessions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "exam_questions_subject_id_fkey"
             columns: ["subject_id"]
@@ -2293,6 +2309,7 @@ export type Database = {
           name: string
           pass_mark_percentage: number
           randomize_questions: boolean
+          session_id: string | null
           sort_order: number
           tenant_id: string | null
           time_limit_minutes: number | null
@@ -2310,6 +2327,7 @@ export type Database = {
           name: string
           pass_mark_percentage?: number
           randomize_questions?: boolean
+          session_id?: string | null
           sort_order?: number
           tenant_id?: string | null
           time_limit_minutes?: number | null
@@ -2327,6 +2345,7 @@ export type Database = {
           name?: string
           pass_mark_percentage?: number
           randomize_questions?: boolean
+          session_id?: string | null
           sort_order?: number
           tenant_id?: string | null
           time_limit_minutes?: number | null
@@ -2344,6 +2363,13 @@ export type Database = {
             columns: ["lecturer_id"]
             isOneToOne: false
             referencedRelation: "lecturers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_subjects_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "exam_sessions"
             referencedColumns: ["id"]
           },
           {
@@ -7380,6 +7406,16 @@ export type Database = {
         }
       }
       claim_member: { Args: { _token: string }; Returns: Json }
+      clone_exam_subjects_to_session: {
+        Args: {
+          p_course_id: string
+          p_from_session: string
+          p_include_questions?: boolean
+          p_tenant_id: string
+          p_to_session: string
+        }
+        Returns: Json
+      }
       count_pending_join_requests_for_user: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: number
