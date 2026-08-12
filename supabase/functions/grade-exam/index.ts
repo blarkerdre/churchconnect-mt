@@ -117,12 +117,14 @@ Deno.serve(async (req) => {
     let passThreshold = 50;
     let sendResultEmail = true;
     let sendCertificateEmail = true;
+    let subjectRow: any = null;
     if (subject_id) {
       const { data: subj } = await adminClient
         .from("exam_subjects")
-        .select("pass_mark_percentage, course_id, is_open")
+        .select("id, name, code, description, pass_mark_percentage, time_limit_minutes, course_id, session_id, lecturer_id, is_open, grade_classifications")
         .eq("id", subject_id)
         .maybeSingle();
+      subjectRow = subj;
       if (subj) passThreshold = subj.pass_mark_percentage;
       if (subj && subj.is_open === false) {
         return new Response(JSON.stringify({ error: "This exam is currently closed." }), {
@@ -130,6 +132,7 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
       // Fetch email flags from the course
       if (subj?.course_id) {
         const { data: courseFlags } = await adminClient
@@ -187,6 +190,33 @@ Deno.serve(async (req) => {
     const percentage = totalPoints > 0 ? (score / totalPoints) * 100 : 0;
     const passed = percentage >= passThreshold;
 
+    // Freeze the syllabus as it stood at submission time so later edits to the
+    // subject/questions (e.g. for a new edition) never rewrite history.
+    let lecturerName: string | null = null;
+    if (subjectRow?.lecturer_id) {
+      const { data: lec } = await adminClient
+        .from("lecturers")
+        .select("name")
+        .eq("id", subjectRow.lecturer_id)
+        .maybeSingle();
+      lecturerName = lec?.name ?? null;
+    }
+    const subjectSnapshot = subjectRow
+      ? {
+          id: subjectRow.id,
+          name: subjectRow.name,
+          code: subjectRow.code ?? null,
+          description: subjectRow.description ?? null,
+          pass_mark_percentage: subjectRow.pass_mark_percentage ?? null,
+          time_limit_minutes: subjectRow.time_limit_minutes ?? null,
+          session_id: subjectRow.session_id ?? null,
+          lecturer_id: subjectRow.lecturer_id ?? null,
+          lecturer_name: lecturerName,
+          grade_classifications: subjectRow.grade_classifications ?? null,
+          captured_at: new Date().toISOString(),
+        }
+      : null;
+
     // Insert attempt
     const { data: attempt, error: attemptErr } = await adminClient
       .from("exam_attempts")
@@ -194,6 +224,8 @@ Deno.serve(async (req) => {
         member_id,
         training_type,
         subject_id: subject_id || null,
+        session_id: subjectRow?.session_id ?? null,
+        subject_snapshot: subjectSnapshot,
         completed_at: new Date().toISOString(),
         score,
         total_points: totalPoints,
@@ -204,18 +236,37 @@ Deno.serve(async (req) => {
       .single();
     if (attemptErr) throw attemptErr;
 
-    // Insert answers
-    const answersPayload = answerRows.map((a: any) => ({
-      ...a,
-      attempt_id: attempt.id,
-      tenant_id: member.tenant_id,
-    }));
+    // Insert answers, each carrying a frozen copy of the question it answered
+    const questionById: Record<string, any> = {};
+    questions.forEach((q: any) => { questionById[q.id] = q; });
+    const answersPayload = answerRows.map((a: any) => {
+      const q = questionById[a.question_id] || {};
+      return {
+        ...a,
+        attempt_id: attempt.id,
+        tenant_id: member.tenant_id,
+        question_snapshot: {
+          id: q.id ?? a.question_id,
+          question_text: q.question_text ?? null,
+          question_type: q.question_type ?? null,
+          option_a: q.option_a ?? null,
+          option_b: q.option_b ?? null,
+          option_c: q.option_c ?? null,
+          option_d: q.option_d ?? null,
+          answer_count: q.answer_count ?? null,
+          points: q.points ?? null,
+          correct_answer: q.correct_answer ?? null,
+          captured_at: new Date().toISOString(),
+        },
+      };
+    });
     const { error: ansErr } = await adminClient.from("exam_answers").insert(answersPayload);
     if (ansErr) throw ansErr;
 
     // Course completion check / certificate issuance
     if (subject_id) {
-      await checkCourseCompletion(adminClient, member_id, training_type, member.tenant_id, sendCertificateEmail);
+      await checkCourseCompletion(adminClient, member_id, training_type, member.tenant_id, sendCertificateEmail, subjectRow?.session_id ?? null);
+
     } else if (passed) {
       await issueCertificate(supabaseUrl, serviceKey, member_id, training_type, attempt.id, member.tenant_id, adminClient, sendCertificateEmail);
     }
@@ -261,7 +312,7 @@ Deno.serve(async (req) => {
   }
 });
 
-async function checkCourseCompletion(adminClient: any, memberId: string, courseName: string, tenantId: string, sendCertificateEmail: boolean) {
+async function checkCourseCompletion(adminClient: any, memberId: string, courseName: string, tenantId: string, sendCertificateEmail: boolean, sessionId: string | null = null) {
   try {
     const { data: course } = await adminClient
       .from("exam_titles")
@@ -270,12 +321,16 @@ async function checkCourseCompletion(adminClient: any, memberId: string, courseN
       .maybeSingle();
     if (!course) return;
 
-    const { data: subjects } = await adminClient
+    // Only this edition's subjects count toward completion.
+    let subjectsQuery = adminClient
       .from("exam_subjects")
       .select("id")
       .eq("course_id", course.id)
       .eq("is_active", true);
+    subjectsQuery = sessionId ? subjectsQuery.eq("session_id", sessionId) : subjectsQuery.is("session_id", null);
+    const { data: subjects } = await subjectsQuery;
     if (!subjects || subjects.length === 0) return;
+
 
     const subjectIds = subjects.map((s: any) => s.id);
     const { data: attempts } = await adminClient
