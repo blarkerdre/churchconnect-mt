@@ -117,12 +117,14 @@ Deno.serve(async (req) => {
     let passThreshold = 50;
     let sendResultEmail = true;
     let sendCertificateEmail = true;
+    let subjectRow: any = null;
     if (subject_id) {
       const { data: subj } = await adminClient
         .from("exam_subjects")
-        .select("pass_mark_percentage, course_id, is_open")
+        .select("id, name, code, description, pass_mark_percentage, time_limit_minutes, course_id, session_id, lecturer_id, is_open, grade_classifications")
         .eq("id", subject_id)
         .maybeSingle();
+      subjectRow = subj;
       if (subj) passThreshold = subj.pass_mark_percentage;
       if (subj && subj.is_open === false) {
         return new Response(JSON.stringify({ error: "This exam is currently closed." }), {
@@ -130,6 +132,7 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
       // Fetch email flags from the course
       if (subj?.course_id) {
         const { data: courseFlags } = await adminClient
