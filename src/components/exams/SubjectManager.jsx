@@ -14,14 +14,19 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
-import { Loader2, Plus, Trash2, Edit, Layers, Eye, ChevronDown, ChevronRight } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit, Layers, Eye, ChevronDown, ChevronRight, Copy } from "lucide-react";
+import { useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
+import CopySyllabusDialog from "@/components/exams/CopySyllabusDialog";
 
 export default function SubjectManager({ course, onSelectSubject, selectedSubjectId, renderSubjectPanel, onAddQuestion, onPreviewSubject }) {
   const qc = useQueryClient();
   const { tenantId, withTenant, scopeQuery } = useTenantQuery();
+  const { sessionId, isAll, isUnassigned, sessionMap, sessionName } = useExamSessionFilter();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [copyOpen, setCopyOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: "", code: "", description: "", lecturer_id: "", pass_mark_percentage: 50, time_limit_minutes: "", randomize_questions: false, is_open: false, useCustomGrades: false, grade_classifications: [] });
+
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data: lecturers = [] } = useQuery({
