@@ -88,7 +88,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
         const { error } = await supabase.from("exam_subjects").update(payload).eq("id", editing.id).eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("exam_subjects").insert(withTenant({ ...payload, course_id: course.id, sort_order: subjects.length }));
+        const { error } = await supabase.from("exam_subjects").insert(withTenant({ ...payload, course_id: course.id, sort_order: subjects.length, ...(isAll || isUnassigned ? {} : { session_id: sessionId }) }));
         if (error) throw error;
       }
     },
