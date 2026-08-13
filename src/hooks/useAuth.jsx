@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState, useCallback, useMemo } 
 import { supabase } from "@/integrations/supabase/client";
 import { isMfaChallengeRequired, clearMfaPassed } from "@/hooks/useMfa";
 import { withClockSkewRetry, isClockSkewError } from "@/lib/supabase-retry";
+import { getActiveTenantId, subscribeActiveTenantId } from "@/lib/active-tenant";
+
 
 
 
