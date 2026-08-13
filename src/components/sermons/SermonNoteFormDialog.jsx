@@ -11,7 +11,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Plus, Check, X } from "lucide-react";
+import { Plus, Check, X, Maximize2, Minimize2 } from "lucide-react";
 
 const NONE = "__none__";
 const NEW = "__new__";
