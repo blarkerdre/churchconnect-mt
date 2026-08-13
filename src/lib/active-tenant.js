@@ -12,6 +12,32 @@ export const DEFAULT_TENANT_ID = "d8bbbdae-d9b3-4999-912d-3aa5999884b0";
 
 const KEY_PREFIX = "activeTenantId:";
 
+/**
+ * Lightweight broadcast of the currently active tenant id.
+ * TenantProvider publishes; useAuth (which sits above it) subscribes so
+ * role flags can be scoped to the church the user is actually in.
+ */
+let activeTenantId = null;
+const listeners = new Set();
+
+export function setActiveTenantId(tenantId) {
+  if (activeTenantId === tenantId) return;
+  activeTenantId = tenantId || null;
+  listeners.forEach((fn) => {
+    try { fn(activeTenantId); } catch { /* ignore listener errors */ }
+  });
+}
+
+export function getActiveTenantId() {
+  return activeTenantId;
+}
+
+export function subscribeActiveTenantId(fn) {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+
+
 export function getStoredTenantId(userId) {
   if (!userId) return null;
   try {
