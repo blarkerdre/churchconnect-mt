@@ -44,7 +44,34 @@ export default function Members() {
   const [importOpen, setImportOpen] = useState(false);
   const [certMember, setCertMember] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [linkUserId, setLinkUserId] = useState(null);
+  const [prefill, setPrefill] = useState(null);
   const queryClient = useQueryClient();
+
+  // Accounts that belong to this church but have no directory record yet
+  // (e.g. people invited in from another church).
+  const { data: unlinkedAccounts = [] } = useQuery({
+    queryKey: ["memberships-without-directory", tenantId],
+    enabled: !!tenantId && !!isAdmin,
+    queryFn: async () => {
+      const [{ data: memberships, error: mErr }, { data: rows, error: rErr }] = await Promise.all([
+        supabase.from("tenant_memberships").select("user_id").eq("tenant_id", tenantId),
+        supabase.from("members").select("user_id").eq("tenant_id", tenantId).not("user_id", "is", null),
+      ]);
+      if (mErr) throw mErr;
+      if (rErr) throw rErr;
+      const linked = new Set((rows || []).map(r => r.user_id));
+      const missing = (memberships || []).map(m => m.user_id).filter(id => id && !linked.has(id));
+      if (missing.length === 0) return [];
+      const { data: profs, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email")
+        .in("user_id", missing);
+      if (error) throw error;
+      return profs || [];
+    },
+  });
+
 
   const { enabled: canAddMember } = useSubFeature("members.add_member");
   const { enabled: canBulkImport } = useSubFeature("members.bulk_import");
@@ -154,13 +181,31 @@ export default function Members() {
 
   const openNew = () => {
     setEditingMember(null);
+    setLinkUserId(null);
+    setPrefill(null);
     setDialogOpen(true);
   };
 
   const openEdit = (m) => {
     setEditingMember(m);
+    setLinkUserId(null);
+    setPrefill(null);
     setDialogOpen(true);
   };
+
+  const addAccountToDirectory = (acct) => {
+    const parts = (acct.full_name || "").trim().split(/\s+/);
+    setEditingMember(null);
+    setLinkUserId(acct.user_id);
+    setPrefill({
+      first_name: parts[0] || "",
+      last_name: parts.slice(1).join(" ") || "",
+      email: acct.email || "",
+    });
+    setDialogOpen(true);
+  };
+
+
 
   const handleDelete = (member) => {
     setDeleteTarget(member);
@@ -237,6 +282,39 @@ export default function Members() {
 
         </div>
       )}
+
+      {/* Accounts with church access but no directory record yet */}
+      {isAdmin && unlinkedAccounts.length > 0 && (
+        <Card className="border-0 shadow-sm bg-accent/5">
+          <CardContent className="p-4 space-y-3">
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                {unlinkedAccounts.length} account{unlinkedAccounts.length > 1 ? "s" : ""} with access to this church {unlinkedAccounts.length > 1 ? "are" : "is"} not in the member directory
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Usually people invited in from another church. Add them to the directory to include them in reports and communications.
+              </p>
+            </div>
+            <div className="space-y-2">
+              {unlinkedAccounts.map(a => (
+                <div key={a.user_id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-background p-2.5">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{a.full_name || "—"}</p>
+                    <p className="text-xs text-muted-foreground truncate">{a.email || ""}</p>
+                  </div>
+                  {canAddMember && (
+                    <Button size="sm" variant="outline" onClick={() => addAccountToDirectory(a)} className="gap-1.5">
+                      <Plus className="h-4 w-4" /> Add to directory
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+
 
       {/* Filters */}
       {(isAdmin || viewOnly) && (
@@ -361,11 +439,15 @@ export default function Members() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         member={editingMember}
+        linkUserId={linkUserId}
+        prefill={prefill}
         onSaved={() => {
           queryClient.invalidateQueries({ queryKey: ["members"] });
+          queryClient.invalidateQueries({ queryKey: ["memberships-without-directory"] });
           setDialogOpen(false);
         }}
       />
+
       <RegistrationQRCode open={qrOpen} onOpenChange={setQrOpen} />
       <BulkImportDialog
         open={importOpen}
