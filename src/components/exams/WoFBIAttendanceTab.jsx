@@ -963,7 +963,12 @@ export default function WoFBIAttendanceTab() {
         </CardHeader>
         <CardContent>
           {perStudent.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">No registered students on this course yet.</p>
+            <p className="text-sm text-muted-foreground py-6 text-center">
+              {isAllEditions
+                ? "No registered students on this course yet."
+                : `No students registered for ${editionName} on this course.`}
+            </p>
+
           ) : (
             <div className="overflow-x-auto -mx-3 sm:mx-0">
             <Table className="min-w-[720px]">
