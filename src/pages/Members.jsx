@@ -44,7 +44,33 @@ export default function Members() {
   const [importOpen, setImportOpen] = useState(false);
   const [certMember, setCertMember] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [linkUserId, setLinkUserId] = useState(null);
   const queryClient = useQueryClient();
+
+  // Accounts that belong to this church but have no directory record yet
+  // (e.g. people invited in from another church).
+  const { data: unlinkedAccounts = [] } = useQuery({
+    queryKey: ["memberships-without-directory", tenantId],
+    enabled: !!tenantId && !!isAdmin,
+    queryFn: async () => {
+      const [{ data: memberships, error: mErr }, { data: rows, error: rErr }] = await Promise.all([
+        supabase.from("tenant_memberships").select("user_id").eq("tenant_id", tenantId),
+        supabase.from("members").select("user_id").eq("tenant_id", tenantId).not("user_id", "is", null),
+      ]);
+      if (mErr) throw mErr;
+      if (rErr) throw rErr;
+      const linked = new Set((rows || []).map(r => r.user_id));
+      const missing = (memberships || []).map(m => m.user_id).filter(id => id && !linked.has(id));
+      if (missing.length === 0) return [];
+      const { data: profs, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email")
+        .in("user_id", missing);
+      if (error) throw error;
+      return profs || [];
+    },
+  });
+
 
   const { enabled: canAddMember } = useSubFeature("members.add_member");
   const { enabled: canBulkImport } = useSubFeature("members.bulk_import");
