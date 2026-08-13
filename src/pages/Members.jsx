@@ -20,6 +20,7 @@ import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import ModuleTour from "@/components/tour/ModuleTour";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import UserChurchBadges, { useUserChurches } from "@/components/tenants/UserChurchBadges";
 
 const statusColors = {
   "Active": "bg-chart-3/10 text-chart-3",
