@@ -405,7 +405,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
                 </Button>
               </div>
             </div>
-            <SermonRichEditor content={content} onChange={setContent} expanded={expanded} />
+            <SermonRichEditor content={content} onChange={setContent} expanded={expanded || fullscreen} fullscreen={fullscreen} />
             <p className="text-[11px] text-muted-foreground mt-1 h-4">
               {draftStatus === "saving" && "Saving…"}
               {draftStatus === "saved" && savedAt && `Draft saved ${format(new Date(savedAt), "HH:mm")}`}
