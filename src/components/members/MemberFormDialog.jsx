@@ -51,7 +51,7 @@ const emptyMember = {
   wofbi_highest_level: "None", baptized_by_immersion: false, preferred_contact_modes: "",
 };
 
-export default function MemberFormDialog({ open, onOpenChange, member, onSaved, linkUserId = null }) {
+export default function MemberFormDialog({ open, onOpenChange, member, onSaved, linkUserId = null, prefill = null }) {
   const { isAdmin, roles: currentUserRoles, user: currentUser, isTenantOwner } = useAuth();
   const { data: churchUnits = [] } = useChurchUnits(!isAdmin);
   const CHURCH_UNITS = churchUnits.map(u => u.name);
@@ -224,14 +224,15 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
 
   useEffect(() => {
     if (open) {
-      setForm(member ? { ...emptyMember, ...member } : emptyMember);
+      setForm(member ? { ...emptyMember, ...member } : { ...emptyMember, ...(prefill || {}) });
       setShowLinkSearch(false);
       setLinkSearch("");
       setCreateAccount(false);
       setPassword("");
       setAccountRole("member");
     }
-  }, [member, open]);
+  }, [member, prefill, open]);
+
 
   // Sync staged role edits with saved roles whenever the dialog opens or saved roles refresh
   useEffect(() => {
