@@ -14,6 +14,8 @@ import { toast } from "@/components/ui/use-toast";
 import { Loader2, ClipboardCheck } from "lucide-react";
 import { SCORE_LABELS } from "@/lib/qc-options";
 import { logWofbiActivity } from "@/lib/wofbi-activity";
+import { useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
+
 
 const emptyForm = {
   lecturer_id: "",
@@ -85,7 +87,10 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null, i
   const qc = useQueryClient();
   const { user } = useAuth();
   const { tenantId } = useTenantQuery();
+  const { sessionId, sessionName, applySession, isAll, isUnassigned } = useExamSessionFilter();
+  const pinnedEditionId = !isAll && !isUnassigned ? sessionId : null;
   const [form, setForm] = useState(emptyForm);
+
 
 
   const { data: lecturers = [] } = useQuery({
@@ -119,16 +124,17 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null, i
   });
 
   const { data: subjects = [] } = useQuery({
-    queryKey: ["qc-subjects", tenantId, form.exam_title_id],
+    queryKey: ["qc-subjects", tenantId, form.exam_title_id, sessionId],
     enabled: !!tenantId && !!form.exam_title_id && open,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("exam_subjects")
-        .select("id, name, code, lecturer_id")
-        .eq("tenant_id", tenantId)
-        .eq("course_id", form.exam_title_id)
-        .eq("is_active", true)
-        .order("sort_order");
+      const { data, error } = await applySession(
+        supabase
+          .from("exam_subjects")
+          .select("id, name, code, lecturer_id, session_id, exam_sessions(id, name)")
+          .eq("tenant_id", tenantId)
+          .eq("course_id", form.exam_title_id)
+          .eq("is_active", true)
+      ).order("sort_order");
       if (error) throw error;
       return data || [];
     },
@@ -136,17 +142,20 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null, i
 
   // Subjects that already have a QC check (blocked by the one-QC-per-subject rule)
   const { data: checkedSubjectIds = [] } = useQuery({
-    queryKey: ["qc-checked-subjects", tenantId],
+    queryKey: ["qc-checked-subjects", tenantId, sessionId],
     enabled: !!tenantId && open,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("lecturer_qc_checks")
-        .select("exam_subject_id")
-        .eq("tenant_id", tenantId);
+      const { data, error } = await applySession(
+        supabase
+          .from("lecturer_qc_checks")
+          .select("exam_subject_id")
+          .eq("tenant_id", tenantId)
+      );
       if (error) throw error;
       return (data || []).map((r) => r.exam_subject_id).filter(Boolean);
     },
   });
+
 
   const outstandingSubjects = subjects.filter(
     (s) => !checkedSubjectIds.includes(s.id) || s.id === editRecord?.exam_subject_id,
@@ -283,12 +292,17 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null, i
         }
       } catch { /* ignore */ }
 
+      const subjectEdition =
+        subjects.find((s) => s.id === form.exam_subject_id)?.session_id || pinnedEditionId || null;
+
       const payload = {
         tenant_id: tenantId,
         lecturer_id: form.lecturer_id,
         exam_title_id: form.exam_title_id || null,
         exam_subject_id: form.exam_subject_id,
+        ...(subjectEdition ? { session_id: subjectEdition } : {}),
         check_date: form.check_date,
+
         tier: null,
         qc_member_id: form.qc_member_id,
         qc_member_name: form.qc_member_name.trim(),
@@ -355,7 +369,9 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null, i
           </DialogTitle>
           <p className="text-xs text-muted-foreground pt-1">
             Word of Faith Bible Institute — record class quality against the standard checklist.
+            {" "}Recording under <span className="font-medium text-foreground">{sessionName}</span>.
           </p>
+
         </DialogHeader>
 
         <div className="space-y-5">
@@ -389,12 +405,14 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null, i
                 <SelectContent>
                   {subjects.map((s) => {
                     const done = checkedSubjectIds.includes(s.id) && s.id !== editRecord?.exam_subject_id;
+                    const ed = isAll && s.exam_sessions?.name ? ` · ${s.exam_sessions.name}` : "";
                     return (
                       <SelectItem key={s.id} value={s.id} disabled={done}>
-                        {done ? "✓ " : ""}{s.code ? `${s.code} — ${s.name}` : s.name}{done ? " (QC done)" : ""}
+                        {done ? "✓ " : ""}{s.code ? `${s.code} — ${s.name}` : s.name}{ed}{done ? " (QC done)" : ""}
                       </SelectItem>
                     );
                   })}
+
                 </SelectContent>
               </Select>
               {form.exam_title_id && (
