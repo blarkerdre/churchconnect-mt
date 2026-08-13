@@ -412,6 +412,12 @@ export default function UserManagement() {
                                   <KeyRound className="h-2.5 w-2.5 mr-1" /> 2FA
                                 </Badge>
                               )}
+                              {p.membership_role && (
+                                <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                                  {p.membership_role === "owner" ? "Church Owner" : p.membership_role === "admin" ? "Church Admin" : "Church Member"}
+                                </Badge>
+                              )}
+
                             </div>
 
                           </div>
