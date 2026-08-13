@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Mail, Clock, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
+import { Mail, Clock, CheckCircle2, XCircle, RefreshCw, Copy, MailCheck, MailWarning } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
