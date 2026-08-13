@@ -51,6 +51,7 @@ export default function SermonNotes() {
   const [selectedFolder, setSelectedFolder] = useState("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editNote, setEditNote] = useState(null);
+  const [viewNote, setViewNote] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
