@@ -222,22 +222,25 @@ export default function WoFBIAttendanceTab() {
     },
   });
 
-  // Roster: approved/enrolled registrants of the course
+  // Roster: approved/enrolled registrants of the course, scoped to the selected edition
   const { data: roster = [] } = useQuery({
-    queryKey: ["wofbi-att-roster", tenantId, selectedCourseId],
+    queryKey: ["wofbi-att-roster", tenantId, selectedCourseId, editionId],
     enabled: !!tenantId && !!selectedCourseId,
     queryFn: async () => {
-      const { data, error } = await scopeQuery(
-        supabase
-          .from("course_registrations")
-          .select("id, member_id, student_number, status, members:member_id(id, first_name, last_name)")
-          .eq("course_id", selectedCourseId)
-          .in("status", ["approved", "enrolled", "active", "completed"])
+      const { data, error } = await applySession(
+        scopeQuery(
+          supabase
+            .from("course_registrations")
+            .select("id, member_id, student_number, status, session_id, edition:exam_sessions(id, name), members:member_id(id, first_name, last_name)")
+            .eq("course_id", selectedCourseId)
+            .in("status", ["approved", "enrolled", "active", "completed"])
+        )
       );
       if (error) throw error;
       return data || [];
     },
   });
+
 
   // All records across sessions for the % report
   const { data: allRecords = [] } = useQuery({
@@ -960,7 +963,12 @@ export default function WoFBIAttendanceTab() {
         </CardHeader>
         <CardContent>
           {perStudent.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">No registered students on this course yet.</p>
+            <p className="text-sm text-muted-foreground py-6 text-center">
+              {isAllEditions
+                ? "No registered students on this course yet."
+                : `No students registered for ${editionName} on this course.`}
+            </p>
+
           ) : (
             <div className="overflow-x-auto -mx-3 sm:mx-0">
             <Table className="min-w-[720px]">
@@ -996,7 +1004,13 @@ export default function WoFBIAttendanceTab() {
                         <TableCell>{s.registration.student_number || "—"}</TableCell>
                         <TableCell className="font-medium">
                           {`${s.registration.members?.first_name || ""} ${s.registration.members?.last_name || ""}`.trim() || "Unknown"}
+                          {isAllEditions && (
+                            <Badge variant="outline" className="ml-2 text-[10px] font-normal">
+                              {s.registration.edition?.name || "Unassigned edition"}
+                            </Badge>
+                          )}
                         </TableCell>
+
                         <TableCell>{s.present}</TableCell>
                         <TableCell>{s.late}</TableCell>
                         <TableCell>{s.absent}</TableCell>
@@ -1298,7 +1312,7 @@ export default function WoFBIAttendanceTab() {
                   );
                 })}
                 {roster.length === 0 && (
-                  <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">No registered students.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">{isAllEditions ? "No registered students." : `No students registered for ${editionName}.`}</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
