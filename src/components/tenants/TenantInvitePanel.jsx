@@ -48,6 +48,29 @@ export default function TenantInvitePanel({ tenantId, pendingOnly = false }) {
     enabled: !!tenantId,
   });
 
+  // Delivery status for invitation emails in this church, latest row per recipient.
+  const { data: deliveryByEmail = {} } = useQuery({
+    queryKey: ["tenant-invitation-emails", tenantId],
+    queryFn: async () => {
+      const { data, error: err } = await supabase
+        .from("email_send_log")
+        .select("recipient_email, status, error_message, created_at")
+        .eq("tenant_id", tenantId)
+        .eq("template_name", "tenant-invitation")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (err) throw err;
+      const latest = {};
+      for (const row of data || []) {
+        const key = (row.recipient_email || "").toLowerCase();
+        if (!latest[key]) latest[key] = row;
+      }
+      return latest;
+    },
+    enabled: !!tenantId,
+  });
+
+
   const sendInvite = useMutation({
     mutationFn: async ({ email: to, role: asRole }) => {
       const { data: { session } } = await supabase.auth.getSession();
