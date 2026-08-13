@@ -283,6 +283,39 @@ export default function Members() {
         </div>
       )}
 
+      {/* Accounts with church access but no directory record yet */}
+      {isAdmin && unlinkedAccounts.length > 0 && (
+        <Card className="border-0 shadow-sm bg-accent/5">
+          <CardContent className="p-4 space-y-3">
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                {unlinkedAccounts.length} account{unlinkedAccounts.length > 1 ? "s" : ""} with access to this church {unlinkedAccounts.length > 1 ? "are" : "is"} not in the member directory
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Usually people invited in from another church. Add them to the directory to include them in reports and communications.
+              </p>
+            </div>
+            <div className="space-y-2">
+              {unlinkedAccounts.map(a => (
+                <div key={a.user_id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-background p-2.5">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{a.full_name || "—"}</p>
+                    <p className="text-xs text-muted-foreground truncate">{a.email || ""}</p>
+                  </div>
+                  {canAddMember && (
+                    <Button size="sm" variant="outline" onClick={() => addAccountToDirectory(a)} className="gap-1.5">
+                      <Plus className="h-4 w-4" /> Add to directory
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+
+
       {/* Filters */}
       {(isAdmin || viewOnly) && (
         <div data-tour="members-filters">
