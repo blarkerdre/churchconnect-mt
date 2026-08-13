@@ -36,7 +36,7 @@ const MenuBar = ({ editor, onOpenPad, onOpenVerse }) => {
   ];
 
   return (
-    <div className="flex flex-wrap items-center gap-1 border-b border-border p-1">
+    <div className="flex flex-wrap items-center gap-1 border-b border-border p-1 sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       {buttons.map((btn) => (
         <Toggle key={btn.label} size="sm" pressed={btn.active} onPressedChange={btn.action} aria-label={btn.label} className="h-8 w-8 p-0">
           <btn.icon className="h-4 w-4" />
