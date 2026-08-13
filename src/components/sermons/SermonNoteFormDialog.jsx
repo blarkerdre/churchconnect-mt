@@ -130,12 +130,20 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-1rem)] max-w-2xl max-h-[92vh] p-4 sm:p-6 flex flex-col">
+    <Dialog open={open} onOpenChange={(val) => { onOpenChange(val); if (!val) setExpanded(false); }}>
+      <DialogContent
+        className={cn(
+          "w-[calc(100vw-1rem)] p-4 sm:p-6 flex flex-col",
+          expanded ? "max-w-6xl h-[92vh]" : "max-w-2xl max-h-[92vh]"
+        )}
+      >
         <DialogHeader>
           <DialogTitle>{note ? "Edit Note" : "New Sermon Note"}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 flex-1 min-h-0 overflow-y-auto pr-1">
+        <div className={cn(
+          "space-y-4 flex-1 min-h-0 pr-1",
+          expanded ? "flex flex-col overflow-hidden" : "overflow-y-auto"
+        )}>
           <div>
             <Label htmlFor="sn-title">Sermon Title (optional)</Label>
             <Input id="sn-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. The Power of Faith" maxLength={200} />
@@ -191,9 +199,22 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
             <Label htmlFor="sn-date">Service date</Label>
             <Input id="sn-date" type="date" value={serviceDate} onChange={(e) => setServiceDate(e.target.value)} />
           </div>
-          <div>
-            <Label>Notes *</Label>
-            <SermonRichEditor content={content} onChange={setContent} />
+          <div className={cn("flex flex-col", expanded && "flex-1 min-h-0")}>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <Label>Notes *</Label>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setExpanded((v) => !v)}
+                className="h-7 px-2 gap-1"
+                title={expanded ? "Collapse notes editor" : "Expand notes editor"}
+              >
+                {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                <span className="text-xs hidden sm:inline">{expanded ? "Collapse" : "Expand"}</span>
+              </Button>
+            </div>
+            <SermonRichEditor content={content} onChange={setContent} expanded={expanded} />
           </div>
         </div>
         <DialogFooter>
