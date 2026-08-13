@@ -16,9 +16,8 @@ import { cn } from "@/lib/utils";
 import { Expand, Maximize2, Minimize2, Pencil, ChevronUp, Plus, Printer, RotateCcw, Shrink, X, Check } from "lucide-react";
 import { printSermonNote } from "@/lib/sermon-note-print";
 import useSermonNoteDraft from "@/hooks/useSermonNoteDraft";
+import SermonNoteMetaFields, { NONE, NEW } from "@/components/sermons/SermonNoteMetaFields";
 
-const NONE = "__none__";
-const NEW = "__new__";
 
 export default function SermonNoteFormDialog({ open, onOpenChange, note, folders = [], defaultFolderId = null, onSaved }) {
   const { user } = useAuth();
@@ -287,7 +286,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
               </div>
             </div>
           )}
-          {!expanded && !fullscreen && <MetadataFields />}
+          {!expanded && !fullscreen && metaFields}
           {(expanded || fullscreen) && !metaExpanded && (
 
             <div className="shrink-0 rounded-md border border-border bg-muted/40 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -312,7 +311,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
           )}
           {(expanded || fullscreen) && metaExpanded && (
             <div className="shrink-0 space-y-4">
-              <MetadataFields />
+              {metaFields}
               <div className="flex justify-end">
                 <Button
                   type="button"
