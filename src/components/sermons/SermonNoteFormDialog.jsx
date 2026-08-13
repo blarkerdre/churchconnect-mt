@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SermonRichEditor from "@/components/sermons/SermonRichEditor";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -13,7 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Expand, Maximize2, Minimize2, Pencil, ChevronUp, Plus, Printer, RotateCcw, Shrink, X, Check } from "lucide-react";
+import { Expand, Maximize2, Minimize2, Pencil, ChevronUp, Printer, RotateCcw, Shrink } from "lucide-react";
 import { printSermonNote } from "@/lib/sermon-note-print";
 import useSermonNoteDraft from "@/hooks/useSermonNoteDraft";
 import SermonNoteMetaFields, { NONE, NEW } from "@/components/sermons/SermonNoteMetaFields";
