@@ -85,7 +85,10 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null, i
   const qc = useQueryClient();
   const { user } = useAuth();
   const { tenantId } = useTenantQuery();
+  const { sessionId, sessionName, applySession, isAll, isUnassigned } = useExamSessionFilter();
+  const pinnedEditionId = !isAll && !isUnassigned ? sessionId : null;
   const [form, setForm] = useState(emptyForm);
+
 
 
   const { data: lecturers = [] } = useQuery({
