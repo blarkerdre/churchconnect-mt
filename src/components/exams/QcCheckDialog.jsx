@@ -119,16 +119,17 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null, i
   });
 
   const { data: subjects = [] } = useQuery({
-    queryKey: ["qc-subjects", tenantId, form.exam_title_id],
+    queryKey: ["qc-subjects", tenantId, form.exam_title_id, sessionId],
     enabled: !!tenantId && !!form.exam_title_id && open,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("exam_subjects")
-        .select("id, name, code, lecturer_id")
-        .eq("tenant_id", tenantId)
-        .eq("course_id", form.exam_title_id)
-        .eq("is_active", true)
-        .order("sort_order");
+      const { data, error } = await applySession(
+        supabase
+          .from("exam_subjects")
+          .select("id, name, code, lecturer_id, session_id, exam_sessions(id, name)")
+          .eq("tenant_id", tenantId)
+          .eq("course_id", form.exam_title_id)
+          .eq("is_active", true)
+      ).order("sort_order");
       if (error) throw error;
       return data || [];
     },
@@ -136,17 +137,20 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null, i
 
   // Subjects that already have a QC check (blocked by the one-QC-per-subject rule)
   const { data: checkedSubjectIds = [] } = useQuery({
-    queryKey: ["qc-checked-subjects", tenantId],
+    queryKey: ["qc-checked-subjects", tenantId, sessionId],
     enabled: !!tenantId && open,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("lecturer_qc_checks")
-        .select("exam_subject_id")
-        .eq("tenant_id", tenantId);
+      const { data, error } = await applySession(
+        supabase
+          .from("lecturer_qc_checks")
+          .select("exam_subject_id")
+          .eq("tenant_id", tenantId)
+      );
       if (error) throw error;
       return (data || []).map((r) => r.exam_subject_id).filter(Boolean);
     },
   });
+
 
   const outstandingSubjects = subjects.filter(
     (s) => !checkedSubjectIds.includes(s.id) || s.id === editRecord?.exam_subject_id,
