@@ -48,19 +48,20 @@ export default function Members() {
   const [prefill, setPrefill] = useState(null);
   const queryClient = useQueryClient();
 
-  // Accounts that belong to this church but have no directory record yet
-  // (e.g. people invited in from another church).
+  // Accounts that belong to this church but have no directory record linked
+  // to them. Split into likely duplicates (a matching member record already
+  // exists) and genuinely missing records.
   const { data: unlinkedAccounts = [] } = useQuery({
     queryKey: ["memberships-without-directory", tenantId],
     enabled: !!tenantId && !!isAdmin,
     queryFn: async () => {
       const [{ data: memberships, error: mErr }, { data: rows, error: rErr }] = await Promise.all([
         supabase.from("tenant_memberships").select("user_id").eq("tenant_id", tenantId),
-        supabase.from("members").select("user_id").eq("tenant_id", tenantId).not("user_id", "is", null),
+        supabase.from("members").select("id, first_name, last_name, email, user_id").eq("tenant_id", tenantId),
       ]);
       if (mErr) throw mErr;
       if (rErr) throw rErr;
-      const linked = new Set((rows || []).map(r => r.user_id));
+      const linked = new Set((rows || []).filter(r => r.user_id).map(r => r.user_id));
       const missing = (memberships || []).map(m => m.user_id).filter(id => id && !linked.has(id));
       if (missing.length === 0) return [];
       const { data: profs, error } = await supabase
@@ -68,9 +69,31 @@ export default function Members() {
         .select("user_id, full_name, email")
         .in("user_id", missing);
       if (error) throw error;
-      return profs || [];
+
+      const normEmail = (e) => {
+        const raw = (e || "").trim().toLowerCase();
+        const [local, domain = ""] = raw.split("@");
+        if (!local) return "";
+        return `${local.split("+")[0].replace(/\./g, "")}@${domain.replace(/^gmaill\./, "gmail.")}`;
+      };
+      const normName = (n) => (n || "").trim().toLowerCase().replace(/\s+/g, " ");
+
+      return (profs || []).map(p => {
+        const pe = normEmail(p.email);
+        const pn = normName(p.full_name);
+        const suggested =
+          (pe && (rows || []).find(m => normEmail(m.email) === pe)) ||
+          (pn && (rows || []).find(m => {
+            const full = normName(`${m.first_name} ${m.last_name}`);
+            const reversed = normName(`${m.last_name} ${m.first_name}`);
+            return full === pn || reversed === pn;
+          })) ||
+          null;
+        return { ...p, suggestedMember: suggested || null };
+      });
     },
   });
+
 
 
   const { enabled: canAddMember } = useSubFeature("members.add_member");
