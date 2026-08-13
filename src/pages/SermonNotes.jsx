@@ -13,7 +13,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Search, Trash2, Edit, FileText, ArrowUpDown, MoreVertical, Folder, Inbox, CheckSquare, X, FolderInput } from "lucide-react";
+import { Plus, Search, Trash2, Edit, FileText, ArrowUpDown, MoreVertical, Folder, Inbox, CheckSquare, X, FolderInput, Church } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import SermonNoteFormDialog from "@/components/sermons/SermonNoteFormDialog";
@@ -51,40 +51,60 @@ export default function SermonNotes() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const { data: notes = [], isLoading } = useQuery({
-    queryKey: ["sermon_notes", user?.id, tenantId],
+    queryKey: ["sermon_notes", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sermon_notes")
         .select("*")
         .eq("user_id", user.id)
-        .eq("tenant_id", tenantId)
         .order("service_date", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!user && !!tenantId,
+    enabled: !!user,
   });
 
   const { data: folders = [] } = useQuery({
-    queryKey: ["sermon_note_folders", user?.id, tenantId],
+    queryKey: ["sermon_note_folders", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sermon_note_folders")
         .select("*")
         .eq("user_id", user.id)
-        .eq("tenant_id", tenantId)
         .order("name", { ascending: true });
       if (error) throw error;
       return data;
     },
-    enabled: !!user && !!tenantId,
+    enabled: !!user,
   });
+
+  const { data: memberships = [] } = useQuery({
+    queryKey: ["sermon_notes_tenants", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tenant_memberships")
+        .select("tenant_id, tenants(name)")
+        .eq("user_id", user.id);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  const tenantNames = useMemo(() => {
+    const m = {};
+    memberships.forEach((t) => { if (t.tenant_id) m[t.tenant_id] = t.tenants?.name || null; });
+    return m;
+  }, [memberships]);
+
+  const showOrigin = memberships.length > 1;
 
   const folderMap = useMemo(() => {
     const m = {};
     folders.forEach((f) => { m[f.id] = f; });
     return m;
   }, [folders]);
+
 
   const categories = useMemo(() => {
     const cats = new Set();
@@ -153,8 +173,8 @@ export default function SermonNotes() {
       .from("sermon_notes")
       .update({ folder_id: folderId })
       .eq("id", noteId)
-      .eq("user_id", user.id)
-      .eq("tenant_id", tenantId);
+      .eq("user_id", user.id);
+
     if (error) {
       toast.error("Failed to move note.");
     } else {
@@ -194,8 +214,8 @@ export default function SermonNotes() {
       .from("sermon_notes")
       .update({ folder_id: folderId })
       .in("id", ids)
-      .eq("user_id", user.id)
-      .eq("tenant_id", tenantId);
+      .eq("user_id", user.id);
+
     if (error) {
       toast.error("Failed to move notes.");
       return;
@@ -214,8 +234,8 @@ export default function SermonNotes() {
       .from("sermon_notes")
       .delete()
       .in("id", ids)
-      .eq("user_id", user.id)
-      .eq("tenant_id", tenantId);
+      .eq("user_id", user.id);
+
     if (error) {
       toast.error("Failed to delete notes.");
     } else {
@@ -427,6 +447,12 @@ export default function SermonNotes() {
                           </Badge>
                         )}
                         {n.category && <Badge variant="secondary" className="text-xs">{n.category}</Badge>}
+                        {showOrigin && n.tenant_id && tenantNames[n.tenant_id] && (
+                          <Badge variant="outline" className="text-xs gap-1">
+                            <Church className="h-3 w-3" />{tenantNames[n.tenant_id]}
+                          </Badge>
+                        )}
+
                       </div>
                       <p className="text-sm text-muted-foreground max-h-[80px] overflow-y-auto break-words">{n.content?.replace(/<[^>]*>/g, "") || ""}</p>
                     </CardContent>
