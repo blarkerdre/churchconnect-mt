@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Navigate, useParams } from "react-router-dom";
-import { DEFAULT_TENANT_ID } from "@/contexts/TenantContext";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info } from "lucide-react";
+import { resolveActiveMembership } from "@/lib/active-tenant";
+
 
 export default function Auth() {
   // Prefetch the Dashboard chunk while the user types credentials so the
@@ -169,10 +170,12 @@ export default function Auth() {
         </div>
       );
     }
-    const slug = tenantMemberships?.[0]?.tenants?.slug;
+    const slug = resolveActiveMembership(tenantMemberships, { userId: user?.id })
+      ?.tenants?.slug;
     if (slug) {
       return <Navigate to={`/t/${slug}`} replace />;
     }
+
     // Couldn't load the account (network / transient auth error) — keep the
     // session and let the user retry instead of forcing a sign-out.
     if (dataError || !dataLoaded) {

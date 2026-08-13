@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, UserCircle, ChevronRight, Cake, Shield, Home } from "lucide-react";
 import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+
 import MemberFeed from "@/components/profile/MemberFeed";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
 import SignPostedToMeWidget from "@/components/dashboard/SignPostedToMeWidget";
@@ -99,8 +101,29 @@ export default function MemberDashboard({ currentUser, myMember }) {
 
   return (
     <div className="space-y-6">
+      {/* No member profile in THIS church yet — explain the empty dashboard */}
+      {!myMember && currentTenant && (
+        <Card className="border-amber-300 bg-amber-50/60">
+          <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-900">
+                You don't have a profile in {currentTenant.name} yet
+              </p>
+              <p className="text-xs text-amber-800/80 mt-0.5">
+                You have access to this church, but no member record here — that's why this
+                dashboard looks empty. Complete your profile, or switch back to another church.
+              </p>
+            </div>
+            <Button asChild size="sm" className="shrink-0">
+              <Link to={`/t/${currentTenant.slug}/my-profile`}>Complete profile</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Dashboard Banner Slideshow */}
       <DashboardBanner />
+
 
       {/* Welcome Banner */}
       <Card className="border-0 shadow-sm bg-gradient-to-r from-primary to-primary/70 text-primary-foreground overflow-hidden">

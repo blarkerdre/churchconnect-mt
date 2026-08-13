@@ -2,6 +2,15 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useParams, useNavigate } from "react-router-dom";
+import {
+  DEFAULT_TENANT_ID,
+  resolveActiveMembership,
+  sortMemberships,
+  storeTenantId,
+  setActiveTenantId,
+} from "@/lib/active-tenant";
+
+
 
 const TenantContext = createContext({
   currentTenant: null,
@@ -15,11 +24,9 @@ const TenantContext = createContext({
   switchTenant: () => {},
 });
 
-/**
- * Default tenant ID used during the migration period.
- * All existing data has been backfilled to this tenant.
- */
-const DEFAULT_TENANT_ID = "d8bbbdae-d9b3-4999-912d-3aa5999884b0";
+// DEFAULT_TENANT_ID now lives in @/lib/active-tenant and is re-exported below
+// so existing imports from this module keep working.
+
 
 export function TenantProvider({ children }) {
   const { user, loading: authLoading, roles, refetchMemberForTenant } = useAuth();
@@ -48,22 +55,12 @@ export function TenantProvider({ children }) {
     }
   }, []);
 
-  const selectTenant = useCallback((memberships, slugHint) => {
-    if (!memberships || memberships.length === 0) return null;
+  const selectTenant = useCallback(
+    (memberships, slugHint) =>
+      resolveActiveMembership(memberships, { slugHint, userId: user?.id }),
+    [user?.id]
+  );
 
-    // If a slug is specified in URL, use that tenant
-    if (slugHint) {
-      const match = memberships.find(m => m.tenants?.slug === slugHint);
-      if (match) return match;
-    }
-
-    // Single tenant → auto-select
-    if (memberships.length === 1) return memberships[0];
-
-    // Multiple tenants, no slug → pick the default or first
-    const defaultMatch = memberships.find(m => m.tenant_id === DEFAULT_TENANT_ID);
-    return defaultMatch || memberships[0];
-  }, []);
 
   const acceptPendingInvitations = useCallback(async (userId, email) => {
     if (!email) return;
@@ -108,12 +105,15 @@ export function TenantProvider({ children }) {
       // Auto-accept any pending invitations first
       await acceptPendingInvitations(user.id, user.email);
 
-      const memberships = await fetchMemberships(user.id);
+      const memberships = sortMemberships(await fetchMemberships(user.id));
       if (cancelled) return;
 
       setTenantMemberships(memberships);
       const selected = selectTenant(memberships, tenantSlugFromUrl);
       setCurrentTenant(selected);
+      // Remember the church resolved from the URL so a later bare-URL visit
+      // or sign-in lands in the same place.
+      if (selected?.tenant_id) storeTenantId(user.id, selected.tenant_id);
       setLoading(false);
     })();
 
@@ -122,18 +122,29 @@ export function TenantProvider({ children }) {
 
   const switchTenant = useCallback((tenantId) => {
     const match = tenantMemberships.find(m => m.tenant_id === tenantId);
-    if (match) setCurrentTenant(match);
-  }, [tenantMemberships]);
+    if (match) {
+      setCurrentTenant(match);
+      storeTenantId(user?.id, tenantId);
+    }
+  }, [tenantMemberships, user?.id]);
+
 
   const refreshTenantContext = useCallback(async () => {
     if (!user) return;
-    const memberships = await fetchMemberships(user.id);
+    const memberships = sortMemberships(await fetchMemberships(user.id));
     setTenantMemberships(memberships);
+
     const selected = selectTenant(memberships, tenantSlugFromUrl);
     setCurrentTenant(selected);
   }, [user, fetchMemberships, selectTenant, tenantSlugFromUrl]);
 
   const tenantId = currentTenant?.tenant_id || null;
+
+  // Publish the active church so role flags in useAuth can be scoped to it.
+  useEffect(() => {
+    setActiveTenantId(tenantId);
+    return () => setActiveTenantId(null);
+  }, [tenantId]);
 
   // Re-fetch the auth hook's `myMember` scoped to the active tenant so users with
   // member rows in multiple tenants always see the correct one.
@@ -142,6 +153,7 @@ export function TenantProvider({ children }) {
       refetchMemberForTenant(tenantId);
     }
   }, [tenantId, refetchMemberForTenant]);
+
 
   const tenantSlug = currentTenant?.tenants?.slug || null;
   const tenantRole = currentTenant?.role || null;

@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState, useCallback, useMemo } 
 import { supabase } from "@/integrations/supabase/client";
 import { isMfaChallengeRequired, clearMfaPassed } from "@/hooks/useMfa";
 import { withClockSkewRetry, isClockSkewError } from "@/lib/supabase-retry";
+import { getActiveTenantId, subscribeActiveTenantId } from "@/lib/active-tenant";
+
 
 
 
@@ -131,7 +133,7 @@ export function AuthProvider({ children }) {
         q(() => supabase.from("user_roles").select("role").eq("user_id", userId)),
         q(() => supabase.from("unit_leader_assignments").select("unit_name").eq("user_id", userId)),
         q(() => supabase.from("members").select("*, wsf_centres!fk_members_wsf_centre(name)").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle()),
-        q(() => supabase.from("tenant_memberships").select("tenant_id, role, tenants(slug)").eq("user_id", userId)),
+        q(() => supabase.from("tenant_memberships").select("tenant_id, role, tenants(slug, name)").eq("user_id", userId)),
       ]);
 
       const profileData = profileRes.status === "fulfilled" ? profileRes.value?.data : null;
@@ -269,9 +271,26 @@ export function AuthProvider({ children }) {
     return { data, error };
   };
 
-  // Derive tenant-level admin status
-  const isTenantOwner = tenantMemberships.some((m) => m.role === "owner");
-  const isTenantAdmin = tenantMemberships.some((m) => m.role === "owner" || m.role === "admin");
+  // Derive tenant-level admin status for the church the user is CURRENTLY in.
+  // Owning one church must not grant owner-level UI inside another church.
+  const [activeTenantId, setActiveTenantIdState] = useState(getActiveTenantId());
+  useEffect(() => subscribeActiveTenantId(setActiveTenantIdState), []);
+
+  const activeMembership = activeTenantId
+    ? tenantMemberships.find((m) => m.tenant_id === activeTenantId)
+    : null;
+  // Before the tenant context resolves, fall back to the broadest membership so
+  // admin-only routes don't flash a redirect during the initial load.
+  const effectiveRole = activeTenantId
+    ? activeMembership?.role || null
+    : tenantMemberships.some((m) => m.role === "owner")
+      ? "owner"
+      : tenantMemberships.some((m) => m.role === "admin")
+        ? "admin"
+        : null;
+  const isTenantOwner = effectiveRole === "owner";
+  const isTenantAdmin = effectiveRole === "owner" || effectiveRole === "admin";
+
 
   const isReportsOfficer = roles.includes("reports_officer");
   // Bridge: treat tenant owners/admins as app-level admins
