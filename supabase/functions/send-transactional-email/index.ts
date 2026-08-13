@@ -58,14 +58,13 @@ Deno.serve(async (req) => {
   // The function is deployed with verify_jwt=false so we validate in-code to allow both cases.
   const authHeader = req.headers.get('Authorization') || ''
   const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : ''
-  const apiKeyHeader = req.headers.get('apikey')?.trim() || ''
-  const internalServiceKey = req.headers.get('x-internal-service-key')?.trim() || ''
+  const internalEmailKey = req.headers.get('x-internal-email-key')?.trim() || ''
+  const expectedInternalEmailKey = Deno.env.get('INTERNAL_EMAIL_FUNCTION_KEY') || ''
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
   let isAuthorized = false
   if (
     (bearer && bearer === supabaseServiceKey) ||
-    (apiKeyHeader && apiKeyHeader === supabaseServiceKey) ||
-    (internalServiceKey && internalServiceKey === supabaseServiceKey)
+    (internalEmailKey && expectedInternalEmailKey && internalEmailKey === expectedInternalEmailKey)
   ) {
     isAuthorized = true
   } else if (bearer && bearer !== anonKey) {

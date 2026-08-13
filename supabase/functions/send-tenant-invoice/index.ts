@@ -14,6 +14,8 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+    const internalEmailKey = Deno.env.get('INTERNAL_EMAIL_FUNCTION_KEY')!
+    if (!internalEmailKey) throw new Error('Internal email authorization is not configured')
 
     const authHeader = req.headers.get('Authorization') || ''
     const userClient = createClient(supabaseUrl, anonKey, {
@@ -102,9 +104,7 @@ Deno.serve(async (req) => {
     const sendResponse = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${serviceKey}`,
-        apikey: serviceKey,
-        'x-internal-service-key': serviceKey,
+        'x-internal-email-key': internalEmailKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

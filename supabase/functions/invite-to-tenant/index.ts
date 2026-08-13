@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
   async function sendInviteEmail(
     supabase: any,
     supabaseUrl: string,
-    serviceKey: string,
+    internalEmailKey: string,
     opts: {
       recipient: string;
       tenant_id: string;
@@ -44,9 +44,7 @@ Deno.serve(async (req) => {
       const response = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${serviceKey}`,
-          apikey: serviceKey,
-          "x-internal-service-key": serviceKey,
+          "x-internal-email-key": internalEmailKey,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -88,6 +86,8 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const internalEmailKey = Deno.env.get("INTERNAL_EMAIL_FUNCTION_KEY")!;
+    if (!internalEmailKey) throw new Error("Internal email authorization is not configured");
     const supabase = createClient(supabaseUrl, serviceKey);
 
     const authHeader = req.headers.get("Authorization")!;
@@ -207,7 +207,7 @@ Deno.serve(async (req) => {
 
         console.log("Sending auto-add notification email", { email: normalizedEmail, tenant: churchName });
 
-        email_warning = await sendInviteEmail(supabase, supabaseUrl, serviceKey, {
+        email_warning = await sendInviteEmail(supabase, supabaseUrl, internalEmailKey, {
           recipient: normalizedEmail,
           tenant_id,
           idempotencyKey: `tenant-autoadd-${existingProfile.user_id}-${tenant_id}`,
@@ -249,7 +249,7 @@ Deno.serve(async (req) => {
         const siteUrl = "https://app.churchmanagementsuite.org";
         const signupUrl = `${siteUrl}/accept-invite?token=${existingInvite.token}`;
 
-        email_warning = await sendInviteEmail(supabase, supabaseUrl, serviceKey, {
+        email_warning = await sendInviteEmail(supabase, supabaseUrl, internalEmailKey, {
           recipient: normalizedEmail,
           tenant_id,
           idempotencyKey: `tenant-invite-resend-${existingInvite.id}-${Date.now()}`,
@@ -301,7 +301,7 @@ Deno.serve(async (req) => {
 
       console.log("Sending invitation email", { email: normalizedEmail, signupUrl, tenant: tenant.name });
 
-      email_warning = await sendInviteEmail(supabase, supabaseUrl, serviceKey, {
+      email_warning = await sendInviteEmail(supabase, supabaseUrl, internalEmailKey, {
         recipient: normalizedEmail,
         tenant_id,
         idempotencyKey: `tenant-invite-${invitation.id}`,
