@@ -277,7 +277,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
   );
 
   return (
-    <Dialog open={open} onOpenChange={(val) => { onOpenChange(val); if (!val) setExpanded(false); }}>
+    <Dialog open={open} onOpenChange={closeDialog}>
       <DialogContent
         className={cn(
           "w-[calc(100vw-1rem)] p-4 sm:p-6 flex flex-col",
@@ -291,8 +291,25 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
           "space-y-4 flex-1 min-h-0 pr-1",
           expanded ? "flex flex-col overflow-hidden" : "overflow-y-auto"
         )}>
+          {pendingDraft && (
+            <div className="shrink-0 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <p className="text-xs text-amber-900 dark:text-amber-200">
+                Unsaved draft from {pendingDraft.updatedAt ? format(new Date(pendingDraft.updatedAt), "PPp") : "an earlier session"} found.
+              </p>
+              <div className="flex gap-2 shrink-0">
+                <Button type="button" size="sm" variant="outline" className="h-7 px-2 gap-1" onClick={restoreDraft}>
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span className="text-xs">Restore draft</span>
+                </Button>
+                <Button type="button" size="sm" variant="ghost" className="h-7 px-2" onClick={dismissPending}>
+                  <span className="text-xs">Discard</span>
+                </Button>
+              </div>
+            </div>
+          )}
           {!expanded && <MetadataFields />}
           {expanded && !metaExpanded && (
+
             <div className="shrink-0 rounded-md border border-border bg-muted/40 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="font-medium text-sm truncate">{title || "Untitled note"}</p>
