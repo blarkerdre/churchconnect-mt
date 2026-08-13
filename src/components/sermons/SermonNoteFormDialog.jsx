@@ -221,61 +221,45 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
           "space-y-4 flex-1 min-h-0 pr-1",
           expanded ? "flex flex-col overflow-hidden" : "overflow-y-auto"
         )}>
-          <div>
-            <Label htmlFor="sn-title">Sermon Title (optional)</Label>
-            <Input id="sn-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. The Power of Faith" maxLength={200} />
-          </div>
-          <div>
-            <Label htmlFor="sn-speaker">Speaker (optional)</Label>
-            <Input id="sn-speaker" value={speaker} onChange={(e) => setSpeaker(e.target.value)} placeholder="e.g. Pastor John" maxLength={100} />
-          </div>
-          <div>
-            <Label htmlFor="sn-category">Category (optional)</Label>
-            <Input id="sn-category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Faith, Prayer, Worship" maxLength={50} />
-          </div>
-          <div>
-            <Label>Folder</Label>
-            {creatingFolder ? (
-              <div className="flex items-center gap-1.5">
-                <Input
-                  placeholder="New folder name"
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") { e.preventDefault(); handleCreateFolder(); }
-                    if (e.key === "Escape") { setCreatingFolder(false); setNewFolderName(""); }
-                  }}
-                  autoFocus
-                  maxLength={60}
-                />
-                <Button type="button" size="icon" variant="ghost" onClick={handleCreateFolder}>
-                  <Check className="h-4 w-4" />
-                </Button>
-                <Button type="button" size="icon" variant="ghost" onClick={() => { setCreatingFolder(false); setNewFolderName(""); }}>
-                  <X className="h-4 w-4" />
+          {!expanded && <MetadataFields />}
+          {expanded && !metaExpanded && (
+            <div className="shrink-0 rounded-md border border-border bg-muted/40 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="font-medium text-sm truncate">{title || "Untitled note"}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {[speaker, serviceDate, category].filter(Boolean).join(" · ") || "No details"}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setMetaExpanded(true)}
+                className="h-7 px-2 gap-1 shrink-0"
+                title="Edit note details"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                <span className="text-xs">Edit details</span>
+              </Button>
+            </div>
+          )}
+          {expanded && metaExpanded && (
+            <div className="shrink-0 space-y-4">
+              <MetadataFields />
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setMetaExpanded(false)}
+                  className="h-7 px-2 gap-1"
+                >
+                  <ChevronUp className="h-3.5 w-3.5" />
+                  <span className="text-xs">Hide details</span>
                 </Button>
               </div>
-            ) : (
-              <Select value={folderId} onValueChange={handleFolderChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose folder" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE}>Unfiled</SelectItem>
-                  {folders.map((f) => (
-                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                  ))}
-                  <SelectItem value={NEW}>
-                    <span className="flex items-center gap-1.5"><Plus className="h-3.5 w-3.5" /> Create new folder…</span>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-          <div>
-            <Label htmlFor="sn-date">Service date</Label>
-            <Input id="sn-date" type="date" value={serviceDate} onChange={(e) => setServiceDate(e.target.value)} />
-          </div>
+            </div>
+          )}
           <div className={cn("flex flex-col", expanded && "flex-1 min-h-0")}>
             <div className="flex items-center justify-between gap-2 mb-1">
               <Label>Notes *</Label>
