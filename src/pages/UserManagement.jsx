@@ -71,14 +71,30 @@ export default function UserManagement() {
   const [toggleTarget, setToggleTarget] = useState(null);
   const [roleChangeTarget, setRoleChangeTarget] = useState(null);
 
+  // Driven by church membership (not by where the profile was originally created),
+  // so users invited into a second church appear here too.
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ["all-profiles", tenantId],
+    enabled: !!tenantId,
     queryFn: async () => {
-      const { data, error } = await scopeQuery(supabase.from("profiles").select("*").order("created_at", { ascending: false }));
+      const { data: memberships, error: mErr } = await supabase
+        .from("tenant_memberships")
+        .select("user_id, role")
+        .eq("tenant_id", tenantId);
+      if (mErr) throw mErr;
+      const ids = [...new Set((memberships || []).map(m => m.user_id))];
+      if (ids.length === 0) return [];
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .in("user_id", ids)
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      const roleByUser = Object.fromEntries((memberships || []).map(m => [m.user_id, m.role]));
+      return (data || []).map(p => ({ ...p, membership_role: roleByUser[p.user_id] || "member" }));
     },
   });
+
 
   const { data: allRoles = [] } = useQuery({
     queryKey: ["all-user-roles", tenantId],
@@ -396,6 +412,12 @@ export default function UserManagement() {
                                   <KeyRound className="h-2.5 w-2.5 mr-1" /> 2FA
                                 </Badge>
                               )}
+                              {p.membership_role && (
+                                <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                                  {p.membership_role === "owner" ? "Church Owner" : p.membership_role === "admin" ? "Church Admin" : "Church Member"}
+                                </Badge>
+                              )}
+
                             </div>
 
                           </div>
