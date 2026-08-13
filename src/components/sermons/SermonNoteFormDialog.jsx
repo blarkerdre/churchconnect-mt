@@ -205,8 +205,10 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
         if (error) throw error;
         toast.success("Note saved.");
       }
+      clearDraft();
       onSaved?.();
       onOpenChange(false);
+
     } catch (err) {
       toast.error(err.message || "Failed to save note.");
     } finally {
