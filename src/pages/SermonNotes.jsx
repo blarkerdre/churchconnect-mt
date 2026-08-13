@@ -447,6 +447,12 @@ export default function SermonNotes() {
                           </Badge>
                         )}
                         {n.category && <Badge variant="secondary" className="text-xs">{n.category}</Badge>}
+                        {showOrigin && n.tenant_id && tenantNames[n.tenant_id] && (
+                          <Badge variant="outline" className="text-xs gap-1">
+                            <Church className="h-3 w-3" />{tenantNames[n.tenant_id]}
+                          </Badge>
+                        )}
+
                       </div>
                       <p className="text-sm text-muted-foreground max-h-[80px] overflow-y-auto break-words">{n.content?.replace(/<[^>]*>/g, "") || ""}</p>
                     </CardContent>
