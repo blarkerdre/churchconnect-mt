@@ -325,7 +325,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
               </div>
             </div>
           )}
-          {!expanded && <MetadataFields />}
+          {!expanded && !fullscreen && <MetadataFields />}
           {expanded && !metaExpanded && (
 
             <div className="shrink-0 rounded-md border border-border bg-muted/40 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
