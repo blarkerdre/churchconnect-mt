@@ -127,17 +127,18 @@ export default function QcReport() {
     },
   });
 
-  // Subjects with no QC check yet — surfaced as a hint for QC officers
+  // Subjects with no QC check yet — surfaced as a hint for QC officers (edition-aware)
   const { data: allSubjects = [] } = useQuery({
-    queryKey: ["qc-outstanding-subjects", tenantId],
+    queryKey: ["qc-outstanding-subjects", tenantId, sessionId],
     enabled: !!tenantId && canCreate,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("exam_subjects")
-        .select("id, name, course_id, lecturer_id, exam_titles(name)")
-        .eq("tenant_id", tenantId)
-        .eq("is_active", true)
-        .order("sort_order");
+      const { data, error } = await applySession(
+        supabase
+          .from("exam_subjects")
+          .select("id, name, course_id, lecturer_id, session_id, exam_titles(name), exam_sessions(id, name)")
+          .eq("tenant_id", tenantId)
+          .eq("is_active", true)
+      ).order("sort_order");
       if (error) throw error;
       return data || [];
     },
@@ -145,6 +146,7 @@ export default function QcReport() {
 
   const checkedSubjectIds = new Set(checks.map((c) => c.exam_subject_id).filter(Boolean));
   const outstandingQc = allSubjects.filter((s) => !checkedSubjectIds.has(s.id));
+
 
 
   const deleteMutation = useMutation({
