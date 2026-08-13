@@ -9,6 +9,7 @@ import { TextAlign } from "@tiptap/extension-text-align";
 import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Heading2, AlignLeft, AlignCenter, AlignRight, AlignJustify, PenLine, BookOpen } from "lucide-react";
 import { Toggle } from "@/components/ui/toggle";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import HandwritingPad from "@/components/sermons/HandwritingPad";
 import BibleRef from "@/components/sermons/extensions/BibleRef";
 import BibleRefPopover from "@/components/sermons/BibleRefPopover";
