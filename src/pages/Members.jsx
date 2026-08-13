@@ -406,11 +406,15 @@ export default function Members() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         member={editingMember}
+        linkUserId={linkUserId}
+        prefill={prefill}
         onSaved={() => {
           queryClient.invalidateQueries({ queryKey: ["members"] });
+          queryClient.invalidateQueries({ queryKey: ["memberships-without-directory"] });
           setDialogOpen(false);
         }}
       />
+
       <RegistrationQRCode open={qrOpen} onOpenChange={setQrOpen} />
       <BulkImportDialog
         open={importOpen}
