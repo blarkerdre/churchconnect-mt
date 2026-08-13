@@ -20,6 +20,7 @@ import { useTenant } from "@/contexts/TenantContext";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import SermonNoteFormDialog from "@/components/sermons/SermonNoteFormDialog";
+import SermonNoteViewer from "@/components/sermons/SermonNoteViewer";
 import SermonFolderSidebar from "@/components/sermons/SermonFolderSidebar";
 import { cn } from "@/lib/utils";
 import ModuleTour from "@/components/tour/ModuleTour";
