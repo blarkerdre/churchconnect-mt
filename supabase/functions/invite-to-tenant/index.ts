@@ -240,30 +240,23 @@ Deno.serve(async (req) => {
         const siteUrl = "https://app.churchmanagementsuite.org";
         const signupUrl = `${siteUrl}/accept-invite?token=${existingInvite.token}`;
 
-        const emailResult = await supabase.functions.invoke("send-transactional-email", {
-          body: {
-            templateName: "tenant-invitation",
-            recipientEmail: normalizedEmail,
-            idempotencyKey: `tenant-invite-resend-${existingInvite.id}-${Date.now()}`,
-            tenant_id,
-            templateData: {
-              churchName: tenant.name,
-              signupUrl,
-              role,
-            },
-          },
+        email_warning = await sendInviteEmail(supabase, {
+          recipient: normalizedEmail,
+          tenant_id,
+          idempotencyKey: `tenant-invite-resend-${existingInvite.id}-${Date.now()}`,
+          templateData: { churchName: tenant.name, signupUrl, role },
+          invitationId: existingInvite.id,
+          context: "resend invitation",
         });
-
-        if (emailResult.error) {
-          console.error("Resend invitation email failed", { error: emailResult.error });
-          email_warning = "Invitation updated but email failed to send.";
-        }
+      } else {
+        email_warning = "Invitation updated, but the church could not be resolved so no email was sent.";
       }
 
       return new Response(JSON.stringify({
         success: true,
         invitation_id: existingInvite.id,
         reused_pending_invitation: true,
+        email_sent: !email_warning,
         email_warning,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -292,55 +285,35 @@ Deno.serve(async (req) => {
       .single();
 
     // Send invitation email via transactional email system
+    let email_warning: string | undefined;
     if (tenant) {
       const siteUrl = "https://app.churchmanagementsuite.org";
       const signupUrl = `${siteUrl}/accept-invite?token=${invitation.token}`;
 
       console.log("Sending invitation email", { email: normalizedEmail, signupUrl, tenant: tenant.name });
 
-      const emailResult = await supabase.functions.invoke("send-transactional-email", {
-        body: {
-          templateName: "tenant-invitation",
-          recipientEmail: normalizedEmail,
-          idempotencyKey: `tenant-invite-${invitation.id}`,
-          tenant_id,
-          templateData: {
-            churchName: tenant.name,
-            signupUrl,
-            role,
-          },
-        },
+      email_warning = await sendInviteEmail(supabase, {
+        recipient: normalizedEmail,
+        tenant_id,
+        idempotencyKey: `tenant-invite-${invitation.id}`,
+        templateData: { churchName: tenant.name, signupUrl, role },
+        invitationId: invitation.id,
+        context: "new invitation",
       });
-
-      if (emailResult.error) {
-        console.error("Invitation email failed", { error: emailResult.error, email: normalizedEmail });
-        return new Response(JSON.stringify({
-          success: true,
-          invitation_id: invitation.id,
-          auto_added: false,
-          email_warning: "Invitation created but email failed to send. Please try resending.",
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const emailData = emailResult.data;
-      if (emailData && (emailData.error || emailData.reason === "email_suppressed")) {
-        console.warn("Invitation email issue", { data: emailData, email: normalizedEmail });
-        return new Response(JSON.stringify({
-          success: true,
-          invitation_id: invitation.id,
-          auto_added: false,
-          email_warning: emailData.error || "Recipient email is suppressed.",
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    } else {
+      email_warning = "Invitation created, but the church could not be resolved so no email was sent.";
     }
 
-    return new Response(JSON.stringify({ success: true, invitation_id: invitation.id, auto_added: false }), {
+    return new Response(JSON.stringify({
+      success: true,
+      invitation_id: invitation.id,
+      auto_added: false,
+      email_sent: !email_warning,
+      email_warning,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (err) {
     console.error("invite-to-tenant error:", err);
     return new Response(JSON.stringify({ error: "An unexpected error occurred" }), {
