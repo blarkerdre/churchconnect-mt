@@ -21,6 +21,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 import ModuleTour from "@/components/tour/ModuleTour";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import UserChurchBadges, { useUserChurches } from "@/components/tenants/UserChurchBadges";
 
 // NOTE: super_admin is intentionally NOT assignable from the per-tenant role picker.
 // It is a platform-wide role (tenant_id IS NULL) and must be granted via the
