@@ -292,12 +292,17 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null, i
         }
       } catch { /* ignore */ }
 
+      const subjectEdition =
+        subjects.find((s) => s.id === form.exam_subject_id)?.session_id || pinnedEditionId || null;
+
       const payload = {
         tenant_id: tenantId,
         lecturer_id: form.lecturer_id,
         exam_title_id: form.exam_title_id || null,
         exam_subject_id: form.exam_subject_id,
+        ...(subjectEdition ? { session_id: subjectEdition } : {}),
         check_date: form.check_date,
+
         tier: null,
         qc_member_id: form.qc_member_id,
         qc_member_name: form.qc_member_name.trim(),
