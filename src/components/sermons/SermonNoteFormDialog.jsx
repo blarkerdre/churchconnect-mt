@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import SermonRichEditor from "@/components/sermons/SermonRichEditor";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -13,12 +12,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Expand, Maximize2, Minimize2, Pencil, ChevronUp, Plus, Printer, RotateCcw, Shrink, X, Check } from "lucide-react";
+import { Expand, Maximize2, Minimize2, Pencil, ChevronUp, Printer, RotateCcw, Shrink } from "lucide-react";
 import { printSermonNote } from "@/lib/sermon-note-print";
 import useSermonNoteDraft from "@/hooks/useSermonNoteDraft";
+import SermonNoteMetaFields, { NONE, NEW } from "@/components/sermons/SermonNoteMetaFields";
 
-const NONE = "__none__";
-const NEW = "__new__";
 
 export default function SermonNoteFormDialog({ open, onOpenChange, note, folders = [], defaultFolderId = null, onSaved }) {
   const { user } = useAuth();
@@ -223,65 +221,27 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
     }
   };
 
-  const MetadataFields = () => (
-    <div className="space-y-4">
-      <div>
-        <Label htmlFor="sn-title">Sermon Title (optional)</Label>
-        <Input id="sn-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. The Power of Faith" maxLength={200} />
-      </div>
-      <div>
-        <Label htmlFor="sn-speaker">Speaker (optional)</Label>
-        <Input id="sn-speaker" value={speaker} onChange={(e) => setSpeaker(e.target.value)} placeholder="e.g. Pastor John" maxLength={100} />
-      </div>
-      <div>
-        <Label htmlFor="sn-category">Category (optional)</Label>
-        <Input id="sn-category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Faith, Prayer, Worship" maxLength={50} />
-      </div>
-      <div>
-        <Label>Folder</Label>
-        {creatingFolder ? (
-          <div className="flex items-center gap-1.5">
-            <Input
-              placeholder="New folder name"
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") { e.preventDefault(); handleCreateFolder(); }
-                if (e.key === "Escape") { setCreatingFolder(false); setNewFolderName(""); }
-              }}
-              autoFocus
-              maxLength={60}
-            />
-            <Button type="button" size="icon" variant="ghost" onClick={handleCreateFolder}>
-              <Check className="h-4 w-4" />
-            </Button>
-            <Button type="button" size="icon" variant="ghost" onClick={() => { setCreatingFolder(false); setNewFolderName(""); }}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        ) : (
-          <Select value={folderId} onValueChange={handleFolderChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Choose folder" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NONE}>Unfiled</SelectItem>
-              {folders.map((f) => (
-                <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-              ))}
-              <SelectItem value={NEW}>
-                <span className="flex items-center gap-1.5"><Plus className="h-3.5 w-3.5" /> Create new folder…</span>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="sn-date">Service date</Label>
-        <Input id="sn-date" type="date" value={serviceDate} onChange={(e) => setServiceDate(e.target.value)} />
-      </div>
-    </div>
+  const metaFields = (
+    <SermonNoteMetaFields
+      title={title}
+      setTitle={setTitle}
+      speaker={speaker}
+      setSpeaker={setSpeaker}
+      category={category}
+      setCategory={setCategory}
+      serviceDate={serviceDate}
+      setServiceDate={setServiceDate}
+      folderId={folderId}
+      folders={folders}
+      onFolderChange={handleFolderChange}
+      creatingFolder={creatingFolder}
+      newFolderName={newFolderName}
+      setNewFolderName={setNewFolderName}
+      onCreateFolder={handleCreateFolder}
+      onCancelCreateFolder={() => { setCreatingFolder(false); setNewFolderName(""); }}
+    />
   );
+
 
   return (
     <Dialog open={open} onOpenChange={closeDialog}>
@@ -325,7 +285,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
               </div>
             </div>
           )}
-          {!expanded && !fullscreen && <MetadataFields />}
+          {!expanded && !fullscreen && metaFields}
           {(expanded || fullscreen) && !metaExpanded && (
 
             <div className="shrink-0 rounded-md border border-border bg-muted/40 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -350,7 +310,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
           )}
           {(expanded || fullscreen) && metaExpanded && (
             <div className="shrink-0 space-y-4">
-              <MetadataFields />
+              {metaFields}
               <div className="flex justify-end">
                 <Button
                   type="button"
