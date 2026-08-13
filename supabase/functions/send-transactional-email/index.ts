@@ -59,11 +59,13 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get('Authorization') || ''
   const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : ''
   const apiKeyHeader = req.headers.get('apikey')?.trim() || ''
+  const internalServiceKey = req.headers.get('x-internal-service-key')?.trim() || ''
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
   let isAuthorized = false
   if (
     (bearer && bearer === supabaseServiceKey) ||
-    (apiKeyHeader && apiKeyHeader === supabaseServiceKey)
+    (apiKeyHeader && apiKeyHeader === supabaseServiceKey) ||
+    (internalServiceKey && internalServiceKey === supabaseServiceKey)
   ) {
     isAuthorized = true
   } else if (bearer && bearer !== anonKey) {
