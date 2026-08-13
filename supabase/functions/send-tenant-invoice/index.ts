@@ -100,6 +100,10 @@ Deno.serve(async (req) => {
 
     // Invoke send-transactional-email
     const sendRes = await admin.functions.invoke('send-transactional-email', {
+      headers: {
+        Authorization: `Bearer ${serviceKey}`,
+        apikey: serviceKey,
+      },
       body: {
         templateName: 'tenant-invoice',
         recipientEmail: recipient,
@@ -110,8 +114,20 @@ Deno.serve(async (req) => {
     })
 
     if (sendRes.error) {
-      console.error('send-transactional-email failed', sendRes.error)
-      return new Response(JSON.stringify({ error: 'Failed to send email', details: sendRes.error }), {
+      let detail = sendRes.error.message || 'Unknown email service error'
+      const response = sendRes.error.context instanceof Response
+        ? sendRes.error.context
+        : undefined
+      if (response) {
+        try {
+          const errorBody = await response.clone().json()
+          detail = errorBody?.error || errorBody?.message || detail
+        } catch {
+          // Keep the SDK error when the response is not JSON.
+        }
+      }
+      console.error('send-transactional-email failed', { detail })
+      return new Response(JSON.stringify({ error: 'Failed to send email', detail }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
