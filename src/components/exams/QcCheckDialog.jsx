@@ -14,6 +14,8 @@ import { toast } from "@/components/ui/use-toast";
 import { Loader2, ClipboardCheck } from "lucide-react";
 import { SCORE_LABELS } from "@/lib/qc-options";
 import { logWofbiActivity } from "@/lib/wofbi-activity";
+import { useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
+
 
 const emptyForm = {
   lecturer_id: "",
