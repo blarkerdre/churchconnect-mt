@@ -99,33 +99,25 @@ Deno.serve(async (req) => {
     }
 
     // Invoke send-transactional-email
-    const sendRes = await admin.functions.invoke('send-transactional-email', {
+    const sendResponse = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${serviceKey}`,
         apikey: serviceKey,
+        'Content-Type': 'application/json',
       },
-      body: {
+      body: JSON.stringify({
         templateName: 'tenant-invoice',
         recipientEmail: recipient,
         idempotencyKey: `tenant-invoice-${invoice.id}-${invoice.status}`,
         tenant_id: invoice.tenant_id,
         templateData,
-      },
+      }),
     })
 
-    if (sendRes.error) {
-      let detail = sendRes.error.message || 'Unknown email service error'
-      const response = sendRes.error.context instanceof Response
-        ? sendRes.error.context
-        : undefined
-      if (response) {
-        try {
-          const errorBody = await response.clone().json()
-          detail = errorBody?.error || errorBody?.message || detail
-        } catch {
-          // Keep the SDK error when the response is not JSON.
-        }
-      }
+    const sendData = await sendResponse.json().catch(() => ({}))
+    if (!sendResponse.ok || sendData?.error) {
+      const detail = sendData?.error || sendData?.message || `Email service returned HTTP ${sendResponse.status}`
       console.error('send-transactional-email failed', { detail })
       return new Response(JSON.stringify({ error: 'Failed to send email', detail }), {
         status: 500,
