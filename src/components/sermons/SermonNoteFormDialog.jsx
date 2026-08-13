@@ -37,6 +37,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
   const [expanded, setExpanded] = useState(false);
   const [metaExpanded, setMetaExpanded] = useState(false);
   const [printing, setPrinting] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
 
 
   useEffect(() => {
