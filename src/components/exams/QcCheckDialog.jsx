@@ -364,7 +364,9 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null, i
           </DialogTitle>
           <p className="text-xs text-muted-foreground pt-1">
             Word of Faith Bible Institute — record class quality against the standard checklist.
+            {" "}Recording under <span className="font-medium text-foreground">{sessionName}</span>.
           </p>
+
         </DialogHeader>
 
         <div className="space-y-5">
