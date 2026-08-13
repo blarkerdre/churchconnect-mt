@@ -69,7 +69,7 @@ const MenuBar = ({ editor, onOpenPad, onOpenVerse }) => {
   );
 };
 
-export default function SermonRichEditor({ content, onChange, expanded = false }) {
+export default function SermonRichEditor({ content, onChange, expanded = false, fullscreen = false }) {
   const [padOpen, setPadOpen] = useState(false);
   const [verseOpen, setVerseOpen] = useState(false);
   const containerRef = useRef(null);
