@@ -32,6 +32,7 @@ function SignedMemberLightboxAvatar({ member }) {
   );
 }
 import DashboardBanner from "@/components/dashboard/DashboardBanner";
+import { useTenantFeatureEnabled } from "@/hooks/useSubFeature";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -52,6 +53,7 @@ export default function MemberDashboard({ currentUser, myMember }) {
   const { currentTenant, tenantRole } = useTenant();
   const { session, isUnitLeader, isAdmin, leaderUnits, leaderCentres } = useAuth();
   const { tenantId } = useTenantQuery();
+  const slideshowEnabled = useTenantFeatureEnabled("/dashboard-slideshow");
   const roleLabel = tenantRole ? tenantRole.charAt(0).toUpperCase() + tenantRole.slice(1) : "";
   const userId = session?.user?.id;
   const showBirthdays = isUnitLeader && !isAdmin;
@@ -122,7 +124,7 @@ export default function MemberDashboard({ currentUser, myMember }) {
       )}
 
       {/* Dashboard Banner Slideshow */}
-      <DashboardBanner />
+      {slideshowEnabled && <DashboardBanner />}
 
 
       {/* Welcome Banner */}
