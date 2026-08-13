@@ -21,6 +21,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 import ModuleTour from "@/components/tour/ModuleTour";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import UserChurchBadges, { useUserChurches } from "@/components/tenants/UserChurchBadges";
 
 // NOTE: super_admin is intentionally NOT assignable from the per-tenant role picker.
 // It is a platform-wide role (tenant_id IS NULL) and must be granted via the
@@ -160,6 +161,12 @@ export default function UserManagement() {
     retry: false,
   });
   const mfaUsers = Object.fromEntries(mfaUserIds.map(id => [id, true]));
+
+  // Super admins can see every church a user belongs to
+  const { data: churchesByUser = {} } = useUserChurches(
+    profiles.map(p => p.user_id),
+    isSuperAdmin
+  );
 
   const resetMfaMutation = useMutation({
     mutationFn: async ({ userId, targetName }) => {
@@ -419,6 +426,12 @@ export default function UserManagement() {
                               )}
 
                             </div>
+                            {isSuperAdmin && (
+                              <UserChurchBadges
+                                churches={churchesByUser[p.user_id] || []}
+                                currentTenantId={tenantId}
+                              />
+                            )}
 
                           </div>
                         </div>

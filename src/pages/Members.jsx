@@ -20,6 +20,7 @@ import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import ModuleTour from "@/components/tour/ModuleTour";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import UserChurchBadges, { useUserChurches } from "@/components/tenants/UserChurchBadges";
 
 const statusColors = {
   "Active": "bg-chart-3/10 text-chart-3",
@@ -30,7 +31,8 @@ const statusColors = {
 };
 
 export default function Members() {
-  const { isAdmin, isUnitLeader, isWSFLeader, isReportsOfficer, user, loading: authLoading, myMember, leaderUnits, myUnits } = useAuth();
+  const { isAdmin, isUnitLeader, isWSFLeader, isReportsOfficer, user, loading: authLoading, myMember, leaderUnits, myUnits, roles } = useAuth();
+  const isSuperAdmin = (roles || []).includes("super_admin");
   const { tenantId, scopeQuery } = useTenantQuery();
   const isLeader = isUnitLeader || isWSFLeader;
   const unitMemberOnly = !isAdmin && !isUnitLeader && !isWSFLeader && !isReportsOfficer && (myUnits?.length || 0) > 0;
@@ -203,6 +205,12 @@ export default function Members() {
     const matchWsfCentre = !filters.wsfCentreId || filters.wsfCentreId === "all" || m.wsf_centre_id === filters.wsfCentreId;
     return matchSearch && matchStatus && matchUnit && matchDateFrom && matchDateTo && matchAccount && matchWsfCentre;
   });
+
+  // Super admins can see every church a linked member belongs to
+  const { data: churchesByUser = {} } = useUserChurches(
+    filtered.map((m) => m.user_id),
+    isSuperAdmin
+  );
 
   const openNew = () => {
     setEditingMember(null);
@@ -454,6 +462,12 @@ export default function Members() {
                         <div>
                           <p className="font-medium text-foreground">{m.first_name} {m.last_name}</p>
                           <p className="text-xs text-muted-foreground sm:hidden">{m.email}</p>
+                          {isSuperAdmin && m.user_id && (
+                            <UserChurchBadges
+                              churches={churchesByUser[m.user_id] || []}
+                              currentTenantId={tenantId}
+                            />
+                          )}
                         </div>
                       </div>
                     </td>
