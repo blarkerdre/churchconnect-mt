@@ -191,35 +191,27 @@ Deno.serve(async (req) => {
       });
 
       // Send notification email
+      let email_warning: string | undefined;
       if (tenantInfo) {
         const siteUrl = "https://app.churchmanagementsuite.org";
         const loginUrl = `${siteUrl}/t/${tenantInfo.slug}/auth`;
 
         console.log("Sending auto-add notification email", { email: normalizedEmail, tenant: churchName });
 
-        const emailResult = await supabase.functions.invoke("send-transactional-email", {
-          body: {
-            templateName: "tenant-invitation",
-            recipientEmail: normalizedEmail,
-            idempotencyKey: `tenant-autoadd-${existingProfile.user_id}-${tenant_id}`,
-            tenant_id,
-            templateData: {
-              churchName,
-              signupUrl: loginUrl,
-              role,
-            },
-          },
+        email_warning = await sendInviteEmail(supabase, {
+          recipient: normalizedEmail,
+          tenant_id,
+          idempotencyKey: `tenant-autoadd-${existingProfile.user_id}-${tenant_id}`,
+          templateData: { churchName, signupUrl: loginUrl, role },
+          context: "auto-add notification",
         });
-
-        if (emailResult.error) {
-          console.error("Auto-add notification email failed", { error: emailResult.error, email: normalizedEmail });
-        }
       }
 
-      return new Response(JSON.stringify({ success: true, auto_added: true }), {
+      return new Response(JSON.stringify({ success: true, auto_added: true, email_sent: !email_warning, email_warning }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     // User doesn't exist — check for pending invitation
     const { data: existingInvite } = await supabase
