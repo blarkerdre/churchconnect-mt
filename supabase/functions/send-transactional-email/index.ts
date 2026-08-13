@@ -58,9 +58,13 @@ Deno.serve(async (req) => {
   // The function is deployed with verify_jwt=false so we validate in-code to allow both cases.
   const authHeader = req.headers.get('Authorization') || ''
   const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : ''
+  const apiKeyHeader = req.headers.get('apikey')?.trim() || ''
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
   let isAuthorized = false
-  if (bearer && bearer === supabaseServiceKey) {
+  if (
+    (bearer && bearer === supabaseServiceKey) ||
+    (apiKeyHeader && apiKeyHeader === supabaseServiceKey)
+  ) {
     isAuthorized = true
   } else if (bearer && bearer !== anonKey) {
     try {
