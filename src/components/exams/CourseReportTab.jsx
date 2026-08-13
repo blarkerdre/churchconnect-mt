@@ -309,10 +309,14 @@ export default function CourseReportTab() {
     try {
       const sid = sessionId === NO_SESSION ? null : sessionId;
       const course = selectedCourse;
+      /** Scope a query to the selected edition when one is chosen. */
+      const byEdition = (q, col = "session_id") => (sid ? q.eq(col, sid) : q);
 
       const [{ data: subjects }, { data: lecturers }, template] = await Promise.all([
-        supabase.from("exam_subjects").select("id, name, code, lecturer_id, sort_order")
-          .eq("tenant_id", tenantId).eq("course_id", courseId).order("sort_order"),
+        byEdition(
+          supabase.from("exam_subjects").select("id, name, code, lecturer_id, sort_order")
+            .eq("tenant_id", tenantId).eq("course_id", courseId).order("sort_order")
+        ),
         supabase.from("lecturers").select("id, name, lecturer_type").eq("tenant_id", tenantId),
         fetchCourseTemplate({ tenantId, course }),
       ]);
@@ -326,32 +330,54 @@ export default function CourseReportTab() {
       const subjectList = subjects || [];
       const subjectIds = subjectList.map((s) => s.id);
 
-      let regQ = supabase.from("course_registrations")
-        .select("id, member_id, status, members(first_name, last_name, nationality, water_baptism, holy_spirit_baptism, membership_status)")
-        .eq("tenant_id", tenantId).eq("course_id", courseId);
-      if (sid) regQ = regQ.eq("session_id", sid);
+      if (sid && subjectIds.length === 0) {
+        toast({
+          title: "This edition has no subjects yet",
+          description: "Copy the syllabus from another edition first, otherwise the report has no courses, lecturers or exam data to draw on.",
+        });
+      }
+
+      const regQ = byEdition(
+        supabase.from("course_registrations")
+          .select("id, member_id, status, members(first_name, last_name, nationality, water_baptism, holy_spirit_baptism, membership_status)")
+          .eq("tenant_id", tenantId).eq("course_id", courseId)
+      );
 
       const [{ data: regs }, { data: applications }, { data: attempts }, { data: ratings }, { data: qcChecks }, { data: testimonies }, { data: attendance }] =
         await Promise.all([
           regQ,
-          supabase.from("wofbi_applications").select("id, member_id, answers, status")
-            .eq("tenant_id", tenantId).eq("course_id", courseId),
+          byEdition(
+            supabase.from("wofbi_applications").select("id, member_id, answers, status")
+              .eq("tenant_id", tenantId).eq("course_id", courseId)
+          ),
           subjectIds.length
-            ? supabase.from("exam_attempts").select("member_id, subject_id")
-                .eq("tenant_id", tenantId).in("subject_id", subjectIds)
+            ? byEdition(
+                supabase.from("exam_attempts").select("member_id, subject_id")
+                  .eq("tenant_id", tenantId).in("subject_id", subjectIds)
+              )
             : Promise.resolve({ data: [] }),
-          supabase.from("lecturer_ratings").select("lecturer_id, subject_id, overall_rating")
-            .eq("tenant_id", tenantId).eq("course_id", courseId),
-          supabase.from("lecturer_qc_checks")
-            .select("lecturer_id, exam_subject_id, qc_member_name, total_score, general_observations, started_on_time, finished_on_time, introduced_self, orderliness_note, orderliness_score, content_focus_note, content_focus_score, conducted_test, qa_observations, class_recorded, recording_submitted")
-            .eq("tenant_id", tenantId).eq("exam_title_id", courseId),
-          supabase.from("wofbi_feedback_responses")
-            .select("answers, submitted_at, members(first_name, last_name)")
-            .eq("tenant_id", tenantId).eq("course_id", courseId)
-            .order("submitted_at", { ascending: false }),
-          supabase.from("wofbi_attendance_records").select("member_id, session_id, wofbi_attendance_sessions!inner(course_id)")
-            .eq("tenant_id", tenantId).eq("wofbi_attendance_sessions.course_id", courseId),
+          byEdition(
+            supabase.from("lecturer_ratings").select("lecturer_id, subject_id, overall_rating")
+              .eq("tenant_id", tenantId).eq("course_id", courseId)
+          ),
+          byEdition(
+            supabase.from("lecturer_qc_checks")
+              .select("lecturer_id, exam_subject_id, qc_member_name, total_score, general_observations, started_on_time, finished_on_time, introduced_self, orderliness_note, orderliness_score, content_focus_note, content_focus_score, conducted_test, qa_observations, class_recorded, recording_submitted")
+              .eq("tenant_id", tenantId).eq("exam_title_id", courseId)
+          ),
+          byEdition(
+            supabase.from("wofbi_feedback_responses")
+              .select("answers, submitted_at, members(first_name, last_name)")
+              .eq("tenant_id", tenantId).eq("course_id", courseId)
+              .order("submitted_at", { ascending: false })
+          ),
+          byEdition(
+            supabase.from("wofbi_attendance_records").select("member_id, session_id, wofbi_attendance_sessions!inner(course_id, session_id)")
+              .eq("tenant_id", tenantId).eq("wofbi_attendance_sessions.course_id", courseId),
+            "wofbi_attendance_sessions.session_id"
+          ),
         ]);
+
 
       const regList = regs || [];
       const appList = applications || [];
