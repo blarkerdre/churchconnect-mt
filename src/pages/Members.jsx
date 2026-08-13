@@ -206,6 +206,12 @@ export default function Members() {
     return matchSearch && matchStatus && matchUnit && matchDateFrom && matchDateTo && matchAccount && matchWsfCentre;
   });
 
+  // Super admins can see every church a linked member belongs to
+  const { data: churchesByUser = {} } = useUserChurches(
+    filtered.map((m) => m.user_id),
+    isSuperAdmin
+  );
+
   const openNew = () => {
     setEditingMember(null);
     setLinkUserId(null);
