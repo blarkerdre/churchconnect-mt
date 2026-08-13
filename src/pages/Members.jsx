@@ -194,15 +194,14 @@ export default function Members() {
     const parts = (acct.full_name || "").trim().split(/\s+/);
     setEditingMember(null);
     setLinkUserId(acct.user_id);
-    setDialogOpen(true);
-    // Prefill via editingMember-less path: pass initial values through a pseudo member object
-    setEditingMember(null);
     setPrefill({
       first_name: parts[0] || "",
       last_name: parts.slice(1).join(" ") || "",
       email: acct.email || "",
     });
+    setDialogOpen(true);
   };
+
 
 
   const handleDelete = (member) => {
