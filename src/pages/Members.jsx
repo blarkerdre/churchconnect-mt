@@ -45,6 +45,7 @@ export default function Members() {
   const [certMember, setCertMember] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [linkUserId, setLinkUserId] = useState(null);
+  const [prefill, setPrefill] = useState(null);
   const queryClient = useQueryClient();
 
   // Accounts that belong to this church but have no directory record yet
@@ -181,12 +182,14 @@ export default function Members() {
   const openNew = () => {
     setEditingMember(null);
     setLinkUserId(null);
+    setPrefill(null);
     setDialogOpen(true);
   };
 
   const openEdit = (m) => {
     setEditingMember(m);
     setLinkUserId(null);
+    setPrefill(null);
     setDialogOpen(true);
   };
 
