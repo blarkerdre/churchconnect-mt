@@ -288,7 +288,9 @@ export default function TenantInvitePanel({ tenantId, pendingOnly = false }) {
                     )}
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
+
             </TableBody>
           </Table>
         </div>
