@@ -140,6 +140,12 @@ export function TenantProvider({ children }) {
 
   const tenantId = currentTenant?.tenant_id || null;
 
+  // Publish the active church so role flags in useAuth can be scoped to it.
+  useEffect(() => {
+    setActiveTenantId(tenantId);
+    return () => setActiveTenantId(null);
+  }, [tenantId]);
+
   // Re-fetch the auth hook's `myMember` scoped to the active tenant so users with
   // member rows in multiple tenants always see the correct one.
   useEffect(() => {
@@ -147,6 +153,7 @@ export function TenantProvider({ children }) {
       refetchMemberForTenant(tenantId);
     }
   }, [tenantId, refetchMemberForTenant]);
+
 
   const tenantSlug = currentTenant?.tenants?.slug || null;
   const tenantRole = currentTenant?.role || null;
