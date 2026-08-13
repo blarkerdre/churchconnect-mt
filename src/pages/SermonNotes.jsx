@@ -511,6 +511,16 @@ export default function SermonNotes() {
         onSaved={refresh}
       />
 
+      {viewNote && (
+        <SermonNoteViewer
+          note={viewNote}
+          folderName={viewNote.folder_id ? folderMap[viewNote.folder_id]?.name || "" : ""}
+          churchName={currentTenant?.name}
+          logoUrl={currentTenant?.logo_url}
+          onClose={() => setViewNote(null)}
+        />
+      )}
+
       <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
