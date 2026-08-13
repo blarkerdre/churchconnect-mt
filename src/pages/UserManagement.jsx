@@ -426,6 +426,12 @@ export default function UserManagement() {
                               )}
 
                             </div>
+                            {isSuperAdmin && (
+                              <UserChurchBadges
+                                churches={churchesByUser[p.user_id] || []}
+                                currentTenantId={tenantId}
+                              />
+                            )}
 
                           </div>
                         </div>
