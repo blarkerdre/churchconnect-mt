@@ -13,7 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Plus, Check, X, Maximize2, Minimize2, Pencil, ChevronUp, Printer, RotateCcw } from "lucide-react";
+import { Expand, Maximize2, Minimize2, Pencil, ChevronUp, Plus, Printer, RotateCcw, Shrink, X, Check } from "lucide-react";
 import { printSermonNote } from "@/lib/sermon-note-print";
 import useSermonNoteDraft from "@/hooks/useSermonNoteDraft";
 
@@ -37,6 +37,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
   const [expanded, setExpanded] = useState(false);
   const [metaExpanded, setMetaExpanded] = useState(false);
   const [printing, setPrinting] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
 
 
   useEffect(() => {
@@ -62,10 +63,14 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
   }, [open, note, defaultFolderId]);
 
   useEffect(() => {
-    if (!expanded) return;
+    if (!expanded && !fullscreen) return;
     const handleKey = (e) => {
       if (e.key === "Escape") {
-        if (metaExpanded) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (fullscreen) {
+          setFullscreen(false);
+        } else if (metaExpanded) {
           setMetaExpanded(false);
         } else {
           setExpanded(false);
@@ -74,7 +79,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [expanded, metaExpanded]);
+  }, [expanded, fullscreen, metaExpanded]);
 
   const draftValues = useMemo(
     () => ({ title, speaker, category, serviceDate, content, folderId }),
@@ -106,6 +111,8 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
     if (!val) {
       flush();
       setExpanded(false);
+      setFullscreen(false);
+      setMetaExpanded(false);
     }
     onOpenChange(val);
   };
@@ -280,16 +287,27 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
     <Dialog open={open} onOpenChange={closeDialog}>
       <DialogContent
         className={cn(
-          "w-[calc(100vw-1rem)] p-4 sm:p-6 flex flex-col",
-          expanded ? "max-w-6xl h-[92vh]" : "max-w-2xl max-h-[92vh]"
+          "flex flex-col",
+          fullscreen
+            ? "fixed !inset-0 !translate-x-0 !translate-y-0 !w-screen !h-screen !max-w-none !max-h-none !overflow-hidden rounded-none p-0 sm:rounded-none"
+            : ["w-[calc(100vw-1rem)] p-4 sm:p-6", expanded ? "max-w-6xl h-[92vh]" : "max-w-2xl max-h-[92vh]"]
         )}
+        onEscapeKeyDown={(e) => {
+          if (fullscreen || expanded) {
+            e.preventDefault();
+            if (fullscreen) setFullscreen(false);
+            else if (metaExpanded) setMetaExpanded(false);
+            else setExpanded(false);
+          }
+        }}
       >
         <DialogHeader>
           <DialogTitle>{note ? "Edit Note" : "New Sermon Note"}</DialogTitle>
         </DialogHeader>
         <div className={cn(
           "space-y-4 flex-1 min-h-0 pr-1",
-          expanded ? "flex flex-col overflow-hidden" : "overflow-y-auto"
+          fullscreen || expanded ? "flex flex-col overflow-hidden" : "overflow-y-auto",
+          fullscreen && "p-4 sm:p-6"
         )}>
           {pendingDraft && (
             <div className="shrink-0 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -307,8 +325,8 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
               </div>
             </div>
           )}
-          {!expanded && <MetadataFields />}
-          {expanded && !metaExpanded && (
+          {!expanded && !fullscreen && <MetadataFields />}
+          {(expanded || fullscreen) && !metaExpanded && (
 
             <div className="shrink-0 rounded-md border border-border bg-muted/40 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="min-w-0">
@@ -330,7 +348,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
               </Button>
             </div>
           )}
-          {expanded && metaExpanded && (
+          {(expanded || fullscreen) && metaExpanded && (
             <div className="shrink-0 space-y-4">
               <MetadataFields />
               <div className="flex justify-end">
@@ -347,7 +365,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
               </div>
             </div>
           )}
-          <div className={cn("flex flex-col", expanded && "flex-1 min-h-0")}>
+          <div className={cn("flex flex-col", (expanded || fullscreen) && "flex-1 min-h-0")}>
             <div className="flex items-center justify-between gap-2 mb-1">
               <Label>Notes *</Label>
               <div className="flex items-center gap-1">
@@ -374,9 +392,20 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
                   {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
                   <span className="text-xs hidden sm:inline">{expanded ? "Collapse" : "Expand"}</span>
                 </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setFullscreen((v) => !v)}
+                  className="h-7 px-2 gap-1"
+                  title={fullscreen ? "Exit full screen" : "Enter full screen"}
+                >
+                  {fullscreen ? <Shrink className="h-3.5 w-3.5" /> : <Expand className="h-3.5 w-3.5" />}
+                  <span className="text-xs hidden sm:inline">{fullscreen ? "Exit" : "Full screen"}</span>
+                </Button>
               </div>
             </div>
-            <SermonRichEditor content={content} onChange={setContent} expanded={expanded} />
+            <SermonRichEditor content={content} onChange={setContent} expanded={expanded || fullscreen} fullscreen={fullscreen} />
             <p className="text-[11px] text-muted-foreground mt-1 h-4">
               {draftStatus === "saving" && "Saving…"}
               {draftStatus === "saved" && savedAt && `Draft saved ${format(new Date(savedAt), "HH:mm")}`}

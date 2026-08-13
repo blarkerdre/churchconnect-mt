@@ -13,13 +13,14 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Search, Trash2, Edit, FileText, ArrowUpDown, MoreVertical, Folder, Inbox, CheckSquare, X, FolderInput, Church, Printer } from "lucide-react";
+import { Plus, Search, Trash2, Edit, FileText, ArrowUpDown, MoreVertical, Folder, Inbox, CheckSquare, X, FolderInput, Church, Printer, Maximize } from "lucide-react";
 import { printSermonNote } from "@/lib/sermon-note-print";
 import { useTenant } from "@/contexts/TenantContext";
 
 import { format } from "date-fns";
 import { toast } from "sonner";
 import SermonNoteFormDialog from "@/components/sermons/SermonNoteFormDialog";
+import SermonNoteViewer from "@/components/sermons/SermonNoteViewer";
 import SermonFolderSidebar from "@/components/sermons/SermonFolderSidebar";
 import { cn } from "@/lib/utils";
 import ModuleTour from "@/components/tour/ModuleTour";
@@ -50,6 +51,7 @@ export default function SermonNotes() {
   const [selectedFolder, setSelectedFolder] = useState("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editNote, setEditNote] = useState(null);
+  const [viewNote, setViewNote] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
@@ -443,6 +445,9 @@ export default function SermonNotes() {
                                 <DropdownMenuItem onClick={() => handlePrintNote(n)}>
                                   <Printer className="h-3.5 w-3.5 mr-2" /> Print / PDF
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setViewNote(n)}>
+                                  <Maximize className="h-3.5 w-3.5 mr-2" /> View full screen
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuLabel>Move to folder</DropdownMenuLabel>
 
@@ -505,6 +510,16 @@ export default function SermonNotes() {
         }
         onSaved={refresh}
       />
+
+      {viewNote && (
+        <SermonNoteViewer
+          note={viewNote}
+          folderName={viewNote.folder_id ? folderMap[viewNote.folder_id]?.name || "" : ""}
+          churchName={currentTenant?.name}
+          logoUrl={currentTenant?.logo_url}
+          onClose={() => setViewNote(null)}
+        />
+      )}
 
       <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
         <AlertDialogContent>
