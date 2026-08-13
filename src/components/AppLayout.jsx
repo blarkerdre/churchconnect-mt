@@ -8,8 +8,8 @@ import { useUnitMembership } from "@/hooks/useUnitMembership";
 import {
   LayoutDashboard, Users, CalendarDays, HeartHandshake,
   Heart, Megaphone, Menu, LogOut,
-  ClipboardList, Car, BarChart2, ChevronLeft, Globe, Shield, FileText, TrendingUp, Settings, Mail, AlertTriangle,
-  BookOpen, ChevronsUpDown, Check, Lock, MessageSquareHeart, Star, Package
+  ClipboardList, Car, ChevronLeft, Globe, Shield, FileText, TrendingUp, Settings, AlertTriangle,
+  BookOpen, Lock, MessageSquareHeart, Star, Package
 } from "lucide-react";
 import AppFeedbackDialog from "@/components/feedback/AppFeedbackDialog";
 import { TourProvider } from "@/components/tour/TourProvider";
@@ -74,7 +74,6 @@ const allNavItems = [
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);
   const [pendingTenantSwitch, setPendingTenantSwitch] = useState(null);
   const [switchPassword, setSwitchPassword] = useState("");
   const [switchLoading, setSwitchLoading] = useState(false);
@@ -188,12 +187,10 @@ export default function Layout({ children }) {
 
   const handleTenantSwitchRequest = (targetTenantId) => {
     if (targetTenantId === tenantId) {
-      setTenantDropdownOpen(false);
       return;
     }
     setPendingTenantSwitch(targetTenantId);
     setSwitchPassword("");
-    setTenantDropdownOpen(false);
   };
 
   const confirmTenantSwitch = async () => {
