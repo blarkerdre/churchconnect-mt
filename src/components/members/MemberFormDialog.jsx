@@ -51,7 +51,7 @@ const emptyMember = {
   wofbi_highest_level: "None", baptized_by_immersion: false, preferred_contact_modes: "",
 };
 
-export default function MemberFormDialog({ open, onOpenChange, member, onSaved }) {
+export default function MemberFormDialog({ open, onOpenChange, member, onSaved, linkUserId = null }) {
   const { isAdmin, roles: currentUserRoles, user: currentUser, isTenantOwner } = useAuth();
   const { data: churchUnits = [] } = useChurchUnits(!isAdmin);
   const CHURCH_UNITS = churchUnits.map(u => u.name);
@@ -436,7 +436,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved }
             return;
           }
         }
-        const { error } = await supabase.from("members").insert(withTenant(payload)).select().single();
+        const { error } = await supabase.from("members").insert(withTenant(linkUserId ? { ...payload, user_id: linkUserId } : payload)).select().single();
         if (error) {
           if (error.code === "23505" && /members_tenant_email_uidx/.test(error.message || "")) {
             toast({
