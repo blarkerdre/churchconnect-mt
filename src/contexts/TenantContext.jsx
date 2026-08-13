@@ -103,12 +103,15 @@ export function TenantProvider({ children }) {
       // Auto-accept any pending invitations first
       await acceptPendingInvitations(user.id, user.email);
 
-      const memberships = await fetchMemberships(user.id);
+      const memberships = sortMemberships(await fetchMemberships(user.id));
       if (cancelled) return;
 
       setTenantMemberships(memberships);
       const selected = selectTenant(memberships, tenantSlugFromUrl);
       setCurrentTenant(selected);
+      // Remember the church resolved from the URL so a later bare-URL visit
+      // or sign-in lands in the same place.
+      if (selected?.tenant_id) storeTenantId(user.id, selected.tenant_id);
       setLoading(false);
     })();
 
@@ -117,8 +120,12 @@ export function TenantProvider({ children }) {
 
   const switchTenant = useCallback((tenantId) => {
     const match = tenantMemberships.find(m => m.tenant_id === tenantId);
-    if (match) setCurrentTenant(match);
-  }, [tenantMemberships]);
+    if (match) {
+      setCurrentTenant(match);
+      storeTenantId(user?.id, tenantId);
+    }
+  }, [tenantMemberships, user?.id]);
+
 
   const refreshTenantContext = useCallback(async () => {
     if (!user) return;
