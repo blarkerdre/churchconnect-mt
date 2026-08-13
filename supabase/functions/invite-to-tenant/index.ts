@@ -8,6 +8,74 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  // Sends an invitation email and NEVER fails silently: every failure path
+  // writes a `failed` row into email_send_log so invitation emails show up in
+  // the Email Dashboard like every other email.
+  async function sendInviteEmail(
+    supabase: any,
+    opts: {
+      recipient: string;
+      tenant_id: string;
+      idempotencyKey: string;
+      templateData: Record<string, unknown>;
+      invitationId?: string;
+      context: string;
+    },
+  ): Promise<string | undefined> {
+    const logFailure = async (message: string) => {
+      try {
+        await supabase.from("email_send_log").insert({
+          message_id: opts.idempotencyKey,
+          template_name: "tenant-invitation",
+          recipient_email: opts.recipient,
+          status: "failed",
+          error_message: `${opts.context}: ${message}`.slice(0, 1000),
+          tenant_id: opts.tenant_id,
+          metadata: opts.invitationId ? { invitation_id: opts.invitationId } : null,
+        });
+      } catch (logErr) {
+        console.error("Failed to log invitation email failure", logErr);
+      }
+    };
+
+    try {
+      const result = await supabase.functions.invoke("send-transactional-email", {
+        body: {
+          templateName: "tenant-invitation",
+          recipientEmail: opts.recipient,
+          idempotencyKey: opts.idempotencyKey,
+          tenant_id: opts.tenant_id,
+          templateData: opts.templateData,
+        },
+      });
+
+      if (result.error) {
+        const msg = result.error.message || String(result.error);
+        console.error("Invitation email failed", { context: opts.context, error: msg });
+        await logFailure(msg);
+        return `Invitation created, but the email could not be sent (${msg}).`;
+      }
+
+      const data = result.data;
+      if (data && data.error) {
+        console.error("Invitation email rejected", { context: opts.context, data });
+        await logFailure(String(data.error));
+        return `Invitation created, but the email could not be sent (${data.error}).`;
+      }
+      if (data && data.reason === "email_suppressed") {
+        console.warn("Invitation email suppressed", { recipient: opts.recipient });
+        return "Invitation created, but this address has unsubscribed or bounced, so no email was sent.";
+      }
+      return undefined;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Invitation email threw", { context: opts.context, error: msg });
+      await logFailure(msg);
+      return `Invitation created, but the email could not be sent (${msg}).`;
+    }
+  }
+
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
