@@ -24,4 +24,6 @@ export const FEATURE_MODULES = [
   { key: "certificates", label: "Certificates", description: "Issue and approve training/course certificates" },
   { key: "phone-call", label: "Phone Call", description: "Outbound phone calls via configured voice provider" },
   { key: "whatsapp", label: "WhatsApp", description: "WhatsApp messaging via configured provider" },
+  { key: "my-family", label: "My Family", description: "Family profile, children and teens registered by parents" },
+  { key: "dashboard-slideshow", label: "Dashboard Slideshow", description: "Banner and Book of the Month carousel on the dashboard" },
 ];

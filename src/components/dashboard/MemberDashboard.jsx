@@ -32,6 +32,7 @@ function SignedMemberLightboxAvatar({ member }) {
   );
 }
 import DashboardBanner from "@/components/dashboard/DashboardBanner";
+import { useTenantFeatureEnabled } from "@/hooks/useSubFeature";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -122,7 +123,7 @@ export default function MemberDashboard({ currentUser, myMember }) {
       )}
 
       {/* Dashboard Banner Slideshow */}
-      <DashboardBanner />
+      {slideshowEnabled && <DashboardBanner />}
 
 
       {/* Welcome Banner */}
