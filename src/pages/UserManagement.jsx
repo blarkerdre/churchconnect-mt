@@ -162,6 +162,12 @@ export default function UserManagement() {
   });
   const mfaUsers = Object.fromEntries(mfaUserIds.map(id => [id, true]));
 
+  // Super admins can see every church a user belongs to
+  const { data: churchesByUser = {} } = useUserChurches(
+    profiles.map(p => p.user_id),
+    isSuperAdmin
+  );
+
   const resetMfaMutation = useMutation({
     mutationFn: async ({ userId, targetName }) => {
       const { data, error } = await supabase.functions.invoke("admin-reset-mfa", {
