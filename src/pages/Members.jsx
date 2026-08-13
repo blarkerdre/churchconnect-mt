@@ -48,7 +48,7 @@ export default function Members() {
   const [linkUserId, setLinkUserId] = useState(null);
   const [prefill, setPrefill] = useState(null);
   const queryClient = useQueryClient();
-  const confirmDelete = useConfirmDelete();
+  const confirmAction = useConfirmDelete();
 
   // Accounts that belong to this church but have no directory record linked
   // to them. Split into likely duplicates (a matching member record already
@@ -233,7 +233,7 @@ export default function Members() {
   const linkAccountToMember = async (acct) => {
     const target = acct.suggestedMember;
     if (!target) return;
-    const ok = await confirmDelete({
+    const ok = await confirmAction({
       title: "Link this account",
       description: `Connect ${acct.email || acct.full_name} to the directory record for ${target.first_name} ${target.last_name}.${target.user_id ? " This replaces the account currently linked to that record." : ""}`,
     });
