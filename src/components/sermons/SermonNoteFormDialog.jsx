@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,11 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useTenant } from "@/contexts/TenantContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Plus, Check, X, Maximize2, Minimize2, Pencil, ChevronUp } from "lucide-react";
+import { Plus, Check, X, Maximize2, Minimize2, Pencil, ChevronUp, Printer, RotateCcw } from "lucide-react";
+import { printSermonNote } from "@/lib/sermon-note-print";
+import useSermonNoteDraft from "@/hooks/useSermonNoteDraft";
 
 const NONE = "__none__";
 const NEW = "__new__";
@@ -20,6 +23,7 @@ const NEW = "__new__";
 export default function SermonNoteFormDialog({ open, onOpenChange, note, folders = [], defaultFolderId = null, onSaved }) {
   const { user } = useAuth();
   const { tenantId } = useTenantQuery();
+  const { currentTenant } = useTenant();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState("");
@@ -32,6 +36,8 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
   const [newFolderName, setNewFolderName] = useState("");
   const [expanded, setExpanded] = useState(false);
   const [metaExpanded, setMetaExpanded] = useState(false);
+  const [printing, setPrinting] = useState(false);
+
 
   useEffect(() => {
     if (open) {
