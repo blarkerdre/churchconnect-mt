@@ -30,9 +30,9 @@ function generateToken(): string {
     .join('')
 }
 
-// Auth note: this function uses verify_jwt = true in config.toml, so Supabase's
-// gateway validates the caller's JWT (anon or service_role) before the request
-// reaches this code. No in-function auth check is needed.
+// This function is deployed with gateway JWT verification disabled so it can
+// support both backend service calls and signed-in user calls. Authorization is
+// validated below before any recipient or template data is processed.
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
