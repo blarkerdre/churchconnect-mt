@@ -1004,7 +1004,13 @@ export default function WoFBIAttendanceTab() {
                         <TableCell>{s.registration.student_number || "—"}</TableCell>
                         <TableCell className="font-medium">
                           {`${s.registration.members?.first_name || ""} ${s.registration.members?.last_name || ""}`.trim() || "Unknown"}
+                          {isAllEditions && (
+                            <Badge variant="outline" className="ml-2 text-[10px] font-normal">
+                              {s.registration.edition?.name || "Unassigned edition"}
+                            </Badge>
+                          )}
                         </TableCell>
+
                         <TableCell>{s.present}</TableCell>
                         <TableCell>{s.late}</TableCell>
                         <TableCell>{s.absent}</TableCell>
