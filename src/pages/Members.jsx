@@ -462,6 +462,12 @@ export default function Members() {
                         <div>
                           <p className="font-medium text-foreground">{m.first_name} {m.last_name}</p>
                           <p className="text-xs text-muted-foreground sm:hidden">{m.email}</p>
+                          {isSuperAdmin && m.user_id && (
+                            <UserChurchBadges
+                              churches={churchesByUser[m.user_id] || []}
+                              currentTenantId={tenantId}
+                            />
+                          )}
                         </div>
                       </div>
                     </td>
