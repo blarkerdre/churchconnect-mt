@@ -55,6 +55,21 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
     }
   }, [open, note, defaultFolderId]);
 
+  useEffect(() => {
+    if (!expanded) return;
+    const handleKey = (e) => {
+      if (e.key === "Escape") {
+        if (metaExpanded) {
+          setMetaExpanded(false);
+        } else {
+          setExpanded(false);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [expanded, metaExpanded]);
+
   const handleFolderChange = (value) => {
     if (value === NEW) {
       setCreatingFolder(true);
