@@ -14,6 +14,8 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+    const internalEmailKey = Deno.env.get('INTERNAL_EMAIL_FUNCTION_KEY')!
+    if (!internalEmailKey) throw new Error('Internal email authorization is not configured')
 
     const authHeader = req.headers.get('Authorization') || ''
     const userClient = createClient(supabaseUrl, anonKey, {
@@ -99,19 +101,26 @@ Deno.serve(async (req) => {
     }
 
     // Invoke send-transactional-email
-    const sendRes = await admin.functions.invoke('send-transactional-email', {
-      body: {
+    const sendResponse = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+      method: 'POST',
+      headers: {
+        'x-internal-email-key': internalEmailKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         templateName: 'tenant-invoice',
         recipientEmail: recipient,
         idempotencyKey: `tenant-invoice-${invoice.id}-${invoice.status}`,
         tenant_id: invoice.tenant_id,
         templateData,
-      },
+      }),
     })
 
-    if (sendRes.error) {
-      console.error('send-transactional-email failed', sendRes.error)
-      return new Response(JSON.stringify({ error: 'Failed to send email', details: sendRes.error }), {
+    const sendData = await sendResponse.json().catch(() => ({}))
+    if (!sendResponse.ok || sendData?.error) {
+      const detail = sendData?.error || sendData?.message || `Email service returned HTTP ${sendResponse.status}`
+      console.error('send-transactional-email failed', { detail })
+      return new Response(JSON.stringify({ error: 'Failed to send email', detail }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
