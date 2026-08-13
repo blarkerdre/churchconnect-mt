@@ -14,6 +14,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info } from "lucide-react";
+import { resolveActiveMembership } from "@/lib/active-tenant";
+
 
 export default function Auth() {
   // Prefetch the Dashboard chunk while the user types credentials so the
