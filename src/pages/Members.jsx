@@ -19,6 +19,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import ModuleTour from "@/components/tour/ModuleTour";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const statusColors = {
   "Active": "bg-chart-3/10 text-chart-3",
@@ -47,20 +48,22 @@ export default function Members() {
   const [linkUserId, setLinkUserId] = useState(null);
   const [prefill, setPrefill] = useState(null);
   const queryClient = useQueryClient();
+  const confirmAction = useConfirmDelete();
 
-  // Accounts that belong to this church but have no directory record yet
-  // (e.g. people invited in from another church).
+  // Accounts that belong to this church but have no directory record linked
+  // to them. Split into likely duplicates (a matching member record already
+  // exists) and genuinely missing records.
   const { data: unlinkedAccounts = [] } = useQuery({
     queryKey: ["memberships-without-directory", tenantId],
     enabled: !!tenantId && !!isAdmin,
     queryFn: async () => {
       const [{ data: memberships, error: mErr }, { data: rows, error: rErr }] = await Promise.all([
         supabase.from("tenant_memberships").select("user_id").eq("tenant_id", tenantId),
-        supabase.from("members").select("user_id").eq("tenant_id", tenantId).not("user_id", "is", null),
+        supabase.from("members").select("id, first_name, last_name, email, user_id").eq("tenant_id", tenantId),
       ]);
       if (mErr) throw mErr;
       if (rErr) throw rErr;
-      const linked = new Set((rows || []).map(r => r.user_id));
+      const linked = new Set((rows || []).filter(r => r.user_id).map(r => r.user_id));
       const missing = (memberships || []).map(m => m.user_id).filter(id => id && !linked.has(id));
       if (missing.length === 0) return [];
       const { data: profs, error } = await supabase
@@ -68,9 +71,31 @@ export default function Members() {
         .select("user_id, full_name, email")
         .in("user_id", missing);
       if (error) throw error;
-      return profs || [];
+
+      const normEmail = (e) => {
+        const raw = (e || "").trim().toLowerCase();
+        const [local, domain = ""] = raw.split("@");
+        if (!local) return "";
+        return `${local.split("+")[0].replace(/\./g, "")}@${domain.replace(/^gmaill\./, "gmail.")}`;
+      };
+      const normName = (n) => (n || "").trim().toLowerCase().replace(/\s+/g, " ");
+
+      return (profs || []).map(p => {
+        const pe = normEmail(p.email);
+        const pn = normName(p.full_name);
+        const suggested =
+          (pe && (rows || []).find(m => normEmail(m.email) === pe)) ||
+          (pn && (rows || []).find(m => {
+            const full = normName(`${m.first_name} ${m.last_name}`);
+            const reversed = normName(`${m.last_name} ${m.first_name}`);
+            return full === pn || reversed === pn;
+          })) ||
+          null;
+        return { ...p, suggestedMember: suggested || null };
+      });
     },
   });
+
 
 
   const { enabled: canAddMember } = useSubFeature("members.add_member");
@@ -205,6 +230,35 @@ export default function Members() {
     setDialogOpen(true);
   };
 
+  const linkAccountToMember = async (acct) => {
+    const target = acct.suggestedMember;
+    if (!target) return;
+    const ok = await confirmAction({
+      title: "Link this account",
+      description: `Connect ${acct.email || acct.full_name} to the directory record for ${target.first_name} ${target.last_name}.${target.user_id ? " This replaces the account currently linked to that record." : ""}`,
+    });
+    if (!ok) return;
+    const clash = members.find(m => m.user_id === acct.user_id && m.id !== target.id);
+    if (clash) {
+      toast({ title: "Already linked", description: `This account is already linked to ${clash.first_name} ${clash.last_name}.`, variant: "destructive" });
+      return;
+    }
+    const { error } = await supabase
+      .from("members")
+      .update({ user_id: acct.user_id })
+      .eq("id", target.id)
+      .eq("tenant_id", tenantId);
+    if (error) {
+      toast({ title: "Could not link account", description: error.message, variant: "destructive" });
+      return;
+    }
+    logAudit("member_link_account", "members", target.id, { user_id: acct.user_id, email: acct.email }, tenantId);
+    queryClient.invalidateQueries({ queryKey: ["members"] });
+    queryClient.invalidateQueries({ queryKey: ["memberships-without-directory"] });
+    toast({ title: "Account linked", description: `${target.first_name} ${target.last_name} is now linked to this login.` });
+  };
+
+
 
 
   const handleDelete = (member) => {
@@ -283,36 +337,74 @@ export default function Members() {
         </div>
       )}
 
-      {/* Accounts with church access but no directory record yet */}
-      {isAdmin && unlinkedAccounts.length > 0 && (
+      {/* Accounts with church access but no directory record linked */}
+      {isAdmin && unlinkedAccounts.length > 0 && (() => {
+        const dupes = unlinkedAccounts.filter(a => a.suggestedMember);
+        const missing = unlinkedAccounts.filter(a => !a.suggestedMember);
+        return (
         <Card className="border-0 shadow-sm bg-accent/5">
-          <CardContent className="p-4 space-y-3">
+          <CardContent className="p-4 space-y-4">
             <div>
               <p className="text-sm font-medium text-foreground">
-                {unlinkedAccounts.length} account{unlinkedAccounts.length > 1 ? "s" : ""} with access to this church {unlinkedAccounts.length > 1 ? "are" : "is"} not in the member directory
+                {unlinkedAccounts.length} login account{unlinkedAccounts.length > 1 ? "s" : ""} with access to this church {unlinkedAccounts.length > 1 ? "aren't" : "isn't"} connected to a directory record
               </p>
               <p className="text-xs text-muted-foreground">
-                Usually people invited in from another church. Add them to the directory to include them in reports and communications.
+                Some are duplicate sign-ups of people already in the directory — link those instead of adding them again. The rest have never been added.
               </p>
             </div>
-            <div className="space-y-2">
-              {unlinkedAccounts.map(a => (
-                <div key={a.user_id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-background p-2.5">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{a.full_name || "—"}</p>
-                    <p className="text-xs text-muted-foreground truncate">{a.email || ""}</p>
+
+            {dupes.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Possible duplicate accounts</p>
+                {dupes.map(a => (
+                  <div key={a.user_id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-background p-2.5">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{a.full_name || "—"}</p>
+                      <p className="text-xs text-muted-foreground truncate">{a.email || ""}</p>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        Matches directory record: {a.suggestedMember.first_name} {a.suggestedMember.last_name}
+                        {a.suggestedMember.email ? ` <${a.suggestedMember.email}>` : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" onClick={() => linkAccountToMember(a)} className="gap-1.5">
+                        <Link2 className="h-4 w-4" /> Link this account
+                      </Button>
+                      {canAddMember && (
+                        <Button size="sm" variant="outline" onClick={() => addAccountToDirectory(a)}>
+                          Add as new
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  {canAddMember && (
-                    <Button size="sm" variant="outline" onClick={() => addAccountToDirectory(a)} className="gap-1.5">
-                      <Plus className="h-4 w-4" /> Add to directory
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
+
+            {missing.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Not in the directory</p>
+                {missing.map(a => (
+                  <div key={a.user_id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-background p-2.5">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{a.full_name || "—"}</p>
+                      <p className="text-xs text-muted-foreground truncate">{a.email || ""}</p>
+                    </div>
+                    {canAddMember && (
+                      <Button size="sm" variant="outline" onClick={() => addAccountToDirectory(a)} className="gap-1.5">
+                        <Plus className="h-4 w-4" /> Add to directory
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
           </CardContent>
         </Card>
-      )}
+        );
+      })()}
+
 
 
 
