@@ -51,40 +51,60 @@ export default function SermonNotes() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const { data: notes = [], isLoading } = useQuery({
-    queryKey: ["sermon_notes", user?.id, tenantId],
+    queryKey: ["sermon_notes", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sermon_notes")
         .select("*")
         .eq("user_id", user.id)
-        .eq("tenant_id", tenantId)
         .order("service_date", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!user && !!tenantId,
+    enabled: !!user,
   });
 
   const { data: folders = [] } = useQuery({
-    queryKey: ["sermon_note_folders", user?.id, tenantId],
+    queryKey: ["sermon_note_folders", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sermon_note_folders")
         .select("*")
         .eq("user_id", user.id)
-        .eq("tenant_id", tenantId)
         .order("name", { ascending: true });
       if (error) throw error;
       return data;
     },
-    enabled: !!user && !!tenantId,
+    enabled: !!user,
   });
+
+  const { data: memberships = [] } = useQuery({
+    queryKey: ["sermon_notes_tenants", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tenant_memberships")
+        .select("tenant_id, tenants(name)")
+        .eq("user_id", user.id);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  const tenantNames = useMemo(() => {
+    const m = {};
+    memberships.forEach((t) => { if (t.tenant_id) m[t.tenant_id] = t.tenants?.name || null; });
+    return m;
+  }, [memberships]);
+
+  const showOrigin = memberships.length > 1;
 
   const folderMap = useMemo(() => {
     const m = {};
     folders.forEach((f) => { m[f.id] = f; });
     return m;
   }, [folders]);
+
 
   const categories = useMemo(() => {
     const cats = new Set();
