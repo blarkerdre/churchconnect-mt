@@ -90,7 +90,7 @@ export default function TenantInvitePanel({ tenantId, pendingOnly = false }) {
       return result;
     },
     onSuccess: (result, variables) => {
-      const title = result.already_member
+      const okTitle = result.already_member
         ? "This person already belongs to this church"
         : result.reused_pending_invitation
         ? "Invitation resent"
@@ -98,8 +98,10 @@ export default function TenantInvitePanel({ tenantId, pendingOnly = false }) {
         ? "User added to this church"
         : "Invitation sent";
       toast({
-        title,
-        description: result.email_warning || undefined,
+        title: result.email_warning ? "Invitation saved — email NOT sent" : okTitle,
+        description: result.email_warning
+          ? `${result.email_warning} Use "Copy invite link" to share it directly.`
+          : undefined,
         variant: result.email_warning ? "destructive" : undefined,
       });
       if (!variables?.isResend) {
@@ -107,9 +109,11 @@ export default function TenantInvitePanel({ tenantId, pendingOnly = false }) {
         setRole("member");
       }
       queryClient.invalidateQueries({ queryKey: ["tenant-invitations", tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["tenant-invitation-emails", tenantId] });
       queryClient.invalidateQueries({ queryKey: ["tenant-users", tenantId] });
       queryClient.invalidateQueries({ queryKey: ["tenant-stats"] });
     },
+
     onError: (err) =>
       toast({ title: "Error sending invitation", description: err.message, variant: "destructive" }),
   });
