@@ -173,7 +173,26 @@ export default function SermonNotes() {
     setDeleteId(null);
   };
 
+  const handlePrintNote = async (n) => {
+    try {
+      await printSermonNote(
+        {
+          title: n.title,
+          speaker: n.speaker,
+          category: n.category,
+          folderName: n.folder_id ? folderMap[n.folder_id]?.name || "" : "",
+          serviceDate: n.service_date ? format(new Date(n.service_date), "PPP") : "",
+          content: n.content,
+        },
+        { logoUrl: currentTenant?.logo_url, churchName: currentTenant?.name },
+      );
+    } catch (err) {
+      toast.error(err.message || "Could not open the print view.");
+    }
+  };
+
   const handleMoveToFolder = async (noteId, folderId) => {
+
     const { error } = await supabase
       .from("sermon_notes")
       .update({ folder_id: folderId })
