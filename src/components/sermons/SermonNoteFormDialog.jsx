@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,11 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { useTenant } from "@/contexts/TenantContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Plus, Check, X, Maximize2, Minimize2, Pencil, ChevronUp } from "lucide-react";
+import { Plus, Check, X, Maximize2, Minimize2, Pencil, ChevronUp, Printer, RotateCcw } from "lucide-react";
+import { printSermonNote } from "@/lib/sermon-note-print";
+import useSermonNoteDraft from "@/hooks/useSermonNoteDraft";
 
 const NONE = "__none__";
 const NEW = "__new__";
@@ -20,6 +23,7 @@ const NEW = "__new__";
 export default function SermonNoteFormDialog({ open, onOpenChange, note, folders = [], defaultFolderId = null, onSaved }) {
   const { user } = useAuth();
   const { tenantId } = useTenantQuery();
+  const { currentTenant } = useTenant();
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState("");
@@ -32,6 +36,8 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
   const [newFolderName, setNewFolderName] = useState("");
   const [expanded, setExpanded] = useState(false);
   const [metaExpanded, setMetaExpanded] = useState(false);
+  const [printing, setPrinting] = useState(false);
+
 
   useEffect(() => {
     if (open) {
@@ -69,6 +75,68 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [expanded, metaExpanded]);
+
+  const draftValues = useMemo(
+    () => ({ title, speaker, category, serviceDate, content, folderId }),
+    [title, speaker, category, serviceDate, content, folderId],
+  );
+
+  const { status: draftStatus, savedAt, pendingDraft, flush, clear: clearDraft, dismissPending } =
+    useSermonNoteDraft({
+      userId: user?.id,
+      noteId: note?.id || null,
+      note,
+      open,
+      values: draftValues,
+    });
+
+  const restoreDraft = () => {
+    if (!pendingDraft) return;
+    setTitle(pendingDraft.title || "");
+    setSpeaker(pendingDraft.speaker || "");
+    setCategory(pendingDraft.category || "");
+    setServiceDate(pendingDraft.serviceDate || format(new Date(), "yyyy-MM-dd"));
+    setContent(pendingDraft.content || "");
+    setFolderId(pendingDraft.folderId || NONE);
+    dismissPending();
+    toast.success("Draft restored.");
+  };
+
+  const closeDialog = (val) => {
+    if (!val) {
+      flush();
+      setExpanded(false);
+    }
+    onOpenChange(val);
+  };
+
+  const folderName = useMemo(
+    () => (folderId && folderId !== NONE ? folders.find((f) => f.id === folderId)?.name || "" : ""),
+    [folderId, folders],
+  );
+
+  const handlePrint = async () => {
+    setPrinting(true);
+    try {
+      await printSermonNote(
+        {
+          title,
+          speaker,
+          category,
+          folderName,
+          serviceDate: serviceDate ? format(new Date(serviceDate), "PPP") : "",
+          content,
+        },
+        { logoUrl: currentTenant?.logo_url, churchName: currentTenant?.name },
+      );
+    } catch (err) {
+      toast.error(err.message || "Could not open the print view.");
+    } finally {
+      setPrinting(false);
+    }
+  };
+
+
 
   const handleFolderChange = (value) => {
     if (value === NEW) {
@@ -137,8 +205,10 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
         if (error) throw error;
         toast.success("Note saved.");
       }
+      clearDraft();
       onSaved?.();
       onOpenChange(false);
+
     } catch (err) {
       toast.error(err.message || "Failed to save note.");
     } finally {
@@ -207,7 +277,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
   );
 
   return (
-    <Dialog open={open} onOpenChange={(val) => { onOpenChange(val); if (!val) setExpanded(false); }}>
+    <Dialog open={open} onOpenChange={closeDialog}>
       <DialogContent
         className={cn(
           "w-[calc(100vw-1rem)] p-4 sm:p-6 flex flex-col",
@@ -221,8 +291,25 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
           "space-y-4 flex-1 min-h-0 pr-1",
           expanded ? "flex flex-col overflow-hidden" : "overflow-y-auto"
         )}>
+          {pendingDraft && (
+            <div className="shrink-0 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <p className="text-xs text-amber-900 dark:text-amber-200">
+                Unsaved draft from {pendingDraft.updatedAt ? format(new Date(pendingDraft.updatedAt), "PPp") : "an earlier session"} found.
+              </p>
+              <div className="flex gap-2 shrink-0">
+                <Button type="button" size="sm" variant="outline" className="h-7 px-2 gap-1" onClick={restoreDraft}>
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span className="text-xs">Restore draft</span>
+                </Button>
+                <Button type="button" size="sm" variant="ghost" className="h-7 px-2" onClick={dismissPending}>
+                  <span className="text-xs">Discard</span>
+                </Button>
+              </div>
+            </div>
+          )}
           {!expanded && <MetadataFields />}
           {expanded && !metaExpanded && (
+
             <div className="shrink-0 rounded-md border border-border bg-muted/40 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="font-medium text-sm truncate">{title || "Untitled note"}</p>
@@ -263,25 +350,44 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
           <div className={cn("flex flex-col", expanded && "flex-1 min-h-0")}>
             <div className="flex items-center justify-between gap-2 mb-1">
               <Label>Notes *</Label>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => setExpanded((v) => !v)}
-                className="h-7 px-2 gap-1"
-                title={expanded ? "Collapse notes editor" : "Expand notes editor"}
-              >
-                {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-                <span className="text-xs hidden sm:inline">{expanded ? "Collapse" : "Expand"}</span>
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={handlePrint}
+                  disabled={printing}
+                  className="h-7 px-2 gap-1"
+                  title="Print or save as PDF"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  <span className="text-xs hidden sm:inline">{printing ? "Preparing…" : "Print / PDF"}</span>
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setExpanded((v) => !v)}
+                  className="h-7 px-2 gap-1"
+                  title={expanded ? "Collapse notes editor" : "Expand notes editor"}
+                >
+                  {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                  <span className="text-xs hidden sm:inline">{expanded ? "Collapse" : "Expand"}</span>
+                </Button>
+              </div>
             </div>
             <SermonRichEditor content={content} onChange={setContent} expanded={expanded} />
+            <p className="text-[11px] text-muted-foreground mt-1 h-4">
+              {draftStatus === "saving" && "Saving…"}
+              {draftStatus === "saved" && savedAt && `Draft saved ${format(new Date(savedAt), "HH:mm")}`}
+            </p>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+          <Button variant="outline" onClick={() => closeDialog(false)} disabled={saving}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );
