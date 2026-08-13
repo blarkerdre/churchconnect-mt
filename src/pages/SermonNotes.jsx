@@ -13,7 +13,10 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Search, Trash2, Edit, FileText, ArrowUpDown, MoreVertical, Folder, Inbox, CheckSquare, X, FolderInput, Church } from "lucide-react";
+import { Plus, Search, Trash2, Edit, FileText, ArrowUpDown, MoreVertical, Folder, Inbox, CheckSquare, X, FolderInput, Church, Printer } from "lucide-react";
+import { printSermonNote } from "@/lib/sermon-note-print";
+import { useTenant } from "@/contexts/TenantContext";
+
 import { format } from "date-fns";
 import { toast } from "sonner";
 import SermonNoteFormDialog from "@/components/sermons/SermonNoteFormDialog";
@@ -38,7 +41,9 @@ export default function SermonNotes() {
   const confirmDelete = useConfirmDelete();
   const { user } = useAuth();
   const { tenantId } = useTenantQuery();
+  const { currentTenant } = useTenant();
   const queryClient = useQueryClient();
+
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("date_desc");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -168,7 +173,26 @@ export default function SermonNotes() {
     setDeleteId(null);
   };
 
+  const handlePrintNote = async (n) => {
+    try {
+      await printSermonNote(
+        {
+          title: n.title,
+          speaker: n.speaker,
+          category: n.category,
+          folderName: n.folder_id ? folderMap[n.folder_id]?.name || "" : "",
+          serviceDate: n.service_date ? format(new Date(n.service_date), "PPP") : "",
+          content: n.content,
+        },
+        { logoUrl: currentTenant?.logo_url, churchName: currentTenant?.name },
+      );
+    } catch (err) {
+      toast.error(err.message || "Could not open the print view.");
+    }
+  };
+
   const handleMoveToFolder = async (noteId, folderId) => {
+
     const { error } = await supabase
       .from("sermon_notes")
       .update({ folder_id: folderId })
@@ -416,7 +440,12 @@ export default function SermonNotes() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                <DropdownMenuItem onClick={() => handlePrintNote(n)}>
+                                  <Printer className="h-3.5 w-3.5 mr-2" /> Print / PDF
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
                                 <DropdownMenuLabel>Move to folder</DropdownMenuLabel>
+
                                 <DropdownMenuItem onClick={() => handleMoveToFolder(n.id, null)}>
                                   <Inbox className="h-3.5 w-3.5 mr-2" /> Unfiled
                                 </DropdownMenuItem>
