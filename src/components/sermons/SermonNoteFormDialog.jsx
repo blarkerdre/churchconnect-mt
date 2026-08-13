@@ -76,6 +76,68 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
     return () => window.removeEventListener("keydown", handleKey);
   }, [expanded, metaExpanded]);
 
+  const draftValues = useMemo(
+    () => ({ title, speaker, category, serviceDate, content, folderId }),
+    [title, speaker, category, serviceDate, content, folderId],
+  );
+
+  const { status: draftStatus, savedAt, pendingDraft, flush, clear: clearDraft, dismissPending } =
+    useSermonNoteDraft({
+      userId: user?.id,
+      noteId: note?.id || null,
+      note,
+      open,
+      values: draftValues,
+    });
+
+  const restoreDraft = () => {
+    if (!pendingDraft) return;
+    setTitle(pendingDraft.title || "");
+    setSpeaker(pendingDraft.speaker || "");
+    setCategory(pendingDraft.category || "");
+    setServiceDate(pendingDraft.serviceDate || format(new Date(), "yyyy-MM-dd"));
+    setContent(pendingDraft.content || "");
+    setFolderId(pendingDraft.folderId || NONE);
+    dismissPending();
+    toast.success("Draft restored.");
+  };
+
+  const closeDialog = (val) => {
+    if (!val) {
+      flush();
+      setExpanded(false);
+    }
+    onOpenChange(val);
+  };
+
+  const folderName = useMemo(
+    () => (folderId && folderId !== NONE ? folders.find((f) => f.id === folderId)?.name || "" : ""),
+    [folderId, folders],
+  );
+
+  const handlePrint = async () => {
+    setPrinting(true);
+    try {
+      await printSermonNote(
+        {
+          title,
+          speaker,
+          category,
+          folderName,
+          serviceDate: serviceDate ? format(new Date(serviceDate), "PPP") : "",
+          content,
+        },
+        { logoUrl: currentTenant?.logo_url, churchName: currentTenant?.name },
+      );
+    } catch (err) {
+      toast.error(err.message || "Could not open the print view.");
+    } finally {
+      setPrinting(false);
+    }
+  };
+
+
+
   const handleFolderChange = (value) => {
     if (value === NEW) {
       setCreatingFolder(true);
