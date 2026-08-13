@@ -13,7 +13,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Search, Trash2, Edit, FileText, ArrowUpDown, MoreVertical, Folder, Inbox, CheckSquare, X, FolderInput, Church, Printer } from "lucide-react";
+import { Plus, Search, Trash2, Edit, FileText, ArrowUpDown, MoreVertical, Folder, Inbox, CheckSquare, X, FolderInput, Church, Printer, Maximize } from "lucide-react";
 import { printSermonNote } from "@/lib/sermon-note-print";
 import { useTenant } from "@/contexts/TenantContext";
 
