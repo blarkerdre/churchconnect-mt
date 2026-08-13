@@ -1312,7 +1312,7 @@ export default function WoFBIAttendanceTab() {
                   );
                 })}
                 {roster.length === 0 && (
-                  <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">No registered students.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">{isAllEditions ? "No registered students." : `No students registered for ${editionName}.`}</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
