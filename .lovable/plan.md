@@ -1,45 +1,40 @@
-# Tenant-scoping sweep across all features
+# Fullscreen Sermon Notes
 
-Most of the app already routes reads and writes through the tenant helpers (`scopeQuery`, `withTenant` from `useTenantQuery`). A full scan of every database call in `src/` found about 40 remaining calls, in 28 files, that do not carry a tenant guard and are not one of the deliberate cross-tenant exceptions. This plan closes those, then adds a guard so the gap cannot silently reopen.
+## Goal
+Add true fullscreen modes for both writing and reading sermon notes so the note content fills the entire browser screen.
 
-## Deliberate exceptions (left cross-tenant on purpose)
+## Proposed changes
 
-- Sermon notes and sermon folders — single personal library across churches, as previously agreed.
-- Super Admin / Tenant Admin surfaces — tenants, pricing, platform alerts, invoices, SLA templates, platform users.
-- User-owned rows keyed by `user_id` only — tour completions, push subscriptions, profile/MFA self-updates, notifications.
-- Trustpilot reviews and settings — public marketing content on the landing page.
+### 1. Fullscreen editor mode
+- Add a new `fullscreen` state in `SermonNoteFormDialog.jsx` alongside the existing `expanded` state.
+- Add a fullscreen toggle button (e.g., `Expand` / `Shrink`) in the notes header, next to the existing Print/Expand buttons.
+- When fullscreen is active:
+  - Render the dialog content as a fixed overlay covering the full viewport (`fixed inset-0 z-50`, `w-screen h-screen`, no max-width/max-height limits).
+  - Keep the sticky toolbar, collapsed metadata summary, and Save/Cancel footer visible.
+  - Use `flex flex-col` so the editor surface grows to fill all remaining space.
+- Pressing `Esc` exits fullscreen mode (and falls back to expanded/compact state).
+- Restore previous expanded/compact state when exiting fullscreen.
 
-## Phase 1 — Member, pastoral, comms and attendance data (highest leak risk)
+### 2. Fullscreen reader mode
+- In `SermonNotes.jsx`, add a "View full screen" option to each note's dropdown menu.
+- Create a new lightweight component `SermonNoteViewer.jsx` (or inline overlay) that displays the saved note HTML, title, speaker, service date, and category in a clean, readable, full-screen overlay.
+- Include a print/PDF button and a close button in the reader toolbar.
+- Reuse the existing `printSermonNote` helper for branded printing.
 
-Add explicit tenant guards to:
+### 3. Editor layout updates
+- In `SermonRichEditor.jsx`, ensure the editor container and `EditorContent` area grow to fill the parent when `expanded` is true (or add a new `fullscreen` prop).
+- Remove any remaining height caps in fullscreen mode so the writing area uses the full viewport height minus the toolbar and footer.
+- Keep the toolbar sticky at the top of the editor surface.
 
-- `AudienceFilter.jsx` (home cell centres, members), `SMSDialog.jsx` (members)
-- `Communications.jsx` and `EmailDashboard.jsx` (SMS log, email log)
-- `SystemLogs.jsx` (email log, SMS log, call log, audit log) and `src/lib/audit.js` (audit writes)
-- `ChurchAttendance.jsx` (attendance reports)
-- `useAuth.jsx` (unit leader assignments, member lookup, home cell centre) and `useChurchUnits.jsx`
-- `SignPostDialog.jsx` (referral insert), `FollowupTemplatesSection.jsx`
-- `MemberFeed.jsx` (event registrations), `ReportAttachments.jsx` (documents)
+### 4. Preserve state and data
+- Entering/exiting fullscreen must not reset form values, drafts, or scroll position.
+- Autosave and draft restoration continue to work in fullscreen mode.
+- The existing expand/collapse mode remains available as a non-fullscreen large view.
 
-## Phase 2 — Bible School, training, inventory
+## Outcome
+Users can open the sermon note editor or any saved note in a true fullscreen view, giving the note content the maximum available screen space.
 
-- `SessionManager.jsx` (sessions, session courses), `CourseReportTab.jsx`, `CourseResultsView.jsx`, `QcCheckDialog.jsx`, `ExamManagement.jsx` (subject lookup)
-- `TrainingReports.jsx`, `TrainingAttendeesPanel.jsx`
-- `InspectionDialog.jsx`, `InventoryItemDialog.jsx`
-
-## Phase 3 — Children/teens, family, feedback, user admin
-
-- `MyFamily.jsx` (guardians, preteens), `PreteensSection.jsx` (teens lookup), `PreteensAttendance.jsx` (sessions)
-- `AppFeedbackDialog.jsx`, `FeedbackSummary.jsx`
-- `BulkUnitAssignDialog.jsx` (unit leader assignments)
-
-## Phase 4 — Database-level hardening
-
-For the tables touched above, verify each has a `tenant_id` column that is `NOT NULL` where the data model allows, and review the RLS policies so a missing client-side filter cannot leak rows. Any policy that reads a row without a tenant-membership check gets tightened in a single migration. Client filters are defence in depth; RLS stays the real boundary.
-
-## Technical notes
-
-- Every fix uses the existing helpers rather than hand-written filters: reads become `scopeQuery(supabase.from(...)...)`, inserts become `.insert(withTenant(payload))`, and updates/deletes get an explicit `.eq("tenant_id", tenantId)`.
-- Queries whose cache keys omit the tenant get `tenantId` added to the React Query key so switching churches refetches instead of serving another church's cached rows.
-- Cross-tenant exceptions above are annotated in code with a short comment so future scans and reviewers do not "fix" them by mistake.
-- Verification: after each phase, re-run the repo-wide scan script and confirm the remaining hits are only the annotated exceptions, then build the app.
+## Out of scope
+- No changes to note storage, RLS, or data model.
+- No new editor formatting features (tables, media, etc.).
+- No mobile-specific redesign beyond responsive sizing.
