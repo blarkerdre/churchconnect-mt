@@ -201,17 +201,20 @@ export default function TenantInvitePanel({ tenantId, pendingOnly = false }) {
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <Table className="min-w-[560px]">
+          <Table className="min-w-[680px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Email delivery</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((inv) => (
+              {rows.map((inv) => {
+                const delivery = deliveryByEmail[(inv.email || "").toLowerCase()];
+                return (
                 <TableRow key={inv.id}>
                   <TableCell>
                     <p className="text-sm break-all">{inv.email}</p>
@@ -237,6 +240,27 @@ export default function TenantInvitePanel({ tenantId, pendingOnly = false }) {
                       </Badge>
                     )}
                   </TableCell>
+                  <TableCell>
+                    {!delivery ? (
+                      <Badge variant="outline" className="text-destructive border-destructive/30 text-xs">
+                        <MailWarning className="h-3 w-3 mr-1" />No email sent
+                      </Badge>
+                    ) : delivery.status === "sent" ? (
+                      <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 text-xs">
+                        <MailCheck className="h-3 w-3 mr-1" />Sent
+                      </Badge>
+                    ) : delivery.status === "pending" ? (
+                      <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 text-xs">Queued</Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="text-destructive border-destructive/30 text-xs capitalize"
+                        title={delivery.error_message || undefined}
+                      >
+                        <MailWarning className="h-3 w-3 mr-1" />{delivery.status}
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
                     {inv.status === "pending" && (
                       <>
@@ -248,6 +272,10 @@ export default function TenantInvitePanel({ tenantId, pendingOnly = false }) {
                         >
                           <RefreshCw className="h-3.5 w-3.5 mr-1" />Resend
                         </Button>
+                        <Button size="sm" variant="ghost" onClick={() => handleCopyLink(inv)}>
+                          <Copy className="h-3.5 w-3.5 mr-1" />Copy link
+                        </Button>
+
                         <Button
                           size="sm"
                           variant="ghost"
