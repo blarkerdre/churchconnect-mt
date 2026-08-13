@@ -365,7 +365,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
               </div>
             </div>
           )}
-          <div className={cn("flex flex-col", expanded && "flex-1 min-h-0")}>
+          <div className={cn("flex flex-col", (expanded || fullscreen) && "flex-1 min-h-0")}>
             <div className="flex items-center justify-between gap-2 mb-1">
               <Label>Notes *</Label>
               <div className="flex items-center gap-1">
@@ -391,6 +391,17 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
                 >
                   {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
                   <span className="text-xs hidden sm:inline">{expanded ? "Collapse" : "Expand"}</span>
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setFullscreen((v) => !v)}
+                  className="h-7 px-2 gap-1"
+                  title={fullscreen ? "Exit full screen" : "Enter full screen"}
+                >
+                  {fullscreen ? <Shrink className="h-3.5 w-3.5" /> : <Expand className="h-3.5 w-3.5" />}
+                  <span className="text-xs hidden sm:inline">{fullscreen ? "Exit" : "Full screen"}</span>
                 </Button>
               </div>
             </div>
