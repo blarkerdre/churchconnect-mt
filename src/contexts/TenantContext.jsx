@@ -2,6 +2,13 @@ import { createContext, useContext, useEffect, useState, useCallback } from "rea
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useParams, useNavigate } from "react-router-dom";
+import {
+  DEFAULT_TENANT_ID,
+  resolveActiveMembership,
+  sortMemberships,
+  storeTenantId,
+} from "@/lib/active-tenant";
+
 
 const TenantContext = createContext({
   currentTenant: null,
