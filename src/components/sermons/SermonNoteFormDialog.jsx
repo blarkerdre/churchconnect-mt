@@ -29,6 +29,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
   const [folderId, setFolderId] = useState(NONE);
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     if (open) {
