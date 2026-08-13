@@ -52,6 +52,7 @@ import SLASection from "@/components/tenants/SLASection";
 import ReplayToursSection from "@/components/settings/ReplayToursSection";
 
 import DashboardBannerSettings from "@/components/settings/DashboardBannerSettings";
+import { useTenantFeatureEnabled } from "@/hooks/useSubFeature";
 import ModuleTour from "@/components/tour/ModuleTour";
 
 /* ─── Notification Preferences section ─── */
@@ -1607,6 +1608,7 @@ export default function Settings() {
   const isSuperAdmin = roles.includes("super_admin");
   const canManageTenant = isSuperAdmin || isTenantOwner || isTenantAdmin;
   const canOwnerOnly = isSuperAdmin || isTenantOwner;
+  const slideshowEnabled = useTenantFeatureEnabled("/dashboard-slideshow");
 
   return (
     <div className="space-y-6">
@@ -1660,7 +1662,7 @@ export default function Settings() {
           <StorageUsageCard />
           <ChurchBrandingSection />
           <FaviconOgImageSection />
-          <DashboardBannerSettings />
+          {slideshowEnabled && <DashboardBannerSettings />}
         </TabsContent>
 
         {canOwnerOnly && (
