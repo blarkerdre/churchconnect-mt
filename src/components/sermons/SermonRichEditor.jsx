@@ -68,7 +68,7 @@ const MenuBar = ({ editor, onOpenPad, onOpenVerse }) => {
   );
 };
 
-export default function SermonRichEditor({ content, onChange }) {
+export default function SermonRichEditor({ content, onChange, expanded = false }) {
   const [padOpen, setPadOpen] = useState(false);
   const [verseOpen, setVerseOpen] = useState(false);
   const containerRef = useRef(null);
@@ -110,12 +110,24 @@ export default function SermonRichEditor({ content, onChange }) {
   };
 
   return (
-    <div className="rounded-md border border-input bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-ring">
+    <div className={cn(
+      "rounded-md border border-input bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-ring",
+      expanded && "h-full flex flex-col"
+    )}>
       <MenuBar editor={editor} onOpenPad={() => setPadOpen(true)} onOpenVerse={() => setVerseOpen(true)} />
-      <div ref={containerRef} className="max-h-[400px] overflow-y-auto">
+      <div
+        ref={containerRef}
+        className={cn(
+          "overflow-y-auto",
+          expanded ? "flex-1 min-h-0" : "max-h-[400px]"
+        )}
+      >
         <EditorContent
           editor={editor}
-          className="prose prose-sm dark:prose-invert max-w-none px-3 py-2 min-h-[200px] focus:outline-none [&_.tiptap]:outline-none [&_.tiptap]:min-h-[200px] [&_.bible-ref]:text-primary [&_.bible-ref]:underline [&_.bible-ref]:decoration-dotted [&_.bible-ref]:cursor-help [&_.tiptap_p.is-editor-empty:first-child::before]:text-muted-foreground [&_.tiptap_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.tiptap_p.is-editor-empty:first-child::before]:float-left [&_.tiptap_p.is-editor-empty:first-child::before]:h-0 [&_.tiptap_p.is-editor-empty:first-child::before]:pointer-events-none"
+          className={cn(
+            "prose prose-sm dark:prose-invert max-w-none px-3 py-2 focus:outline-none [&_.tiptap]:outline-none [&_.bible-ref]:text-primary [&_.bible-ref]:underline [&_.bible-ref]:decoration-dotted [&_.bible-ref]:cursor-help [&_.tiptap_p.is-editor-empty:first-child::before]:text-muted-foreground [&_.tiptap_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.tiptap_p.is-editor-empty:first-child::before]:float-left [&_.tiptap_p.is-editor-empty:first-child::before]:h-0 [&_.tiptap_p.is-editor-empty:first-child::before]:pointer-events-none",
+            expanded ? "min-h-[280px] h-full [&_.tiptap]:min-h-full" : "min-h-[200px] [&_.tiptap]:min-h-[200px]"
+          )}
         />
       </div>
       <BibleRefPopover containerRef={containerRef} />
