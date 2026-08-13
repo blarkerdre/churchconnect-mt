@@ -36,7 +36,7 @@ const MenuBar = ({ editor, onOpenPad, onOpenVerse }) => {
   ];
 
   return (
-    <div className="flex flex-wrap items-center gap-1 border-b border-border p-1">
+    <div className="flex flex-wrap items-center gap-1 border-b border-border p-1 sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       {buttons.map((btn) => (
         <Toggle key={btn.label} size="sm" pressed={btn.active} onPressedChange={btn.action} aria-label={btn.label} className="h-8 w-8 p-0">
           <btn.icon className="h-4 w-4" />
@@ -112,22 +112,22 @@ export default function SermonRichEditor({ content, onChange, expanded = false }
 
   return (
     <div className={cn(
-      "rounded-md border border-input bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-ring",
-      expanded && "h-full flex flex-col"
+      "rounded-md border border-input bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-ring flex flex-col",
+      expanded ? "h-full" : ""
     )}>
-      <MenuBar editor={editor} onOpenPad={() => setPadOpen(true)} onOpenVerse={() => setVerseOpen(true)} />
       <div
         ref={containerRef}
         className={cn(
-          "overflow-y-auto",
+          "overflow-y-auto flex flex-col",
           expanded ? "flex-1 min-h-0" : "max-h-[400px]"
         )}
       >
+        <MenuBar editor={editor} onOpenPad={() => setPadOpen(true)} onOpenVerse={() => setVerseOpen(true)} />
         <EditorContent
           editor={editor}
           className={cn(
-            "prose prose-sm dark:prose-invert max-w-none px-3 py-2 focus:outline-none [&_.tiptap]:outline-none [&_.bible-ref]:text-primary [&_.bible-ref]:underline [&_.bible-ref]:decoration-dotted [&_.bible-ref]:cursor-help [&_.tiptap_p.is-editor-empty:first-child::before]:text-muted-foreground [&_.tiptap_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.tiptap_p.is-editor-empty:first-child::before]:float-left [&_.tiptap_p.is-editor-empty:first-child::before]:h-0 [&_.tiptap_p.is-editor-empty:first-child::before]:pointer-events-none",
-            expanded ? "min-h-[280px] h-full [&_.tiptap]:min-h-full" : "min-h-[200px] [&_.tiptap]:min-h-[200px]"
+            "prose dark:prose-invert max-w-none focus:outline-none [&_.tiptap]:outline-none [&_.bible-ref]:text-primary [&_.bible-ref]:underline [&_.bible-ref]:decoration-dotted [&_.bible-ref]:cursor-help [&_.tiptap_p.is-editor-empty:first-child::before]:text-muted-foreground [&_.tiptap_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.tiptap_p.is-editor-empty:first-child::before]:float-left [&_.tiptap_p.is-editor-empty:first-child::before]:h-0 [&_.tiptap_p.is-editor-empty:first-child::before]:pointer-events-none",
+            expanded ? "prose-base leading-relaxed px-5 py-4 min-h-[280px] h-full [&_.tiptap]:min-h-full" : "prose-sm px-3 py-2 min-h-[200px] [&_.tiptap]:min-h-[200px]"
           )}
         />
       </div>
