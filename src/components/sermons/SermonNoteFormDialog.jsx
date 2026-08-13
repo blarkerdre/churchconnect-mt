@@ -12,7 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Plus, Check, X, Maximize2, Minimize2 } from "lucide-react";
+import { Plus, Check, X, Maximize2, Minimize2, Pencil, ChevronUp } from "lucide-react";
 
 const NONE = "__none__";
 const NEW = "__new__";
