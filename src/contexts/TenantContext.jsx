@@ -53,22 +53,12 @@ export function TenantProvider({ children }) {
     }
   }, []);
 
-  const selectTenant = useCallback((memberships, slugHint) => {
-    if (!memberships || memberships.length === 0) return null;
+  const selectTenant = useCallback(
+    (memberships, slugHint) =>
+      resolveActiveMembership(memberships, { slugHint, userId: user?.id }),
+    [user?.id]
+  );
 
-    // If a slug is specified in URL, use that tenant
-    if (slugHint) {
-      const match = memberships.find(m => m.tenants?.slug === slugHint);
-      if (match) return match;
-    }
-
-    // Single tenant → auto-select
-    if (memberships.length === 1) return memberships[0];
-
-    // Multiple tenants, no slug → pick the default or first
-    const defaultMatch = memberships.find(m => m.tenant_id === DEFAULT_TENANT_ID);
-    return defaultMatch || memberships[0];
-  }, []);
 
   const acceptPendingInvitations = useCallback(async (userId, email) => {
     if (!email) return;
