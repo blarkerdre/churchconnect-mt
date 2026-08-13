@@ -146,6 +146,66 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
     }
   };
 
+  const MetadataFields = () => (
+    <div className="space-y-4">
+      <div>
+        <Label htmlFor="sn-title">Sermon Title (optional)</Label>
+        <Input id="sn-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. The Power of Faith" maxLength={200} />
+      </div>
+      <div>
+        <Label htmlFor="sn-speaker">Speaker (optional)</Label>
+        <Input id="sn-speaker" value={speaker} onChange={(e) => setSpeaker(e.target.value)} placeholder="e.g. Pastor John" maxLength={100} />
+      </div>
+      <div>
+        <Label htmlFor="sn-category">Category (optional)</Label>
+        <Input id="sn-category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Faith, Prayer, Worship" maxLength={50} />
+      </div>
+      <div>
+        <Label>Folder</Label>
+        {creatingFolder ? (
+          <div className="flex items-center gap-1.5">
+            <Input
+              placeholder="New folder name"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); handleCreateFolder(); }
+                if (e.key === "Escape") { setCreatingFolder(false); setNewFolderName(""); }
+              }}
+              autoFocus
+              maxLength={60}
+            />
+            <Button type="button" size="icon" variant="ghost" onClick={handleCreateFolder}>
+              <Check className="h-4 w-4" />
+            </Button>
+            <Button type="button" size="icon" variant="ghost" onClick={() => { setCreatingFolder(false); setNewFolderName(""); }}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <Select value={folderId} onValueChange={handleFolderChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Choose folder" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE}>Unfiled</SelectItem>
+              {folders.map((f) => (
+                <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+              ))}
+              <SelectItem value={NEW}>
+                <span className="flex items-center gap-1.5"><Plus className="h-3.5 w-3.5" /> Create new folder…</span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+      <div>
+        <Label htmlFor="sn-date">Service date</Label>
+        <Input id="sn-date" type="date" value={serviceDate} onChange={(e) => setServiceDate(e.target.value)} />
+      </div>
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={(val) => { onOpenChange(val); if (!val) setExpanded(false); }}>
       <DialogContent
