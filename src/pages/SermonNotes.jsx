@@ -445,6 +445,9 @@ export default function SermonNotes() {
                                 <DropdownMenuItem onClick={() => handlePrintNote(n)}>
                                   <Printer className="h-3.5 w-3.5 mr-2" /> Print / PDF
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setViewNote(n)}>
+                                  <Maximize className="h-3.5 w-3.5 mr-2" /> View full screen
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuLabel>Move to folder</DropdownMenuLabel>
 
