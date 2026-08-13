@@ -41,7 +41,9 @@ export default function SermonNotes() {
   const confirmDelete = useConfirmDelete();
   const { user } = useAuth();
   const { tenantId } = useTenantQuery();
+  const { currentTenant } = useTenant();
   const queryClient = useQueryClient();
+
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("date_desc");
   const [categoryFilter, setCategoryFilter] = useState("all");
