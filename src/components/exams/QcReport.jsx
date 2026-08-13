@@ -361,6 +361,7 @@ export default function QcReport() {
               <>
                 <p className="font-medium">
                   {outstandingQc.length} subject{outstandingQc.length === 1 ? "" : "s"} still awaiting a QC check
+                  <span className="font-normal text-muted-foreground"> · {sessionName}</span>
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {outstandingQc.map((s) => (
@@ -376,13 +377,19 @@ export default function QcReport() {
                       }}
                     >
                       {s.exam_titles?.name ? `${s.exam_titles.name} · ` : ""}{s.name}
+                      {isAll && s.exam_sessions?.name ? (
+                        <span className="ml-1 opacity-70">({s.exam_sessions.name})</span>
+                      ) : null}
                     </Button>
                   ))}
                 </div>
               </>
             ) : (
-              <p className="text-muted-foreground">All active subjects have a QC check recorded.</p>
+              <p className="text-muted-foreground">
+                All active subjects have a QC check recorded{isAll ? "" : ` for ${sessionName}`}.
+              </p>
             )}
+
           </div>
         )}
 
