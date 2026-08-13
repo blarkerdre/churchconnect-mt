@@ -22,11 +22,9 @@ const TenantContext = createContext({
   switchTenant: () => {},
 });
 
-/**
- * Default tenant ID used during the migration period.
- * All existing data has been backfilled to this tenant.
- */
-const DEFAULT_TENANT_ID = "d8bbbdae-d9b3-4999-912d-3aa5999884b0";
+// DEFAULT_TENANT_ID now lives in @/lib/active-tenant and is re-exported below
+// so existing imports from this module keep working.
+
 
 export function TenantProvider({ children }) {
   const { user, loading: authLoading, roles, refetchMemberForTenant } = useAuth();
