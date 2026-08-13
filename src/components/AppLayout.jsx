@@ -487,11 +487,22 @@ export default function Layout({ children }) {
               {getRoleTitle()}
             </span>
             {currentTenant && (
-              <span className="text-[10px] font-medium text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full flex items-center gap-1 max-w-[200px]">
-                {currentTenant.logo_url && <img src={currentTenant.logo_url} alt="" className="h-3 w-3 rounded object-contain shrink-0" />}
-                <span className="truncate">{currentTenant.name}</span>
-              </span>
+              tenantMemberships.length > 1 ? (
+                <TenantSwitcherMenu
+                  memberships={tenantMemberships}
+                  tenantId={tenantId}
+                  currentTenant={currentTenant}
+                  onSelect={handleTenantSwitchRequest}
+                  variant="badge"
+                />
+              ) : (
+                <span className="text-[10px] font-medium text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full flex items-center gap-1 max-w-[200px]">
+                  {currentTenant.logo_url && <img src={currentTenant.logo_url} alt="" className="h-3 w-3 rounded object-contain shrink-0" />}
+                  <span className="truncate">{currentTenant.name}</span>
+                </span>
+              )
             )}
+
           </div>
         </header>
 
