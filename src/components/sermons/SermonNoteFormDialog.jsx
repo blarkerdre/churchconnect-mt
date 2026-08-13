@@ -287,16 +287,27 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
     <Dialog open={open} onOpenChange={closeDialog}>
       <DialogContent
         className={cn(
-          "w-[calc(100vw-1rem)] p-4 sm:p-6 flex flex-col",
-          expanded ? "max-w-6xl h-[92vh]" : "max-w-2xl max-h-[92vh]"
+          "flex flex-col",
+          fullscreen
+            ? "fixed !inset-0 !translate-x-0 !translate-y-0 !w-screen !h-screen !max-w-none !max-h-none !overflow-hidden rounded-none p-0 sm:rounded-none"
+            : ["w-[calc(100vw-1rem)] p-4 sm:p-6", expanded ? "max-w-6xl h-[92vh]" : "max-w-2xl max-h-[92vh]"]
         )}
+        onEscapeKeyDown={(e) => {
+          if (fullscreen || expanded) {
+            e.preventDefault();
+            if (fullscreen) setFullscreen(false);
+            else if (metaExpanded) setMetaExpanded(false);
+            else setExpanded(false);
+          }
+        }}
       >
         <DialogHeader>
           <DialogTitle>{note ? "Edit Note" : "New Sermon Note"}</DialogTitle>
         </DialogHeader>
         <div className={cn(
           "space-y-4 flex-1 min-h-0 pr-1",
-          expanded ? "flex flex-col overflow-hidden" : "overflow-y-auto"
+          fullscreen || expanded ? "flex flex-col overflow-hidden" : "overflow-y-auto",
+          fullscreen && "p-4 sm:p-6"
         )}>
           {pendingDraft && (
             <div className="shrink-0 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
