@@ -13,6 +13,7 @@ Deno.serve(async (req) => {
   // the Email Dashboard like every other email.
   async function sendInviteEmail(
     supabase: any,
+    supabaseUrl: string,
     serviceKey: string,
     opts: {
       recipient: string;
@@ -40,39 +41,30 @@ Deno.serve(async (req) => {
     };
 
     try {
-      const result = await supabase.functions.invoke("send-transactional-email", {
+      const response = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${serviceKey}`,
           apikey: serviceKey,
+          "Content-Type": "application/json",
         },
-        body: {
+        body: JSON.stringify({
           templateName: "tenant-invitation",
           recipientEmail: opts.recipient,
           idempotencyKey: opts.idempotencyKey,
           tenant_id: opts.tenant_id,
           templateData: opts.templateData,
-        },
+        }),
       });
 
-      if (result.error) {
-        let msg = result.error.message || String(result.error);
-        const response = result.error.context instanceof Response
-          ? result.error.context
-          : undefined;
-        if (response) {
-          try {
-            const errorBody = await response.clone().json();
-            msg = errorBody?.error || errorBody?.message || msg;
-          } catch {
-            // Keep the SDK error when the response is not JSON.
-          }
-        }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const msg = data?.error || data?.message || `Email service returned HTTP ${response.status}`;
         console.error("Invitation email failed", { context: opts.context, error: msg });
         await logFailure(msg);
         return `Invitation created, but the email could not be sent (${msg}).`;
       }
 
-      const data = result.data;
       if (data && data.error) {
         console.error("Invitation email rejected", { context: opts.context, data });
         await logFailure(String(data.error));
@@ -214,7 +206,7 @@ Deno.serve(async (req) => {
 
         console.log("Sending auto-add notification email", { email: normalizedEmail, tenant: churchName });
 
-        email_warning = await sendInviteEmail(supabase, serviceKey, {
+        email_warning = await sendInviteEmail(supabase, supabaseUrl, serviceKey, {
           recipient: normalizedEmail,
           tenant_id,
           idempotencyKey: `tenant-autoadd-${existingProfile.user_id}-${tenant_id}`,
@@ -256,7 +248,7 @@ Deno.serve(async (req) => {
         const siteUrl = "https://app.churchmanagementsuite.org";
         const signupUrl = `${siteUrl}/accept-invite?token=${existingInvite.token}`;
 
-        email_warning = await sendInviteEmail(supabase, serviceKey, {
+        email_warning = await sendInviteEmail(supabase, supabaseUrl, serviceKey, {
           recipient: normalizedEmail,
           tenant_id,
           idempotencyKey: `tenant-invite-resend-${existingInvite.id}-${Date.now()}`,
@@ -308,7 +300,7 @@ Deno.serve(async (req) => {
 
       console.log("Sending invitation email", { email: normalizedEmail, signupUrl, tenant: tenant.name });
 
-      email_warning = await sendInviteEmail(supabase, serviceKey, {
+      email_warning = await sendInviteEmail(supabase, supabaseUrl, serviceKey, {
         recipient: normalizedEmail,
         tenant_id,
         idempotencyKey: `tenant-invite-${invitation.id}`,
