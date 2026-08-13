@@ -440,7 +440,12 @@ export default function SermonNotes() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                <DropdownMenuItem onClick={() => handlePrintNote(n)}>
+                                  <Printer className="h-3.5 w-3.5 mr-2" /> Print / PDF
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
                                 <DropdownMenuLabel>Move to folder</DropdownMenuLabel>
+
                                 <DropdownMenuItem onClick={() => handleMoveToFolder(n.id, null)}>
                                   <Inbox className="h-3.5 w-3.5 mr-2" /> Unfiled
                                 </DropdownMenuItem>
