@@ -13,7 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Plus, Check, X, Maximize2, Minimize2, Pencil, ChevronUp, Printer, RotateCcw } from "lucide-react";
+import { Expand, Maximize2, Minimize2, Pencil, ChevronUp, Plus, Printer, RotateCcw, Shrink, X, Check } from "lucide-react";
 import { printSermonNote } from "@/lib/sermon-note-print";
 import useSermonNoteDraft from "@/hooks/useSermonNoteDraft";
 
