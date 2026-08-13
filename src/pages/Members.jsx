@@ -19,6 +19,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import ModuleTour from "@/components/tour/ModuleTour";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const statusColors = {
   "Active": "bg-chart-3/10 text-chart-3",
@@ -47,6 +48,7 @@ export default function Members() {
   const [linkUserId, setLinkUserId] = useState(null);
   const [prefill, setPrefill] = useState(null);
   const queryClient = useQueryClient();
+  const confirmDelete = useConfirmDelete();
 
   // Accounts that belong to this church but have no directory record linked
   // to them. Split into likely duplicates (a matching member record already
@@ -250,7 +252,7 @@ export default function Members() {
       toast({ title: "Could not link account", description: error.message, variant: "destructive" });
       return;
     }
-    logAudit({ action: "link_account", entity: "members", entityId: target.id, tenantId, details: { user_id: acct.user_id } });
+    logAudit("member_link_account", "members", target.id, { user_id: acct.user_id, email: acct.email }, tenantId);
     queryClient.invalidateQueries({ queryKey: ["members"] });
     queryClient.invalidateQueries({ queryKey: ["memberships-without-directory"] });
     toast({ title: "Account linked", description: `${target.first_name} ${target.last_name} is now linked to this login.` });
