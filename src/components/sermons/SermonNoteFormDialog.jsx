@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import SermonRichEditor from "@/components/sermons/SermonRichEditor";
 import { Label } from "@/components/ui/label";
 
