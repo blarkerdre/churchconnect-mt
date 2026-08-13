@@ -133,7 +133,7 @@ export function AuthProvider({ children }) {
         q(() => supabase.from("user_roles").select("role").eq("user_id", userId)),
         q(() => supabase.from("unit_leader_assignments").select("unit_name").eq("user_id", userId)),
         q(() => supabase.from("members").select("*, wsf_centres!fk_members_wsf_centre(name)").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle()),
-        q(() => supabase.from("tenant_memberships").select("tenant_id, role, tenants(slug)").eq("user_id", userId)),
+        q(() => supabase.from("tenant_memberships").select("tenant_id, role, tenants(slug, name)").eq("user_id", userId)),
       ]);
 
       const profileData = profileRes.status === "fulfilled" ? profileRes.value?.data : null;
