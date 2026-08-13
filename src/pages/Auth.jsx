@@ -169,10 +169,12 @@ export default function Auth() {
         </div>
       );
     }
-    const slug = tenantMemberships?.[0]?.tenants?.slug;
+    const slug = resolveActiveMembership(tenantMemberships, { userId: user?.id })
+      ?.tenants?.slug;
     if (slug) {
       return <Navigate to={`/t/${slug}`} replace />;
     }
+
     // Couldn't load the account (network / transient auth error) — keep the
     // session and let the user retry instead of forcing a sign-out.
     if (dataError || !dataLoaded) {
