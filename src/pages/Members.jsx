@@ -31,7 +31,8 @@ const statusColors = {
 };
 
 export default function Members() {
-  const { isAdmin, isUnitLeader, isWSFLeader, isReportsOfficer, user, loading: authLoading, myMember, leaderUnits, myUnits } = useAuth();
+  const { isAdmin, isUnitLeader, isWSFLeader, isReportsOfficer, user, loading: authLoading, myMember, leaderUnits, myUnits, roles } = useAuth();
+  const isSuperAdmin = (roles || []).includes("super_admin");
   const { tenantId, scopeQuery } = useTenantQuery();
   const isLeader = isUnitLeader || isWSFLeader;
   const unitMemberOnly = !isAdmin && !isUnitLeader && !isWSFLeader && !isReportsOfficer && (myUnits?.length || 0) > 0;
