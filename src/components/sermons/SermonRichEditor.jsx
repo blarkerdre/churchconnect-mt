@@ -69,7 +69,7 @@ const MenuBar = ({ editor, onOpenPad, onOpenVerse }) => {
   );
 };
 
-export default function SermonRichEditor({ content, onChange, expanded = false }) {
+export default function SermonRichEditor({ content, onChange, expanded = false, fullscreen = false }) {
   const [padOpen, setPadOpen] = useState(false);
   const [verseOpen, setVerseOpen] = useState(false);
   const containerRef = useRef(null);
@@ -113,13 +113,13 @@ export default function SermonRichEditor({ content, onChange, expanded = false }
   return (
     <div className={cn(
       "rounded-md border border-input bg-transparent shadow-sm focus-within:ring-1 focus-within:ring-ring flex flex-col",
-      expanded ? "h-full" : ""
+      fullscreen ? "h-full rounded-none border-none shadow-none focus-within:ring-0" : expanded ? "h-full" : ""
     )}>
       <div
         ref={containerRef}
         className={cn(
           "overflow-y-auto flex flex-col",
-          expanded ? "flex-1 min-h-0" : "max-h-[400px]"
+          fullscreen || expanded ? "flex-1 min-h-0" : "max-h-[400px]"
         )}
       >
         <MenuBar editor={editor} onOpenPad={() => setPadOpen(true)} onOpenVerse={() => setVerseOpen(true)} />
@@ -127,7 +127,11 @@ export default function SermonRichEditor({ content, onChange, expanded = false }
           editor={editor}
           className={cn(
             "prose dark:prose-invert max-w-none focus:outline-none [&_.tiptap]:outline-none [&_.bible-ref]:text-primary [&_.bible-ref]:underline [&_.bible-ref]:decoration-dotted [&_.bible-ref]:cursor-help [&_.tiptap_p.is-editor-empty:first-child::before]:text-muted-foreground [&_.tiptap_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.tiptap_p.is-editor-empty:first-child::before]:float-left [&_.tiptap_p.is-editor-empty:first-child::before]:h-0 [&_.tiptap_p.is-editor-empty:first-child::before]:pointer-events-none",
-            expanded ? "prose-base leading-relaxed px-5 py-4 min-h-[280px] h-full [&_.tiptap]:min-h-full" : "prose-sm px-3 py-2 min-h-[200px] [&_.tiptap]:min-h-[200px]"
+            fullscreen
+              ? "prose-lg leading-loose px-6 py-5 sm:px-8 sm:py-6 min-h-[300px] h-full [&_.tiptap]:min-h-full"
+              : expanded
+                ? "prose-base leading-relaxed px-5 py-4 min-h-[280px] h-full [&_.tiptap]:min-h-full"
+                : "prose-sm px-3 py-2 min-h-[200px] [&_.tiptap]:min-h-[200px]"
           )}
         />
       </div>
