@@ -18,7 +18,7 @@ const FROM_DOMAIN = "notify.app.churchmanagementsuite.org"
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type',
+    'authorization, x-client-info, apikey, content-type, x-internal-email-key',
 }
 
 // Generate a cryptographically random 32-byte hex token
@@ -30,9 +30,9 @@ function generateToken(): string {
     .join('')
 }
 
-// Auth note: this function uses verify_jwt = true in config.toml, so Supabase's
-// gateway validates the caller's JWT (anon or service_role) before the request
-// reaches this code. No in-function auth check is needed.
+// This function is deployed with gateway JWT verification disabled so it can
+// support both backend service calls and signed-in user calls. Authorization is
+// validated below before any recipient or template data is processed.
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -58,9 +58,14 @@ Deno.serve(async (req) => {
   // The function is deployed with verify_jwt=false so we validate in-code to allow both cases.
   const authHeader = req.headers.get('Authorization') || ''
   const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : ''
+  const internalEmailKey = req.headers.get('x-internal-email-key')?.trim() || ''
+  const expectedInternalEmailKey = Deno.env.get('INTERNAL_EMAIL_FUNCTION_KEY') || ''
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
   let isAuthorized = false
-  if (bearer && bearer === supabaseServiceKey) {
+  if (
+    (bearer && bearer === supabaseServiceKey) ||
+    (internalEmailKey && expectedInternalEmailKey && internalEmailKey === expectedInternalEmailKey)
+  ) {
     isAuthorized = true
   } else if (bearer && bearer !== anonKey) {
     try {
