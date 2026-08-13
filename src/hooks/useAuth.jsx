@@ -271,9 +271,26 @@ export function AuthProvider({ children }) {
     return { data, error };
   };
 
-  // Derive tenant-level admin status
-  const isTenantOwner = tenantMemberships.some((m) => m.role === "owner");
-  const isTenantAdmin = tenantMemberships.some((m) => m.role === "owner" || m.role === "admin");
+  // Derive tenant-level admin status for the church the user is CURRENTLY in.
+  // Owning one church must not grant owner-level UI inside another church.
+  const [activeTenantId, setActiveTenantIdState] = useState(getActiveTenantId());
+  useEffect(() => subscribeActiveTenantId(setActiveTenantIdState), []);
+
+  const activeMembership = activeTenantId
+    ? tenantMemberships.find((m) => m.tenant_id === activeTenantId)
+    : null;
+  // Before the tenant context resolves, fall back to the broadest membership so
+  // admin-only routes don't flash a redirect during the initial load.
+  const effectiveRole = activeTenantId
+    ? activeMembership?.role || null
+    : tenantMemberships.some((m) => m.role === "owner")
+      ? "owner"
+      : tenantMemberships.some((m) => m.role === "admin")
+        ? "admin"
+        : null;
+  const isTenantOwner = effectiveRole === "owner";
+  const isTenantAdmin = effectiveRole === "owner" || effectiveRole === "admin";
+
 
   const isReportsOfficer = roles.includes("reports_officer");
   // Bridge: treat tenant owners/admins as app-level admins
