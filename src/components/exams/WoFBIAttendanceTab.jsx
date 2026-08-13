@@ -222,22 +222,25 @@ export default function WoFBIAttendanceTab() {
     },
   });
 
-  // Roster: approved/enrolled registrants of the course
+  // Roster: approved/enrolled registrants of the course, scoped to the selected edition
   const { data: roster = [] } = useQuery({
-    queryKey: ["wofbi-att-roster", tenantId, selectedCourseId],
+    queryKey: ["wofbi-att-roster", tenantId, selectedCourseId, editionId],
     enabled: !!tenantId && !!selectedCourseId,
     queryFn: async () => {
-      const { data, error } = await scopeQuery(
-        supabase
-          .from("course_registrations")
-          .select("id, member_id, student_number, status, members:member_id(id, first_name, last_name)")
-          .eq("course_id", selectedCourseId)
-          .in("status", ["approved", "enrolled", "active", "completed"])
+      const { data, error } = await applySession(
+        scopeQuery(
+          supabase
+            .from("course_registrations")
+            .select("id, member_id, student_number, status, session_id, edition:exam_sessions(id, name), members:member_id(id, first_name, last_name)")
+            .eq("course_id", selectedCourseId)
+            .in("status", ["approved", "enrolled", "active", "completed"])
+        )
       );
       if (error) throw error;
       return data || [];
     },
   });
+
 
   // All records across sessions for the % report
   const { data: allRecords = [] } = useQuery({
