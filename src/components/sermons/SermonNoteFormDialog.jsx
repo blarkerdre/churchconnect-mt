@@ -63,10 +63,14 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
   }, [open, note, defaultFolderId]);
 
   useEffect(() => {
-    if (!expanded) return;
+    if (!expanded && !fullscreen) return;
     const handleKey = (e) => {
       if (e.key === "Escape") {
-        if (metaExpanded) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (fullscreen) {
+          setFullscreen(false);
+        } else if (metaExpanded) {
           setMetaExpanded(false);
         } else {
           setExpanded(false);
@@ -75,7 +79,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [expanded, metaExpanded]);
+  }, [expanded, fullscreen, metaExpanded]);
 
   const draftValues = useMemo(
     () => ({ title, speaker, category, serviceDate, content, folderId }),
