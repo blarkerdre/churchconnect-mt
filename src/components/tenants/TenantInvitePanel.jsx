@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Mail, Clock, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
+import { Mail, Clock, CheckCircle2, XCircle, RefreshCw, Copy, MailCheck, MailWarning } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
@@ -48,6 +48,29 @@ export default function TenantInvitePanel({ tenantId, pendingOnly = false }) {
     enabled: !!tenantId,
   });
 
+  // Delivery status for invitation emails in this church, latest row per recipient.
+  const { data: deliveryByEmail = {} } = useQuery({
+    queryKey: ["tenant-invitation-emails", tenantId],
+    queryFn: async () => {
+      const { data, error: err } = await supabase
+        .from("email_send_log")
+        .select("recipient_email, status, error_message, created_at")
+        .eq("tenant_id", tenantId)
+        .eq("template_name", "tenant-invitation")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (err) throw err;
+      const latest = {};
+      for (const row of data || []) {
+        const key = (row.recipient_email || "").toLowerCase();
+        if (!latest[key]) latest[key] = row;
+      }
+      return latest;
+    },
+    enabled: !!tenantId,
+  });
+
+
   const sendInvite = useMutation({
     mutationFn: async ({ email: to, role: asRole }) => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -67,7 +90,7 @@ export default function TenantInvitePanel({ tenantId, pendingOnly = false }) {
       return result;
     },
     onSuccess: (result, variables) => {
-      const title = result.already_member
+      const okTitle = result.already_member
         ? "This person already belongs to this church"
         : result.reused_pending_invitation
         ? "Invitation resent"
@@ -75,8 +98,10 @@ export default function TenantInvitePanel({ tenantId, pendingOnly = false }) {
         ? "User added to this church"
         : "Invitation sent";
       toast({
-        title,
-        description: result.email_warning || undefined,
+        title: result.email_warning ? "Invitation saved — email NOT sent" : okTitle,
+        description: result.email_warning
+          ? `${result.email_warning} Use "Copy invite link" to share it directly.`
+          : undefined,
         variant: result.email_warning ? "destructive" : undefined,
       });
       if (!variables?.isResend) {
@@ -84,9 +109,11 @@ export default function TenantInvitePanel({ tenantId, pendingOnly = false }) {
         setRole("member");
       }
       queryClient.invalidateQueries({ queryKey: ["tenant-invitations", tenantId] });
+      queryClient.invalidateQueries({ queryKey: ["tenant-invitation-emails", tenantId] });
       queryClient.invalidateQueries({ queryKey: ["tenant-users", tenantId] });
       queryClient.invalidateQueries({ queryKey: ["tenant-stats"] });
     },
+
     onError: (err) =>
       toast({ title: "Error sending invitation", description: err.message, variant: "destructive" }),
   });
@@ -121,6 +148,17 @@ export default function TenantInvitePanel({ tenantId, pendingOnly = false }) {
     });
     if (ok) cancelInvite.mutate(inv.id);
   };
+
+  const handleCopyLink = async (inv) => {
+    const link = `https://app.churchmanagementsuite.org/accept-invite?token=${inv.token}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      toast({ title: "Invite link copied", description: "Share it directly with the person you invited." });
+    } catch {
+      toast({ title: "Could not copy", description: link, variant: "destructive" });
+    }
+  };
+
 
   const rows = pendingOnly ? invitations.filter((i) => i.status === "pending") : invitations;
 
@@ -163,17 +201,20 @@ export default function TenantInvitePanel({ tenantId, pendingOnly = false }) {
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <Table className="min-w-[560px]">
+          <Table className="min-w-[680px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Email delivery</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((inv) => (
+              {rows.map((inv) => {
+                const delivery = deliveryByEmail[(inv.email || "").toLowerCase()];
+                return (
                 <TableRow key={inv.id}>
                   <TableCell>
                     <p className="text-sm break-all">{inv.email}</p>
@@ -199,6 +240,27 @@ export default function TenantInvitePanel({ tenantId, pendingOnly = false }) {
                       </Badge>
                     )}
                   </TableCell>
+                  <TableCell>
+                    {!delivery ? (
+                      <Badge variant="outline" className="text-destructive border-destructive/30 text-xs">
+                        <MailWarning className="h-3 w-3 mr-1" />No email sent
+                      </Badge>
+                    ) : delivery.status === "sent" ? (
+                      <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50 text-xs">
+                        <MailCheck className="h-3 w-3 mr-1" />Sent
+                      </Badge>
+                    ) : delivery.status === "pending" ? (
+                      <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 text-xs">Queued</Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="text-destructive border-destructive/30 text-xs capitalize"
+                        title={delivery.error_message || undefined}
+                      >
+                        <MailWarning className="h-3 w-3 mr-1" />{delivery.status}
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right whitespace-nowrap">
                     {inv.status === "pending" && (
                       <>
@@ -210,6 +272,10 @@ export default function TenantInvitePanel({ tenantId, pendingOnly = false }) {
                         >
                           <RefreshCw className="h-3.5 w-3.5 mr-1" />Resend
                         </Button>
+                        <Button size="sm" variant="ghost" onClick={() => handleCopyLink(inv)}>
+                          <Copy className="h-3.5 w-3.5 mr-1" />Copy link
+                        </Button>
+
                         <Button
                           size="sm"
                           variant="ghost"
@@ -222,7 +288,9 @@ export default function TenantInvitePanel({ tenantId, pendingOnly = false }) {
                     )}
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
+
             </TableBody>
           </Table>
         </div>
