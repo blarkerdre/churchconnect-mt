@@ -228,6 +228,35 @@ export default function Members() {
     setDialogOpen(true);
   };
 
+  const linkAccountToMember = async (acct) => {
+    const target = acct.suggestedMember;
+    if (!target) return;
+    const ok = await confirmDelete({
+      title: "Link this account",
+      description: `Connect ${acct.email || acct.full_name} to the directory record for ${target.first_name} ${target.last_name}.${target.user_id ? " This replaces the account currently linked to that record." : ""}`,
+    });
+    if (!ok) return;
+    const clash = members.find(m => m.user_id === acct.user_id && m.id !== target.id);
+    if (clash) {
+      toast({ title: "Already linked", description: `This account is already linked to ${clash.first_name} ${clash.last_name}.`, variant: "destructive" });
+      return;
+    }
+    const { error } = await supabase
+      .from("members")
+      .update({ user_id: acct.user_id })
+      .eq("id", target.id)
+      .eq("tenant_id", tenantId);
+    if (error) {
+      toast({ title: "Could not link account", description: error.message, variant: "destructive" });
+      return;
+    }
+    logAudit({ action: "link_account", entity: "members", entityId: target.id, tenantId, details: { user_id: acct.user_id } });
+    queryClient.invalidateQueries({ queryKey: ["members"] });
+    queryClient.invalidateQueries({ queryKey: ["memberships-without-directory"] });
+    toast({ title: "Account linked", description: `${target.first_name} ${target.last_name} is now linked to this login.` });
+  };
+
+
 
 
   const handleDelete = (member) => {
