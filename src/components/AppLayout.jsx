@@ -27,6 +27,8 @@ import PlatformAlertOverlay from "@/components/alerts/PlatformAlertOverlay";
 import MobileBottomNav from "@/components/navigation/MobileBottomNav";
 import PaymentRequiredScreen from "@/components/tenants/PaymentRequiredScreen";
 import PaymentWarningBanner from "@/components/tenants/PaymentWarningBanner";
+import TenantSwitcherMenu from "@/components/tenants/TenantSwitcherMenu";
+
 import useMessageAlerts from "@/hooks/useMessageAlerts";
 import PWAUpdateBanner from "@/components/PWAUpdateBanner";
 import { getEnvironmentLabel, getBackendHost, isBackendMismatch, isPreviewEnvironment } from "@/lib/environment";
