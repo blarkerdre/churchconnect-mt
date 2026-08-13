@@ -204,7 +204,7 @@ function AppPages() {
         <Route path="/communications" element={<FeatureGate path="/communications"><Communications /></FeatureGate>} />
         <Route path="/transportation" element={<FeatureGate path="/transportation"><Transportation /></FeatureGate>} />
         <Route path="/children-church" element={<FeatureGate path="/children-church"><ProtectedRoute><ChildrenChurch /></ProtectedRoute></FeatureGate>} />
-        <Route path="/my-family" element={<ProtectedRoute><MyFamily /></ProtectedRoute>} />
+        <Route path="/my-family" element={<FeatureGate path="/my-family"><ProtectedRoute><MyFamily /></ProtectedRoute></FeatureGate>} />
         <Route path="/teens-attendance" element={<Navigate to="/children-church?tab=teens" replace />} />
         <Route path="/preteens-attendance" element={<Navigate to="/children-church?tab=preteens" replace />} />
         <Route path="/analytics" element={<FeatureGate path="/analytics"><ReportsRoute><Analytics /></ReportsRoute></FeatureGate>} />

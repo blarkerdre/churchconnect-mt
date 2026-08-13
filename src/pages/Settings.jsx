@@ -1660,7 +1660,7 @@ export default function Settings() {
           <StorageUsageCard />
           <ChurchBrandingSection />
           <FaviconOgImageSection />
-          <DashboardBannerSettings />
+          {slideshowEnabled && <DashboardBannerSettings />}
         </TabsContent>
 
         {canOwnerOnly && (
