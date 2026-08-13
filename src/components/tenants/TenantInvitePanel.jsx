@@ -149,6 +149,17 @@ export default function TenantInvitePanel({ tenantId, pendingOnly = false }) {
     if (ok) cancelInvite.mutate(inv.id);
   };
 
+  const handleCopyLink = async (inv) => {
+    const link = `https://app.churchmanagementsuite.org/accept-invite?token=${inv.token}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      toast({ title: "Invite link copied", description: "Share it directly with the person you invited." });
+    } catch {
+      toast({ title: "Could not copy", description: link, variant: "destructive" });
+    }
+  };
+
+
   const rows = pendingOnly ? invitations.filter((i) => i.status === "pending") : invitations;
 
   if (!tenantId) return null;
