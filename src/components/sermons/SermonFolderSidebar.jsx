@@ -70,8 +70,8 @@ export default function SermonFolderSidebar({
       .from("sermon_note_folders")
       .update({ name })
       .eq("id", id)
-      .eq("user_id", user.id)
-      .eq("tenant_id", tenantId);
+      .eq("user_id", user.id);
+
     if (error) {
       toast.error("Failed to rename.");
       return;
@@ -88,8 +88,8 @@ export default function SermonFolderSidebar({
       .from("sermon_note_folders")
       .delete()
       .eq("id", deleteFolder.id)
-      .eq("user_id", user.id)
-      .eq("tenant_id", tenantId);
+      .eq("user_id", user.id);
+
     if (error) {
       toast.error("Failed to delete folder.");
     } else {
