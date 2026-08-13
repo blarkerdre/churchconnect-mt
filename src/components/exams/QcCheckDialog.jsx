@@ -398,12 +398,14 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null, i
                 <SelectContent>
                   {subjects.map((s) => {
                     const done = checkedSubjectIds.includes(s.id) && s.id !== editRecord?.exam_subject_id;
+                    const ed = isAll && s.exam_sessions?.name ? ` · ${s.exam_sessions.name}` : "";
                     return (
                       <SelectItem key={s.id} value={s.id} disabled={done}>
-                        {done ? "✓ " : ""}{s.code ? `${s.code} — ${s.name}` : s.name}{done ? " (QC done)" : ""}
+                        {done ? "✓ " : ""}{s.code ? `${s.code} — ${s.name}` : s.name}{ed}{done ? " (QC done)" : ""}
                       </SelectItem>
                     );
                   })}
+
                 </SelectContent>
               </Select>
               {form.exam_title_id && (
