@@ -111,6 +111,8 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
     if (!val) {
       flush();
       setExpanded(false);
+      setFullscreen(false);
+      setMetaExpanded(false);
     }
     onOpenChange(val);
   };
