@@ -173,8 +173,8 @@ export default function SermonNotes() {
       .from("sermon_notes")
       .update({ folder_id: folderId })
       .eq("id", noteId)
-      .eq("user_id", user.id)
-      .eq("tenant_id", tenantId);
+      .eq("user_id", user.id);
+
     if (error) {
       toast.error("Failed to move note.");
     } else {
@@ -214,8 +214,8 @@ export default function SermonNotes() {
       .from("sermon_notes")
       .update({ folder_id: folderId })
       .in("id", ids)
-      .eq("user_id", user.id)
-      .eq("tenant_id", tenantId);
+      .eq("user_id", user.id);
+
     if (error) {
       toast.error("Failed to move notes.");
       return;
@@ -234,8 +234,8 @@ export default function SermonNotes() {
       .from("sermon_notes")
       .delete()
       .in("id", ids)
-      .eq("user_id", user.id)
-      .eq("tenant_id", tenantId);
+      .eq("user_id", user.id);
+
     if (error) {
       toast.error("Failed to delete notes.");
     } else {
