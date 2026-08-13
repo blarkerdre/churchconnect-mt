@@ -53,6 +53,7 @@ export default function MemberDashboard({ currentUser, myMember }) {
   const { currentTenant, tenantRole } = useTenant();
   const { session, isUnitLeader, isAdmin, leaderUnits, leaderCentres } = useAuth();
   const { tenantId } = useTenantQuery();
+  const slideshowEnabled = useTenantFeatureEnabled("/dashboard-slideshow");
   const roleLabel = tenantRole ? tenantRole.charAt(0).toUpperCase() + tenantRole.slice(1) : "";
   const userId = session?.user?.id;
   const showBirthdays = isUnitLeader && !isAdmin;
