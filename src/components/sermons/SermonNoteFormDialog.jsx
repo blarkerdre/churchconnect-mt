@@ -350,25 +350,44 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
           <div className={cn("flex flex-col", expanded && "flex-1 min-h-0")}>
             <div className="flex items-center justify-between gap-2 mb-1">
               <Label>Notes *</Label>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => setExpanded((v) => !v)}
-                className="h-7 px-2 gap-1"
-                title={expanded ? "Collapse notes editor" : "Expand notes editor"}
-              >
-                {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-                <span className="text-xs hidden sm:inline">{expanded ? "Collapse" : "Expand"}</span>
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={handlePrint}
+                  disabled={printing}
+                  className="h-7 px-2 gap-1"
+                  title="Print or save as PDF"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  <span className="text-xs hidden sm:inline">{printing ? "Preparing…" : "Print / PDF"}</span>
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setExpanded((v) => !v)}
+                  className="h-7 px-2 gap-1"
+                  title={expanded ? "Collapse notes editor" : "Expand notes editor"}
+                >
+                  {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                  <span className="text-xs hidden sm:inline">{expanded ? "Collapse" : "Expand"}</span>
+                </Button>
+              </div>
             </div>
             <SermonRichEditor content={content} onChange={setContent} expanded={expanded} />
+            <p className="text-[11px] text-muted-foreground mt-1 h-4">
+              {draftStatus === "saving" && "Saving…"}
+              {draftStatus === "saved" && savedAt && `Draft saved ${format(new Date(savedAt), "HH:mm")}`}
+            </p>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+          <Button variant="outline" onClick={() => closeDialog(false)} disabled={saving}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );
