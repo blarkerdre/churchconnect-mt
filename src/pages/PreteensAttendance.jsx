@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import PreteensPersistentQRDialog from "@/components/preteens/PreteensPersistentQRDialog";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import RecordedBySelect, { useRecorderOptions } from "@/components/shared/RecordedBySelect";
+import { formatDateTime } from "@/lib/utils";
 
 const SESSION_TYPES = [
   "Sunday Service",
@@ -101,7 +103,7 @@ function PendingSelfEnrolments({ tenantId }) {
   );
 }
 
-function SessionFormDialog({ open, onOpenChange, session, onSaved }) {
+function SessionFormDialog({ open, onOpenChange, session, onSaved, isAdmin = false }) {
   const { user } = useAuth();
   const { tenantId, withTenant } = useTenantQuery();
   const isEdit = !!session?.id;
@@ -112,6 +114,7 @@ function SessionFormDialog({ open, onOpenChange, session, onSaved }) {
     end_time: session?.end_time?.slice(0, 5) || "12:00",
     late_after: session?.late_after?.slice(0, 5) || "10:15",
     notes: session?.notes || "",
+    recorded_by: session?.created_by || "",
   }));
 
   React.useEffect(() => {
@@ -123,6 +126,7 @@ function SessionFormDialog({ open, onOpenChange, session, onSaved }) {
         end_time: session?.end_time?.slice(0, 5) || "12:00",
         late_after: session?.late_after?.slice(0, 5) || "10:15",
         notes: session?.notes || "",
+        recorded_by: session?.created_by || "",
       });
     }
   }, [open, session]);
@@ -140,11 +144,13 @@ function SessionFormDialog({ open, onOpenChange, session, onSaved }) {
         late_after: form.late_after || null,
         notes: form.notes || null,
       };
+      const recordedBy = (isAdmin && form.recorded_by) || user?.id || null;
       if (isEdit) {
         const { data, error } = await supabase
           .from("preteen_attendance_sessions")
-          .update(payload)
+          .update(isAdmin ? { ...payload, created_by: recordedBy } : payload)
           .eq("id", session.id)
+          .eq("tenant_id", tenantId)
           .select()
           .single();
         if (error) throw error;
@@ -152,7 +158,7 @@ function SessionFormDialog({ open, onOpenChange, session, onSaved }) {
       }
       const { data, error } = await supabase
         .from("preteen_attendance_sessions")
-        .insert(withTenant({ ...payload, status: "open", created_by: user?.id || null }))
+        .insert(withTenant({ ...payload, status: "open", created_by: recordedBy }))
         .select()
         .single();
       if (error) throw error;
@@ -192,6 +198,7 @@ function SessionFormDialog({ open, onOpenChange, session, onSaved }) {
           </div>
           <div><Label>Late after</Label><Input type="time" value={form.late_after} onChange={(e) => setForm({ ...form, late_after: e.target.value })} /></div>
           <div><Label>Notes</Label><Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+          <RecordedBySelect visible={isAdmin} value={form.recorded_by} onChange={(v) => setForm({ ...form, recorded_by: v })} />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -901,6 +908,7 @@ export default function PreteensAttendance({ embedded = false }) {
   const canManage = isAdmin || isLeader;         // create/edit/delete/report
   const canWrite = canManage || isMember;         // create + close + sign in/out
   const canDelete = isAdmin || isLeader;
+  const { nameFor: recorderName } = useRecorderOptions(canWrite);
 
   const [formSession, setFormSession] = useState(null); // {} for new, session for edit
   const [qrOpen, setQrOpen] = useState(false);
@@ -1000,6 +1008,10 @@ export default function PreteensAttendance({ embedded = false }) {
                 {s.start_time ? ` · ${s.start_time?.slice(0,5)}` : ""}
                 {s.end_time ? ` – ${s.end_time?.slice(0,5)}` : ""}
               </p>
+              <p className="text-xs text-muted-foreground">
+                Recorded by {recorderName(s.created_by)}
+                {s.created_at ? ` · ${formatDateTime(s.created_at)}` : ""}
+              </p>
               <div className="flex gap-2 flex-wrap">
                 <Button size="sm" variant="outline" onClick={() => setRosterSession(s)}>
                   <Users className="h-4 w-4 mr-1" /> Roster
@@ -1035,6 +1047,7 @@ export default function PreteensAttendance({ embedded = false }) {
           open={formSession !== null}
           onOpenChange={(o) => !o && setFormSession(null)}
           session={formSession?.id ? formSession : null}
+          isAdmin={isAdmin}
           onSaved={() => { refetch(); qc.invalidateQueries({ queryKey: ["preteen-sessions"] }); setFormSession(null); }}
         />
       )}

@@ -7,6 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { format } from "date-fns";
+import { useRecorderOptions } from "@/components/shared/RecordedBySelect";
+import { formatDateTime } from "@/lib/utils";
 
 const resultColor = {
   pass: "bg-chart-3/10 text-chart-3",
@@ -16,6 +18,7 @@ const resultColor = {
 
 export default function InspectionHistoryDialog({ open, onOpenChange, item }) {
   const { tenantId } = useTenantQuery();
+  const { nameFor: recorderName } = useRecorderOptions(open);
 
   const { data: inspections = [], isLoading } = useQuery({
     queryKey: ["inspection-history", item?.id, tenantId],
@@ -56,9 +59,10 @@ export default function InspectionHistoryDialog({ open, onOpenChange, item }) {
                   </div>
                   <Badge className={resultColor[insp.overall_result]}>{insp.overall_result.replace("_", " ")}</Badge>
                 </div>
-                {insp.signature_name && (
-                  <div className="text-xs text-muted-foreground">By: {insp.signature_name}</div>
-                )}
+                <div className="text-xs text-muted-foreground">
+                  Inspected by {insp.signature_name || recorderName(insp.inspected_by)}
+                  {insp.created_at ? ` · Recorded on ${formatDateTime(insp.created_at)}` : ""}
+                </div>
                 {insp.notes && <div className="text-sm">{insp.notes}</div>}
                 {insp.responses?.length > 0 && (
                   <ul className="text-xs space-y-1 mt-2">
