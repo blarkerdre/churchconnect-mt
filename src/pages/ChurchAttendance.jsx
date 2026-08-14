@@ -572,7 +572,7 @@ export default function ChurchAttendance() {
                       </TableRow>
                       {expandedRow === r.id && (
                         <TableRow>
-                          <TableCell colSpan={12} className="bg-muted/20 p-3">
+                          <TableCell colSpan={14} className="bg-muted/20 p-3">
                             <ReportAttachments relatedTable="church_attendance_reports" relatedId={r.id} />
                           </TableCell>
                         </TableRow>
