@@ -872,6 +872,8 @@ export default function WoFBIAttendanceTab() {
                   <TableHead>Present</TableHead>
                   <TableHead>Late</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="whitespace-nowrap">Recorded by</TableHead>
+                  <TableHead className="whitespace-nowrap">Recorded on</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
