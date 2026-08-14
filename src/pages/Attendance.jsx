@@ -23,6 +23,7 @@ import CheckInPanel from "@/components/attendance/CheckInPanel";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import ModuleTour from "@/components/tour/ModuleTour";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { formatDateTime } from "@/lib/utils";
 
 function CheckInsList({ records }) {
   if (!records.length) {
