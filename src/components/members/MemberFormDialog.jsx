@@ -28,6 +28,7 @@ import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 import { diffUnitMembership, submitJoinRequests } from "@/hooks/usePendingJoinRequests";
 import { Info as InfoIcon } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 
 const STATUSES = ["Active", "New Convert", "First Timer", "Visitor", "Bible School"];
 const GENDERS = ["Male", "Female"];
@@ -515,6 +516,13 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <TenantDialogHeader>{member ? "Edit Member" : "Register New Member"}</TenantDialogHeader>
+
+        {member && (
+          <p className="text-xs text-muted-foreground pt-2">
+            Added on {formatDateTime(member.created_at)}
+            {member.updated_at ? ` · Last updated ${formatDateTime(member.updated_at)}` : ""}
+          </p>
+        )}
 
         <div className="space-y-6 py-4">
           {/* Personal Details */}

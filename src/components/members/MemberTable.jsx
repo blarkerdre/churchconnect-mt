@@ -3,6 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, Phone, Mail, CheckCircle2, XCircle, SendHorizonal } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 
 const statusColors = {
   Active: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -40,6 +41,7 @@ export default function MemberTable({ members, onEdit, onDelete, onEmail, readOn
             <TableHead className="font-semibold text-center">Baptised</TableHead>
             <TableHead className="font-semibold text-center">WSF</TableHead>
             <TableHead className="font-semibold text-center">HS Baptism</TableHead>
+            <TableHead className="font-semibold hidden lg:table-cell whitespace-nowrap">Added</TableHead>
             {(!readOnly || onEmail) && <TableHead className="font-semibold text-right">Actions</TableHead>}
           </TableRow>
         </TableHeader>
@@ -50,6 +52,7 @@ export default function MemberTable({ members, onEdit, onDelete, onEmail, readOn
                 <div>
                   <p className="font-medium text-slate-800">{m.first_name} {m.last_name}</p>
                   {m.gender && <p className="text-xs text-slate-400">{m.gender}</p>}
+                  <p className="text-xs text-slate-400 lg:hidden">Added {formatDateTime(m.created_at)}</p>
                 </div>
               </TableCell>
               <TableCell>
@@ -75,6 +78,7 @@ export default function MemberTable({ members, onEdit, onDelete, onEmail, readOn
               <TableCell className="text-center"><YesNo value={m.water_baptism} /></TableCell>
               <TableCell className="text-center"><YesNo value={m.winners_satellite} /></TableCell>
               <TableCell className="text-center"><YesNo value={m.holy_spirit_baptism} /></TableCell>
+              <TableCell className="hidden lg:table-cell text-xs text-slate-500 whitespace-nowrap">{formatDateTime(m.created_at)}</TableCell>
               {(!readOnly || onEmail) && (
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
