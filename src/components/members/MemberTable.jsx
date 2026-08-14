@@ -3,6 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, Phone, Mail, CheckCircle2, XCircle, SendHorizonal } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 
 const statusColors = {
   Active: "bg-emerald-50 text-emerald-700 border-emerald-200",
