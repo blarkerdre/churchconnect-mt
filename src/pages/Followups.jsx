@@ -396,6 +396,7 @@ export default function Followups() {
                         {f.due_date && (
                           <span className="flex items-center gap-1"><CalendarCheck className="h-3 w-3" /> {f.due_date}</span>
                         )}
+                        <span className="flex items-center gap-1">Created {formatDateTime(f.created_at)}</span>
                         {isConvertible && (
                           <button
                             onClick={(e) => {
