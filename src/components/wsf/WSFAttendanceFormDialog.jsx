@@ -11,10 +11,10 @@ import { Loader2 } from "lucide-react";
 const empty = {
   date: "", male: 0, female: 0, children: 0,
   first_timers: 0, testimonies: 0, notes: "",
-  held_at_home_cell: true,
+  held_at_home_cell: true, reported_by: "",
 };
 
-export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, report, onSave, allCentres = [] }) {
+export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, report, onSave, allCentres = [], reporterOptions = [], currentUserId }) {
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
   const [selectedCentreId, setSelectedCentreId] = useState("");
@@ -30,18 +30,27 @@ export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, re
         testimonies: report.testimonies || 0,
         notes: report.notes || "",
         held_at_home_cell: report.held_at_home_cell !== false,
+        reported_by: report.reported_by || currentUserId || "",
       });
     } else {
-      setForm({ ...empty, date: new Date().toISOString().split("T")[0] });
+      setForm({ ...empty, date: new Date().toISOString().split("T")[0], reported_by: currentUserId || "" });
     }
     setSelectedCentreId(centre?.id || "");
-  }, [report, centre, open]);
+  }, [report, centre, open, currentUserId]);
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
   const num = (k, v) => set(k, Math.max(0, parseInt(v) || 0));
 
   const adults = form.male + form.female;
   const totalAttendees = adults + form.children;
+
+  const reporterList = React.useMemo(() => {
+    const list = [...reporterOptions];
+    if (form.reported_by && !list.some(o => o.user_id === form.reported_by)) {
+      list.push({ user_id: form.reported_by, name: "Original reporter" });
+    }
+    return list;
+  }, [reporterOptions, form.reported_by]);
 
   const handleSave = async () => {
     const activeCentreId = centre?.id || selectedCentreId;
@@ -57,6 +66,7 @@ export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, re
       testimonies: form.testimonies,
       held_at_home_cell: form.held_at_home_cell,
       notes: form.notes || null,
+      reported_by: form.reported_by || currentUserId || null,
     });
     setSaving(false);
     onOpenChange(false);
@@ -78,6 +88,21 @@ export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, re
                 <SelectContent>
                   {allCentres.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {reporterList.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Reported by</Label>
+              <Select value={form.reported_by} onValueChange={v => set("reported_by", v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select who is reporting..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {reporterList.map(o => (
+                    <SelectItem key={o.user_id} value={o.user_id}>{o.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
