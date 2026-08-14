@@ -333,6 +333,19 @@ export default function ChurchAttendance() {
                   <Label>Title (optional)</Label>
                   <Input value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="e.g. 1st Service, Shiloh Day 2" />
                 </div>
+                {isAdmin && recorderOptions.length > 0 && (
+                  <div className="col-span-2">
+                    <Label>Recorded by</Label>
+                    <Select value={form.recorded_by || user?.id || ""} onValueChange={(v) => set("recorded_by", v)}>
+                      <SelectTrigger><SelectValue placeholder="Select who recorded this..." /></SelectTrigger>
+                      <SelectContent>
+                        {recorderOptions.map((o) => (
+                          <SelectItem key={o.user_id} value={o.user_id}>{o.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
               <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
