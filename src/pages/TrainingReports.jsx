@@ -521,6 +521,20 @@ export default function TrainingReports() {
               )}
 
               <div>
+                <Label>Recorded by</Label>
+                <Select value={form.recorded_by || user?.id || ""} onValueChange={(v) => set("recorded_by", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select person recording this session" /></SelectTrigger>
+                  <SelectContent>
+                    {profiles.map((p) => (
+                      <SelectItem key={p.user_id} value={p.user_id}>
+                        {p.full_name || p.email || "Unknown"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
                 <Label>Notes</Label>
                 <Textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={2} />
               </div>
