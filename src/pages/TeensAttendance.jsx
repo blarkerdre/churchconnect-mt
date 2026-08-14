@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import TeensPersistentQRDialog from "@/components/teens/TeensPersistentQRDialog";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import RecordedBySelect, { useRecorderOptions } from "@/components/shared/RecordedBySelect";
+import { formatDateTime } from "@/lib/utils";
 
 const SESSION_TYPES = [
   "Sunday Service",
