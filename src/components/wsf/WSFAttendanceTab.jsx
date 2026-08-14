@@ -503,6 +503,13 @@ export default function WSFAttendanceTab({ centres }) {
                       </TableCell>
                       <TableCell className="text-center">{r.first_timers}</TableCell>
                       <TableCell className="text-center">{r.testimonies}</TableCell>
+                      <TableCell className="hidden md:table-cell">{reporterName(r)}</TableCell>
+                      <TableCell className="hidden lg:table-cell whitespace-nowrap">
+                        {formatDateTime(r.created_at)}
+                        {r.updated_at && r.created_at && new Date(r.updated_at) - new Date(r.created_at) > 60000 && (
+                          <span className="block text-[10px] text-muted-foreground">edited {formatDateTime(r.updated_at)}</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           {canWrite && (
