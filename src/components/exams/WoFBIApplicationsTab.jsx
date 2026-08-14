@@ -153,6 +153,8 @@ export default function WoFBIApplicationsTab() {
         status: r.status,
         answers: {},
         created_at: r.registered_at,
+        reviewed_by: r.approved_by || null,
+        reviewed_at: r.approved_at || null,
         edition: r.edition || null,
         registration_email_sent_at: r.registration_email_sent_at || null,
         exam_link_sent_at: r.exam_link_sent_at || null,
