@@ -14,7 +14,7 @@ const empty = {
   held_at_home_cell: true, reported_by: "",
 };
 
-export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, report, onSave, allCentres = [], reporterOptions = [], currentUserId }) {
+export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, report, onSave, allCentres = [], reporterOptions = [], currentUserId, canChooseReporter = false }) {
   const [form, setForm] = useState(empty);
   const [saving, setSaving] = useState(false);
   const [selectedCentreId, setSelectedCentreId] = useState("");
