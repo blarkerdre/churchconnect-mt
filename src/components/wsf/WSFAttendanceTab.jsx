@@ -230,27 +230,29 @@ export default function WSFAttendanceTab({ centres }) {
     ? `${dateFrom || "…"} → ${dateTo || "…"}`
     : "All time";
 
+  const reporterName = (r) => (r.reported_by ? (reporterNameMap[r.reported_by] || "—") : "—");
+
   const buildPrintRows = () => ({
     title: "Home Cell Attendance Report",
-    headers: ["Date", "Centre", "Venue", "Male", "Female", "Adults", "Children", "Total", "1st Timers", "Testimonies"],
+    headers: ["Date", "Centre", "Venue", "Male", "Female", "Adults", "Children", "Total", "1st Timers", "Testimonies", "Reported by", "Recorded on"],
     rows: filteredReports.map(r => {
       const adults = r.male + r.female;
       const total = adults + r.children;
       const venue = r.held_at_home_cell === false ? "Off-venue" : "At cell";
-      return [format(new Date(r.meeting_date), "dd MMM yyyy"), r.wsf_centres?.name || "—", venue, r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies];
+      return [format(new Date(r.meeting_date), "dd MMM yyyy"), r.wsf_centres?.name || "—", venue, r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies, reporterName(r), formatDateTime(r.created_at)];
     }),
   });
 
   const downloadReport = () => {
     const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const rows = [
-      ["Date","Centre","Venue","Male","Female","Adults","Children","Total","First Timers","Testimonies","Notes"].join(","),
+      ["Date","Centre","Venue","Male","Female","Adults","Children","Total","First Timers","Testimonies","Notes","Reported by","Recorded on"].join(","),
       ...filteredReports.map(r => {
         const adults = r.male + r.female;
         const total = adults + r.children;
         const venue = r.held_at_home_cell === false ? "Off-venue" : "At cell";
         return [
-          r.meeting_date, esc(r.wsf_centres?.name || ""), venue, r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies, esc(r.notes || "")
+          r.meeting_date, esc(r.wsf_centres?.name || ""), venue, r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies, esc(r.notes || ""), esc(reporterName(r)), esc(formatDateTime(r.created_at))
         ].join(",");
       }),
     ];
