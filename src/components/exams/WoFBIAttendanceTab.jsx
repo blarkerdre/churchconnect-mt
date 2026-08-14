@@ -910,6 +910,8 @@ export default function WoFBIAttendanceTab() {
                           )}
                         </div>
                       </TableCell>
+                      <TableCell className="whitespace-nowrap text-xs">{recorderName(s.created_by)}</TableCell>
+                      <TableCell className="whitespace-nowrap text-xs">{formatDateTime(s.created_at)}</TableCell>
 
                       <TableCell className="text-right space-x-2 whitespace-nowrap">
                         <Button size="sm" variant="outline" onClick={() => setRosterSession(s)}>
