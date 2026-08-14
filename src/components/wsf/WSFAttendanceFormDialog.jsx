@@ -93,6 +93,21 @@ export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, re
               </Select>
             </div>
           )}
+          {reporterList.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Reported by</Label>
+              <Select value={form.reported_by} onValueChange={v => set("reported_by", v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select who is reporting..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {reporterList.map(o => (
+                    <SelectItem key={o.user_id} value={o.user_id}>{o.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label>Meeting Date *</Label>
             <Input type="date" value={form.date} onChange={e => set("date", e.target.value)} />
