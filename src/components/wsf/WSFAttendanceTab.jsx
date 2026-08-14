@@ -467,6 +467,8 @@ export default function WSFAttendanceTab({ centres }) {
                   <TableHead className="text-center">Total</TableHead>
                   <TableHead className="text-center">1st Timers</TableHead>
                   <TableHead className="text-center">Testimonies</TableHead>
+                  <TableHead className="hidden md:table-cell">Reported by</TableHead>
+                  <TableHead className="hidden lg:table-cell whitespace-nowrap">Recorded on</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
