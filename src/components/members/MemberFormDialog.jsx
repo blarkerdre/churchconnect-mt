@@ -28,6 +28,7 @@ import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 import { diffUnitMembership, submitJoinRequests } from "@/hooks/usePendingJoinRequests";
 import { Info as InfoIcon } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 
 const STATUSES = ["Active", "New Convert", "First Timer", "Visitor", "Bible School"];
 const GENDERS = ["Male", "Female"];
