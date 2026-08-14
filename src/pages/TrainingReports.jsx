@@ -25,6 +25,7 @@ import PrintReportButton from "@/components/PrintReportButton";
 import { useSubFeature } from "@/hooks/useSubFeature";
 import ModuleTour from "@/components/tour/ModuleTour";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import { formatDateTime } from "@/lib/utils";
 
 const ICON_MAP = {
   "Water Baptism": { icon: Droplets, color: "text-blue-500" },
@@ -48,6 +49,7 @@ const emptyForm = {
   holy_ghost_baptism: "",
   water_baptism: "",
   notes: "",
+  recorded_by: "",
 };
 
 export default function TrainingReports() {
@@ -119,6 +121,25 @@ export default function TrainingReports() {
     },
   });
 
+  // Users in this church, for the "Recorded by" dropdown
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["training-recorder-profiles", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await scopeQuery(
+        supabase.from("profiles").select("user_id, full_name, email").order("full_name", { ascending: true })
+      );
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const profileMap = useMemo(() => {
+    const map = {};
+    profiles.forEach(p => { map[p.user_id] = p.full_name || p.email || "Unknown"; });
+    return map;
+  }, [profiles]);
+
   const filteredMembers = useMemo(() => {
     const s = attendeeSearch.trim().toLowerCase();
     if (!s) return [];
@@ -146,7 +167,7 @@ export default function TrainingReports() {
   };
 
   const resetForm = () => {
-    setForm(emptyForm);
+    setForm({ ...emptyForm, recorded_by: user?.id || "" });
     setAttendees({});
     setAttendeeSearch("");
     setEditingId(null);
@@ -169,6 +190,7 @@ export default function TrainingReports() {
       holy_ghost_baptism: r.holy_ghost_baptism ?? "",
       water_baptism: r.water_baptism ?? "",
       notes: r.notes || "",
+      recorded_by: r.recorded_by || user?.id || "",
     });
     setAttendees({});
     setAttendeeSearch("");
@@ -269,11 +291,12 @@ export default function TrainingReports() {
       holy_ghost_baptism: parseInt(form.holy_ghost_baptism) || 0,
       water_baptism: parseInt(form.water_baptism) || 0,
       notes: form.notes || null,
+      recorded_by: form.recorded_by || user?.id || null,
     };
     if (editingId) {
       updateMutation.mutate({ id: editingId, payload });
     } else {
-      saveMutation.mutate({ ...payload, recorded_by: user?.id });
+      saveMutation.mutate(payload);
     }
   };
 
@@ -287,8 +310,10 @@ export default function TrainingReports() {
   const totalHGBaptism = reports.reduce((s, r) => s + r.holy_ghost_baptism, 0);
   const totalWBaptism = reports.reduce((s, r) => s + r.water_baptism, 0);
 
+  const recorderName = (r) => (r.recorded_by ? (profileMap[r.recorded_by] || "Unknown") : "—");
+
   const handleDownloadCSV = () => {
-    const headers = ["Date", "Type", "Title", "Total", "Male", "Female", "HG Baptism", "Water Baptism", "Notes"];
+    const headers = ["Date", "Type", "Title", "Total", "Male", "Female", "HG Baptism", "Water Baptism", "Recorded by", "Recorded on", "Notes"];
     const rows = reports.map(r => [
       r.session_date,
       r.training_type,
@@ -298,6 +323,8 @@ export default function TrainingReports() {
       r.female,
       r.holy_ghost_baptism,
       r.water_baptism,
+      recorderName(r),
+      formatDateTime(r.created_at, ""),
       (r.notes || "").replace(/"/g, '""'),
     ]);
     const csv = [headers.join(","), ...rows.map(r => r.map(c => `"${c}"`).join(","))].join("\n");
@@ -312,7 +339,7 @@ export default function TrainingReports() {
 
   const buildPrintRows = () => ({
     title: "Training Report",
-    headers: ["Date", "Type", "Title", "Total", "Male", "Female", "HG Baptism", "Water Baptism"],
+    headers: ["Date", "Type", "Title", "Total", "Male", "Female", "HG Baptism", "Water Baptism", "Recorded by", "Recorded on"],
     rows: reports.map(r => [
       format(parseISO(r.session_date), "dd MMM yyyy"),
       r.training_type,
@@ -322,6 +349,8 @@ export default function TrainingReports() {
       r.female,
       r.holy_ghost_baptism,
       r.water_baptism,
+      recorderName(r),
+      formatDateTime(r.created_at, ""),
     ]),
   });
 
@@ -492,6 +521,20 @@ export default function TrainingReports() {
               )}
 
               <div>
+                <Label>Recorded by</Label>
+                <Select value={form.recorded_by || user?.id || ""} onValueChange={(v) => set("recorded_by", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select person recording this session" /></SelectTrigger>
+                  <SelectContent>
+                    {profiles.map((p) => (
+                      <SelectItem key={p.user_id} value={p.user_id}>
+                        {p.full_name || p.email || "Unknown"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
                 <Label>Notes</Label>
                 <Textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} rows={2} />
               </div>
@@ -556,6 +599,8 @@ export default function TrainingReports() {
                     <TableHead className="text-center">F</TableHead>
                     <TableHead className="text-center">HG</TableHead>
                     <TableHead className="text-center">WB</TableHead>
+                    <TableHead className="hidden lg:table-cell whitespace-nowrap">Recorded by</TableHead>
+                    <TableHead className="hidden lg:table-cell whitespace-nowrap">Recorded on</TableHead>
                     <TableHead className="w-10"></TableHead>
                    </TableRow>
                 </TableHeader>
@@ -572,12 +617,22 @@ export default function TrainingReports() {
                               {r.training_type}
                             </Badge>
                             {r.title && <span className="block text-xs text-muted-foreground mt-0.5">{r.title}</span>}
+                            <span className="block lg:hidden text-xs text-muted-foreground mt-0.5">
+                              {recorderName(r)} · {formatDateTime(r.created_at)}
+                            </span>
                           </TableCell>
                           <TableCell className="text-center font-semibold">{r.total_attendance}</TableCell>
                           <TableCell className="text-center">{r.male}</TableCell>
                           <TableCell className="text-center">{r.female}</TableCell>
                           <TableCell className="text-center">{r.holy_ghost_baptism}</TableCell>
                           <TableCell className="text-center">{r.water_baptism}</TableCell>
+                          <TableCell className="hidden lg:table-cell text-xs whitespace-nowrap">{recorderName(r)}</TableCell>
+                          <TableCell className="hidden lg:table-cell text-xs text-muted-foreground whitespace-nowrap">
+                            {formatDateTime(r.created_at)}
+                            {r.updated_at && r.updated_at !== r.created_at && (
+                              <span className="block text-[10px]">edited {formatDateTime(r.updated_at)}</span>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center justify-end gap-1">
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)} title="Attendees">
@@ -608,7 +663,7 @@ export default function TrainingReports() {
                         </TableRow>
                         {expandedRow === r.id && (
                           <TableRow>
-                            <TableCell colSpan={8} className="bg-muted/20 p-3 space-y-4">
+                            <TableCell colSpan={10} className="bg-muted/20 p-3 space-y-4">
                               <TrainingAttendeesPanel report={r} />
                               {canAttachments && (
                                 <div className="pt-3 border-t">
