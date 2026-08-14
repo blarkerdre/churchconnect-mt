@@ -196,6 +196,7 @@ function SessionFormDialog({ open, onOpenChange, session, onSaved, isAdmin = fal
           </div>
           <div><Label>Late after</Label><Input type="time" value={form.late_after} onChange={(e) => setForm({ ...form, late_after: e.target.value })} /></div>
           <div><Label>Notes</Label><Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+          <RecordedBySelect visible={isAdmin} value={form.recorded_by} onChange={(v) => setForm({ ...form, recorded_by: v })} />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
