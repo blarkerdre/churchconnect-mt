@@ -799,7 +799,7 @@ export default function WoFBIApplicationsTab() {
                         />
                       </TableCell>
                     )}
-                    <TableCell className="text-xs">{new Date(a.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-xs whitespace-nowrap">{formatDateTime(a.created_at)}</TableCell>
                     <TableCell className="font-medium">{a.first_name} {a.last_name}</TableCell>
                     <TableCell className="text-xs">{a.email}</TableCell>
                     <TableCell className="text-xs">{a.course?.name || "—"}</TableCell>
