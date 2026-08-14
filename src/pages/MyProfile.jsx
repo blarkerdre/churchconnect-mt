@@ -836,7 +836,13 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
             <div className="space-y-1"><Label>First Name *</Label><Input value={form.first_name} onChange={e => set("first_name", e.target.value)} /></div>
             <div className="space-y-1"><Label>Last Name *</Label><Input value={form.last_name} onChange={e => set("last_name", e.target.value)} /></div>
             <div className="space-y-1"><Label>Email</Label><Input type="email" value={form.email} onChange={e => set("email", e.target.value)} /></div>
-            <div className="space-y-1"><Label>Phone</Label><Input value={form.phone} onChange={e => set("phone", e.target.value)} placeholder="+447888873207" /></div>
+            <div className="space-y-1">
+              <Label>Phone</Label>
+              <Input value={form.phone} onChange={e => set("phone", e.target.value)} placeholder="+44 XXXXXXXX" />
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <InfoIcon className="h-3 w-3" /> Include your country code (e.g. +44 for UK).
+              </p>
+            </div>
             <div className="space-y-1 sm:col-span-2"><Label>Street Address</Label><Input value={form.address} onChange={e => set("address", e.target.value)} /></div>
             <div className="space-y-1"><Label>City</Label><Input value={form.city} onChange={e => set("city", e.target.value)} /></div>
             <div className="space-y-1"><Label>Postcode</Label><Input value={form.postcode} onChange={e => set("postcode", e.target.value)} /></div>
