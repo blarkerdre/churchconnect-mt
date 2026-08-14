@@ -121,7 +121,7 @@ export default function TrainingReports() {
     },
   });
 
-  // Users in this church, for the "Recorded by" dropdown
+  // Users in this church, used to resolve recorder names for historical rows
   const { data: profiles = [] } = useQuery({
     queryKey: ["training-recorder-profiles", tenantId],
     enabled: !!tenantId,
@@ -139,6 +139,34 @@ export default function TrainingReports() {
     profiles.forEach(p => { map[p.user_id] = p.full_name || p.email || "Unknown"; });
     return map;
   }, [profiles]);
+
+  // Training Rep unit members with an app account — options for "Recorded by"
+  const { data: trainingRepUserIds = [] } = useQuery({
+    queryKey: ["training-rep-recorders", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await scopeQuery(
+        supabase
+          .from("members")
+          .select("user_id, church_unit")
+          .not("user_id", "is", null)
+          .ilike("church_unit", "%Training Rep%")
+      );
+      if (error) throw error;
+      return [...new Set((data || []).map(m => m.user_id))];
+    },
+  });
+
+  const recorderOptions = useMemo(() => {
+    const list = trainingRepUserIds
+      .map(uid => ({ user_id: uid, name: profileMap[uid] || "Unknown" }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    if (user?.id && !list.some(o => o.user_id === user.id)) {
+      list.unshift({ user_id: user.id, name: `${profileMap[user.id] || "You"} (you)` });
+    }
+    return list;
+  }, [trainingRepUserIds, profileMap, user?.id]);
+
 
   const filteredMembers = useMemo(() => {
     const s = attendeeSearch.trim().toLowerCase();
@@ -525,11 +553,12 @@ export default function TrainingReports() {
                 <Select value={form.recorded_by || user?.id || ""} onValueChange={(v) => set("recorded_by", v)}>
                   <SelectTrigger><SelectValue placeholder="Select person recording this session" /></SelectTrigger>
                   <SelectContent>
-                    {profiles.map((p) => (
+                    {recorderOptions.map((p) => (
                       <SelectItem key={p.user_id} value={p.user_id}>
-                        {p.full_name || p.email || "Unknown"}
+                        {p.name}
                       </SelectItem>
                     ))}
+
                   </SelectContent>
                 </Select>
               </div>
