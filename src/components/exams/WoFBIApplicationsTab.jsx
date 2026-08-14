@@ -511,10 +511,12 @@ export default function WoFBIApplicationsTab() {
       "Course",
       "Edition",
       "Status",
+      "Reviewed by",
+      "Reviewed on",
       ...fields.filter((f) => f.type !== "section_heading").map((f) => f.label),
     ];
     const rows = filtered.map((a) => [
-      new Date(a.created_at).toISOString(),
+      formatDateTime(a.created_at),
       SOURCE_LABEL[a.source] || a.source,
       a.first_name,
       a.last_name,
@@ -523,6 +525,8 @@ export default function WoFBIApplicationsTab() {
       a.course?.name || "",
       a.edition?.name || "",
       a.status,
+      a.reviewed_at ? reviewerName(a.reviewed_by) : "—",
+      formatDateTime(a.reviewed_at),
       ...fields.filter((f) => f.type !== "section_heading").map((f) => {
         const v = a.answers?.[f.id];
         if (v === true) return "Yes";
