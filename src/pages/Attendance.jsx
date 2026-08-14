@@ -796,6 +796,17 @@ export default function Attendance() {
                 )}
               </div>
             )}
+            {isAdmin && (
+              <div>
+                <Label>Recorded by</Label>
+                <Select value={form.recorded_by || user?.id || ""} onValueChange={v => setForm(f => ({ ...f, recorded_by: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
+                  <SelectContent>
+                    {recorderOptions.map(o => <SelectItem key={o.user_id} value={o.user_id}>{o.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
             <Button onClick={() => createSessionMutation.mutate(form)} disabled={createSessionMutation.isPending || !form.session_date} className="w-full bg-primary">
               {createSessionMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
