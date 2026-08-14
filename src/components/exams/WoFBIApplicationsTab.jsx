@@ -18,6 +18,7 @@ import { Loader2, Search, Download, Eye, CheckCircle2, XCircle, Trash2, BarChart
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 import { useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
 import MessageFilteredMembersDialog from "@/components/analytics/MessageFilteredMembersDialog";
+import { formatDateTime } from "@/lib/utils";
 
 const STATUS_VARIANT = {
   submitted: "secondary",
@@ -107,7 +108,7 @@ export default function WoFBIApplicationsTab() {
         scopeQuery(
           supabase
             .from("course_registrations")
-            .select("id, member_id, course_id, session_id, status, registered_at, registration_email_sent_at, exam_link_sent_at, course:exam_titles(id, name), member:members(id, first_name, last_name, email, phone, user_id), edition:exam_sessions(id, name)")
+            .select("id, member_id, course_id, session_id, status, registered_at, approved_at, approved_by, registration_email_sent_at, exam_link_sent_at, course:exam_titles(id, name), member:members(id, first_name, last_name, email, phone, user_id), edition:exam_sessions(id, name)")
         )
       ).order("registered_at", { ascending: false });
       if (error) throw error;
@@ -153,6 +154,8 @@ export default function WoFBIApplicationsTab() {
         status: r.status,
         answers: {},
         created_at: r.registered_at,
+        reviewed_by: r.approved_by || null,
+        reviewed_at: r.approved_at || null,
         edition: r.edition || null,
         registration_email_sent_at: r.registration_email_sent_at || null,
         exam_link_sent_at: r.exam_link_sent_at || null,
@@ -161,6 +164,33 @@ export default function WoFBIApplicationsTab() {
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
   }, [appRows, regRows, tenantId]);
+
+  // Resolve reviewer (approver) names from members of this church.
+  const { data: reviewerMembers = [] } = useQuery({
+    queryKey: ["wofbi-app-reviewers", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members")
+        .select("user_id, first_name, last_name")
+        .eq("tenant_id", tenantId)
+        .not("user_id", "is", null);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const reviewerNameMap = useMemo(() => {
+    const m = {};
+    reviewerMembers.forEach((p) => {
+      if (p.user_id) m[p.user_id] = [p.first_name, p.last_name].filter(Boolean).join(" ") || "—";
+    });
+    return m;
+  }, [reviewerMembers]);
+
+  const reviewerName = (id) => (id ? reviewerNameMap[id] || (id === user?.id ? "You" : "—") : "—");
+
+
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }) => {
@@ -482,10 +512,12 @@ export default function WoFBIApplicationsTab() {
       "Course",
       "Edition",
       "Status",
+      "Reviewed by",
+      "Reviewed on",
       ...fields.filter((f) => f.type !== "section_heading").map((f) => f.label),
     ];
     const rows = filtered.map((a) => [
-      new Date(a.created_at).toISOString(),
+      formatDateTime(a.created_at),
       SOURCE_LABEL[a.source] || a.source,
       a.first_name,
       a.last_name,
@@ -494,6 +526,8 @@ export default function WoFBIApplicationsTab() {
       a.course?.name || "",
       a.edition?.name || "",
       a.status,
+      a.reviewed_at ? reviewerName(a.reviewed_by) : "—",
+      formatDateTime(a.reviewed_at),
       ...fields.filter((f) => f.type !== "section_heading").map((f) => {
         const v = a.answers?.[f.id];
         if (v === true) return "Yes";
@@ -749,6 +783,7 @@ export default function WoFBIApplicationsTab() {
                   <TableHead>Edition</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="hidden lg:table-cell">Reviewed by</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -764,7 +799,7 @@ export default function WoFBIApplicationsTab() {
                         />
                       </TableCell>
                     )}
-                    <TableCell className="text-xs">{new Date(a.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-xs whitespace-nowrap">{formatDateTime(a.created_at)}</TableCell>
                     <TableCell className="font-medium">{a.first_name} {a.last_name}</TableCell>
                     <TableCell className="text-xs">{a.email}</TableCell>
                     <TableCell className="text-xs">{a.course?.name || "—"}</TableCell>
@@ -780,6 +815,16 @@ export default function WoFBIApplicationsTab() {
                       </div>
                     </TableCell>
                     <TableCell><Badge variant={STATUS_VARIANT[a.status] || "secondary"} className="capitalize">{a.status}</Badge></TableCell>
+                    <TableCell className="hidden lg:table-cell text-xs">
+                      {a.reviewed_at || a.reviewed_by ? (
+                        <>
+                          {reviewerName(a.reviewed_by)}
+                          <span className="block text-[11px] text-muted-foreground">{formatDateTime(a.reviewed_at)}</span>
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button size="sm" variant="outline" onClick={() => setDetail(a)} className="gap-1.5">
@@ -861,7 +906,10 @@ export default function WoFBIApplicationsTab() {
               {detail?.source === "direct" ? "Direct enrolment" : "Application"} — {detail?.first_name} {detail?.last_name}
             </DialogTitle>
             <DialogDescription>
-              {detail?.source === "direct" ? "Registered" : "Submitted"} {detail && new Date(detail.created_at).toLocaleString()} · {detail?.email || "—"} · Course: {detail?.course?.name || "—"}
+              {detail?.source === "direct" ? "Registered" : "Submitted"} {detail && formatDateTime(detail.created_at)} · {detail?.email || "—"} · Course: {detail?.course?.name || "—"}
+              {detail && (detail.reviewed_at || detail.reviewed_by) && (
+                <span className="block">Reviewed by {reviewerName(detail.reviewed_by)} · {formatDateTime(detail.reviewed_at)}</span>
+              )}
             </DialogDescription>
           </DialogHeader>
           {detail && (

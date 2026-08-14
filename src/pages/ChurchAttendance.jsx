@@ -22,6 +22,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import PrintReportButton from "@/components/PrintReportButton";
 import ModuleTour from "@/components/tour/ModuleTour";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import { formatDateTime } from "@/lib/utils";
 
 const DEFAULT_SERVICE_TYPES = ["Sunday Service", "Midweek Service", "Special Program", "Thanksgiving Service", "Other"];
 
@@ -38,6 +39,7 @@ const emptyForm = {
   testimonies: "",
   cars: "",
   notes: "",
+  recorded_by: "",
 };
 
 export default function ChurchAttendance() {
@@ -68,6 +70,44 @@ export default function ChurchAttendance() {
       return data;
     },
   });
+
+  // Members of this church, used for the "Recorded by" dropdown and name resolution
+  const { data: recorderMembers = [] } = useQuery({
+    queryKey: ["church-attendance-recorders", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members")
+        .select("id, user_id, first_name, last_name")
+        .eq("tenant_id", tenantId)
+        .not("user_id", "is", null)
+        .order("first_name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const recorderNameMap = useMemo(() => {
+    const m = {};
+    recorderMembers.forEach((p) => {
+      if (p.user_id) m[p.user_id] = [p.first_name, p.last_name].filter(Boolean).join(" ") || "—";
+    });
+    return m;
+  }, [recorderMembers]);
+
+  const recorderOptions = useMemo(() => {
+    const list = recorderMembers
+      .filter((p) => p.user_id)
+      .map((p) => ({ user_id: p.user_id, name: [p.first_name, p.last_name].filter(Boolean).join(" ") || "Unnamed member" }));
+    if (user?.id && !list.some((o) => o.user_id === user.id)) {
+      list.unshift({ user_id: user.id, name: "You" });
+    }
+    return list;
+  }, [recorderMembers, user?.id]);
+
+  const recorderName = (id) => (id ? recorderNameMap[id] || (id === user?.id ? "You" : "—") : "—");
+
+
 
   const saveMutation = useMutation({
     mutationFn: async (payload) => {
@@ -134,6 +174,7 @@ export default function ChurchAttendance() {
       testimonies: String(r.testimonies ?? ""),
       cars: String(r.cars ?? ""),
       notes: r.notes || "",
+      recorded_by: r.recorded_by || user?.id || "",
     });
     setOpen(true);
   };
@@ -174,11 +215,12 @@ export default function ChurchAttendance() {
       cars,
       total_attendance: adultMale + adultFemale + children + teens,
       notes: form.notes || null,
+      recorded_by: form.recorded_by || user?.id || null,
     };
     if (editingId) {
       updateMutation.mutate({ id: editingId, payload });
     } else {
-      saveMutation.mutate({ ...payload, recorded_by: user?.id });
+      saveMutation.mutate(payload);
     }
   };
 
@@ -221,11 +263,11 @@ export default function ChurchAttendance() {
   }, [filteredReports]);
 
   const downloadCSV = () => {
-    const headers = ["Date", "Service Type", "Title", "Adult Male", "Adult Female", "Children", "Teens", "Converts", "First Timers", "Testimonies", "Cars", "Total", "Notes"];
+    const headers = ["Date", "Service Type", "Title", "Adult Male", "Adult Female", "Children", "Teens", "Converts", "First Timers", "Testimonies", "Cars", "Total", "Recorded by", "Recorded on", "Notes"];
     const rows = filteredReports.map(r => [
       r.service_date, r.service_type, r.title || "", r.adult_male, r.adult_female, r.children, r.teens,
       r.converts || 0, r.first_timers || 0, r.testimonies || 0, r.cars || 0,
-      r.total_attendance, r.notes || ""
+      r.total_attendance, recorderName(r.recorded_by), formatDateTime(r.created_at), r.notes || ""
     ]);
     const csv = [headers.join(","), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -237,12 +279,12 @@ export default function ChurchAttendance() {
 
   const buildPrintRows = () => ({
     title: "Church Attendance Report",
-    headers: ["Date", "Service Type", "Title", "Adult M", "Adult F", "Children", "Teens", "Converts", "First Timers", "Testimonies", "Cars", "Total"],
+    headers: ["Date", "Service Type", "Title", "Adult M", "Adult F", "Children", "Teens", "Converts", "First Timers", "Testimonies", "Cars", "Total", "Recorded by", "Recorded on"],
     rows: filteredReports.map(r => [
       format(parseISO(r.service_date), "dd MMM yyyy"), r.service_type, r.title || "—",
       r.adult_male, r.adult_female, r.children, r.teens,
       r.converts || 0, r.first_timers || 0, r.testimonies || 0, r.cars || 0,
-      r.total_attendance
+      r.total_attendance, recorderName(r.recorded_by), formatDateTime(r.created_at)
     ]),
   });
 
@@ -291,6 +333,19 @@ export default function ChurchAttendance() {
                   <Label>Title (optional)</Label>
                   <Input value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="e.g. 1st Service, Shiloh Day 2" />
                 </div>
+                {isAdmin && recorderOptions.length > 0 && (
+                  <div className="col-span-2">
+                    <Label>Recorded by</Label>
+                    <Select value={form.recorded_by || user?.id || ""} onValueChange={(v) => set("recorded_by", v)}>
+                      <SelectTrigger><SelectValue placeholder="Select who recorded this..." /></SelectTrigger>
+                      <SelectContent>
+                        {recorderOptions.map((o) => (
+                          <SelectItem key={o.user_id} value={o.user_id}>{o.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
               <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
@@ -452,6 +507,8 @@ export default function ChurchAttendance() {
                     <TableHead className="text-center">Testimonies</TableHead>
                     <TableHead className="text-center">Cars</TableHead>
                      <TableHead className="text-center">Total</TableHead>
+                     <TableHead className="hidden md:table-cell">Recorded by</TableHead>
+                     <TableHead className="hidden md:table-cell">Recorded on</TableHead>
                      <TableHead className="w-10"></TableHead>
                    </TableRow>
                 </TableHeader>
@@ -459,7 +516,12 @@ export default function ChurchAttendance() {
                   {filteredReports.map((r) => (
                     <React.Fragment key={r.id}>
                       <TableRow>
-                        <TableCell className="text-sm">{format(parseISO(r.service_date), "dd MMM yyyy")}</TableCell>
+                        <TableCell className="text-sm">
+                          {format(parseISO(r.service_date), "dd MMM yyyy")}
+                          <span className="block md:hidden text-[11px] text-muted-foreground mt-0.5">
+                            {recorderName(r.recorded_by)} · {formatDateTime(r.created_at)}
+                          </span>
+                        </TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="text-xs">{r.service_type}</Badge>
                           {r.title && <span className="block text-xs text-muted-foreground mt-0.5">{r.title}</span>}
@@ -473,6 +535,13 @@ export default function ChurchAttendance() {
                         <TableCell className="text-center">{r.testimonies || 0}</TableCell>
                         <TableCell className="text-center">{r.cars || 0}</TableCell>
                         <TableCell className="text-center font-semibold">{r.total_attendance}</TableCell>
+                        <TableCell className="hidden md:table-cell text-sm">{recorderName(r.recorded_by)}</TableCell>
+                        <TableCell className="hidden md:table-cell text-xs">
+                          {formatDateTime(r.created_at)}
+                          {r.updated_at && r.created_at && new Date(r.updated_at) - new Date(r.created_at) > 60000 && (
+                            <span className="block text-[11px] text-muted-foreground">edited {formatDateTime(r.updated_at)}</span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-0.5 justify-end">
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)} title="Attachments">
@@ -503,7 +572,7 @@ export default function ChurchAttendance() {
                       </TableRow>
                       {expandedRow === r.id && (
                         <TableRow>
-                          <TableCell colSpan={12} className="bg-muted/20 p-3">
+                          <TableCell colSpan={14} className="bg-muted/20 p-3">
                             <ReportAttachments relatedTable="church_attendance_reports" relatedId={r.id} />
                           </TableCell>
                         </TableRow>
