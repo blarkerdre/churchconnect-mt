@@ -478,7 +478,12 @@ export default function WSFAttendanceTab({ centres }) {
                   const total = adults + r.children;
                   return (
                     <TableRow key={r.id}>
-                      <TableCell className="font-medium">{format(new Date(r.meeting_date), "dd MMM yyyy")}</TableCell>
+                      <TableCell className="font-medium">
+                        {format(new Date(r.meeting_date), "dd MMM yyyy")}
+                        <span className="block md:hidden text-[10px] font-normal text-muted-foreground">
+                          {reporterName(r)} · {formatDateTime(r.created_at)}
+                        </span>
+                      </TableCell>
                       <TableCell>{r.wsf_centres?.name || "—"}</TableCell>
                       <TableCell>
                         {r.held_at_home_cell === false ? (
