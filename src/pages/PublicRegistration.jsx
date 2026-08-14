@@ -221,15 +221,15 @@ export default function PublicRegistration() {
                           <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-[220px] text-xs">
-                          <p>Use international format with country code, e.g. <strong>+447888873207</strong></p>
+                          <p>Use international format with country code, e.g. <strong>+44 XXXXXXXX</strong></p>
                           <p className="mt-1 text-muted-foreground">UK numbers starting with 0 are auto-converted (07xxx → +447xxx)</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </div>
-                  <Input value={form.phone} onChange={e => set("phone", e.target.value)} placeholder="+447888873207" maxLength={20} />
+                  <Input value={form.phone} onChange={e => set("phone", e.target.value)} placeholder="+44 XXXXXXXX" maxLength={20} />
                   {form.phone && !normalizePhone(form.phone) && (
-                    <p className="text-[11px] text-destructive">Invalid format. Use +country code then number, e.g. +447888873207</p>
+                    <p className="text-[11px] text-destructive">Invalid format. Use +country code then number, e.g. +44 XXXXXXXX</p>
                   )}
                 </div>
                 <div className="space-y-1.5 md:col-span-2"><Label>Street Address</Label><Input value={form.address} onChange={e => { set("address", e.target.value); if (form.winners_satellite) { const best = suggestClosestWSFCentre(wsfCentres, { ...form, address: e.target.value }); if (best) set("wsf_centre_id", best.id); } }} maxLength={300} /></div>
