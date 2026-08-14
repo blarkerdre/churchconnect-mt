@@ -93,7 +93,7 @@ export default function WSFAttendanceFormDialog({ open, onOpenChange, centre, re
               </Select>
             </div>
           )}
-          {reporterList.length > 0 && (
+          {canChooseReporter && reporterList.length > 0 && (
             <div className="space-y-1.5">
               <Label>Reported by</Label>
               <Select value={form.reported_by} onValueChange={v => set("reported_by", v)}>
