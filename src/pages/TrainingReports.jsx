@@ -310,8 +310,10 @@ export default function TrainingReports() {
   const totalHGBaptism = reports.reduce((s, r) => s + r.holy_ghost_baptism, 0);
   const totalWBaptism = reports.reduce((s, r) => s + r.water_baptism, 0);
 
+  const recorderName = (r) => (r.recorded_by ? (profileMap[r.recorded_by] || "Unknown") : "—");
+
   const handleDownloadCSV = () => {
-    const headers = ["Date", "Type", "Title", "Total", "Male", "Female", "HG Baptism", "Water Baptism", "Notes"];
+    const headers = ["Date", "Type", "Title", "Total", "Male", "Female", "HG Baptism", "Water Baptism", "Recorded by", "Recorded on", "Notes"];
     const rows = reports.map(r => [
       r.session_date,
       r.training_type,
@@ -321,6 +323,8 @@ export default function TrainingReports() {
       r.female,
       r.holy_ghost_baptism,
       r.water_baptism,
+      recorderName(r),
+      formatDateTime(r.created_at, ""),
       (r.notes || "").replace(/"/g, '""'),
     ]);
     const csv = [headers.join(","), ...rows.map(r => r.map(c => `"${c}"`).join(","))].join("\n");
@@ -335,7 +339,7 @@ export default function TrainingReports() {
 
   const buildPrintRows = () => ({
     title: "Training Report",
-    headers: ["Date", "Type", "Title", "Total", "Male", "Female", "HG Baptism", "Water Baptism"],
+    headers: ["Date", "Type", "Title", "Total", "Male", "Female", "HG Baptism", "Water Baptism", "Recorded by", "Recorded on"],
     rows: reports.map(r => [
       format(parseISO(r.session_date), "dd MMM yyyy"),
       r.training_type,
@@ -345,6 +349,8 @@ export default function TrainingReports() {
       r.female,
       r.holy_ghost_baptism,
       r.water_baptism,
+      recorderName(r),
+      formatDateTime(r.created_at, ""),
     ]),
   });
 
