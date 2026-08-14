@@ -14,6 +14,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import SignPostDialog from "./SignPostDialog";
 import ReferralTimeline from "./ReferralTimeline";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
+import { formatDateTime } from "@/lib/utils";
 
 const NEXT_STEPS = {
   "First Timer": [
