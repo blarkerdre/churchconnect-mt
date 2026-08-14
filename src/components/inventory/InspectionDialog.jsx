@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks/useAuth";
+import RecordedBySelect from "@/components/shared/RecordedBySelect";
 import { logAudit } from "@/lib/audit";
 
 const RESULTS = [
@@ -21,7 +22,8 @@ const RESULTS = [
 
 export default function InspectionDialog({ open, onOpenChange, item, onCompleted }) {
   const { tenantId, withTenant } = useTenantQuery();
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
+  const [inspectedBy, setInspectedBy] = useState("");
   const [checklist, setChecklist] = useState([]);
   const [responses, setResponses] = useState({});
   const [notes, setNotes] = useState("");
@@ -31,6 +33,7 @@ export default function InspectionDialog({ open, onOpenChange, item, onCompleted
   useEffect(() => {
     if (!open || !item) return;
     setNotes("");
+    setInspectedBy(user?.id || "");
     setSignature(profile?.full_name || "");
     setResponses({});
     supabase
@@ -60,7 +63,7 @@ export default function InspectionDialog({ open, onOpenChange, item, onCompleted
         .from("inventory_inspections")
         .insert(withTenant({
           item_id: item.id,
-          inspected_by: user?.id,
+          inspected_by: (isAdmin && inspectedBy) || user?.id,
           overall_result: overall,
           notes: notes || null,
           signature_name: signature || null,
@@ -157,6 +160,7 @@ export default function InspectionDialog({ open, onOpenChange, item, onCompleted
             <Label>Overall notes</Label>
             <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
+          <RecordedBySelect visible={isAdmin} value={inspectedBy} onChange={setInspectedBy} label="Inspected by" />
           <div>
             <Label>Inspector signature (name)</Label>
             <Input value={signature} onChange={(e) => setSignature(e.target.value)} />
