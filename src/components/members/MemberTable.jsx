@@ -40,6 +40,7 @@ export default function MemberTable({ members, onEdit, onDelete, onEmail, readOn
             <TableHead className="font-semibold text-center">Baptised</TableHead>
             <TableHead className="font-semibold text-center">WSF</TableHead>
             <TableHead className="font-semibold text-center">HS Baptism</TableHead>
+            <TableHead className="font-semibold hidden lg:table-cell whitespace-nowrap">Added</TableHead>
             {(!readOnly || onEmail) && <TableHead className="font-semibold text-right">Actions</TableHead>}
           </TableRow>
         </TableHeader>
