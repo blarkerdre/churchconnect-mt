@@ -101,7 +101,7 @@ function PendingSelfEnrolments({ tenantId }) {
   );
 }
 
-function SessionFormDialog({ open, onOpenChange, session, onSaved }) {
+function SessionFormDialog({ open, onOpenChange, session, onSaved, isAdmin = false }) {
   const { user } = useAuth();
   const { tenantId, withTenant } = useTenantQuery();
   const isEdit = !!session?.id;
@@ -112,6 +112,7 @@ function SessionFormDialog({ open, onOpenChange, session, onSaved }) {
     end_time: session?.end_time?.slice(0, 5) || "12:00",
     late_after: session?.late_after?.slice(0, 5) || "10:15",
     notes: session?.notes || "",
+    recorded_by: session?.created_by || "",
   }));
 
   React.useEffect(() => {
@@ -123,6 +124,7 @@ function SessionFormDialog({ open, onOpenChange, session, onSaved }) {
         end_time: session?.end_time?.slice(0, 5) || "12:00",
         late_after: session?.late_after?.slice(0, 5) || "10:15",
         notes: session?.notes || "",
+        recorded_by: session?.created_by || "",
       });
     }
   }, [open, session]);
@@ -140,10 +142,11 @@ function SessionFormDialog({ open, onOpenChange, session, onSaved }) {
         late_after: form.late_after || null,
         notes: form.notes || null,
       };
+      const recordedBy = (isAdmin && form.recorded_by) || user?.id || null;
       if (isEdit) {
         const { data, error } = await supabase
           .from("teen_attendance_sessions")
-          .update(payload)
+          .update(isAdmin ? { ...payload, created_by: recordedBy } : payload)
           .eq("id", session.id)
           .eq("tenant_id", tenantId)
           .select()
@@ -153,7 +156,7 @@ function SessionFormDialog({ open, onOpenChange, session, onSaved }) {
       }
       const { data, error } = await supabase
         .from("teen_attendance_sessions")
-        .insert(withTenant({ ...payload, status: "open", created_by: user?.id || null }))
+        .insert(withTenant({ ...payload, status: "open", created_by: recordedBy }))
         .select()
         .single();
       if (error) throw error;
