@@ -215,11 +215,12 @@ export default function ChurchAttendance() {
       cars,
       total_attendance: adultMale + adultFemale + children + teens,
       notes: form.notes || null,
+      recorded_by: form.recorded_by || user?.id || null,
     };
     if (editingId) {
       updateMutation.mutate({ id: editingId, payload });
     } else {
-      saveMutation.mutate({ ...payload, recorded_by: user?.id });
+      saveMutation.mutate(payload);
     }
   };
 
