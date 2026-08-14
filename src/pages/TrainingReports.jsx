@@ -48,6 +48,7 @@ const emptyForm = {
   holy_ghost_baptism: "",
   water_baptism: "",
   notes: "",
+  recorded_by: "",
 };
 
 export default function TrainingReports() {
