@@ -1008,6 +1008,10 @@ export default function PreteensAttendance({ embedded = false }) {
                 {s.start_time ? ` · ${s.start_time?.slice(0,5)}` : ""}
                 {s.end_time ? ` – ${s.end_time?.slice(0,5)}` : ""}
               </p>
+              <p className="text-xs text-muted-foreground">
+                Recorded by {recorderName(s.created_by)}
+                {s.created_at ? ` · ${formatDateTime(s.created_at)}` : ""}
+              </p>
               <div className="flex gap-2 flex-wrap">
                 <Button size="sm" variant="outline" onClick={() => setRosterSession(s)}>
                   <Users className="h-4 w-4 mr-1" /> Roster
@@ -1043,6 +1047,7 @@ export default function PreteensAttendance({ embedded = false }) {
           open={formSession !== null}
           onOpenChange={(o) => !o && setFormSession(null)}
           session={formSession?.id ? formSession : null}
+          isAdmin={isAdmin}
           onSaved={() => { refetch(); qc.invalidateQueries({ queryKey: ["preteen-sessions"] }); setFormSession(null); }}
         />
       )}
