@@ -71,6 +71,44 @@ export default function ChurchAttendance() {
     },
   });
 
+  // Members of this church, used for the "Recorded by" dropdown and name resolution
+  const { data: recorderMembers = [] } = useQuery({
+    queryKey: ["church-attendance-recorders", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members")
+        .select("id, user_id, first_name, last_name")
+        .eq("tenant_id", tenantId)
+        .not("user_id", "is", null)
+        .order("first_name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const recorderNameMap = useMemo(() => {
+    const m = {};
+    recorderMembers.forEach((p) => {
+      if (p.user_id) m[p.user_id] = [p.first_name, p.last_name].filter(Boolean).join(" ") || "—";
+    });
+    return m;
+  }, [recorderMembers]);
+
+  const recorderOptions = useMemo(() => {
+    const list = recorderMembers
+      .filter((p) => p.user_id)
+      .map((p) => ({ user_id: p.user_id, name: [p.first_name, p.last_name].filter(Boolean).join(" ") || "Unnamed member" }));
+    if (user?.id && !list.some((o) => o.user_id === user.id)) {
+      list.unshift({ user_id: user.id, name: "You" });
+    }
+    return list;
+  }, [recorderMembers, user?.id]);
+
+  const recorderName = (id) => (id ? recorderNameMap[id] || (id === user?.id ? "You" : "—") : "—");
+
+
+
   const saveMutation = useMutation({
     mutationFn: async (payload) => {
       const { error } = await supabase.from("church_attendance_reports").insert(withTenant(payload));
