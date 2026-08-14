@@ -535,6 +535,13 @@ export default function ChurchAttendance() {
                         <TableCell className="text-center">{r.testimonies || 0}</TableCell>
                         <TableCell className="text-center">{r.cars || 0}</TableCell>
                         <TableCell className="text-center font-semibold">{r.total_attendance}</TableCell>
+                        <TableCell className="hidden md:table-cell text-sm">{recorderName(r.recorded_by)}</TableCell>
+                        <TableCell className="hidden md:table-cell text-xs">
+                          {formatDateTime(r.created_at)}
+                          {r.updated_at && r.created_at && new Date(r.updated_at) - new Date(r.created_at) > 60000 && (
+                            <span className="block text-[11px] text-muted-foreground">edited {formatDateTime(r.updated_at)}</span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-0.5 justify-end">
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)} title="Attachments">
