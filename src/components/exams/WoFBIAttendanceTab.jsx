@@ -14,6 +14,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import RecordedBySelect, { useRecorderOptions } from "@/components/shared/RecordedBySelect";
+import { formatDateTime } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, QrCode, Trash2, Download, CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Pencil, Star } from "lucide-react";
 import WoFBIPersistentQRDialog from "./WoFBIPersistentQRDialog";
@@ -115,6 +117,7 @@ function StarRating({ value, onChange, disabled }) {
 export default function WoFBIAttendanceTab() {
   const confirmDelete = useConfirmDelete();
   const { user, isAdmin } = useAuth();
+  const { nameFor: recorderName } = useRecorderOptions(isAdmin);
   const qc = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const { currentTenant } = useTenant();
@@ -143,6 +146,7 @@ export default function WoFBIAttendanceTab() {
     scheduled_open_at: "",
     scheduled_close_at: "",
     status: "open",
+    recorded_by: "",
   });
 
   const [form, setForm] = useState(emptySessionForm);
@@ -292,7 +296,7 @@ export default function WoFBIAttendanceTab() {
           status: startsClosed ? "closed" : "open",
           scheduled_open_at: openAt,
           scheduled_close_at: closeAt,
-          created_by: user?.id || null,
+          created_by: payload.recorded_by || user?.id || null,
         })
       );
       if (error) throw error;
@@ -321,6 +325,7 @@ export default function WoFBIAttendanceTab() {
       scheduled_open_at: toLocal(s.scheduled_open_at),
       scheduled_close_at: toLocal(s.scheduled_close_at),
       status: s.status || "open",
+      recorded_by: s.created_by || "",
     });
     setEditSession(s);
   };
@@ -343,6 +348,7 @@ export default function WoFBIAttendanceTab() {
           status: isClosed ? "closed" : "open",
           scheduled_open_at: isClosed ? null : openAt,
           scheduled_close_at: isClosed ? null : closeAt,
+          created_by: payload.recorded_by || user?.id || null,
         })
         .eq("id", editSession.id)
         .eq("tenant_id", tenantId);
@@ -866,6 +872,8 @@ export default function WoFBIAttendanceTab() {
                   <TableHead>Present</TableHead>
                   <TableHead>Late</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="whitespace-nowrap">Recorded by</TableHead>
+                  <TableHead className="whitespace-nowrap">Recorded on</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -902,6 +910,8 @@ export default function WoFBIAttendanceTab() {
                           )}
                         </div>
                       </TableCell>
+                      <TableCell className="whitespace-nowrap text-xs">{recorderName(s.created_by)}</TableCell>
+                      <TableCell className="whitespace-nowrap text-xs">{formatDateTime(s.created_at)}</TableCell>
 
                       <TableCell className="text-right space-x-2 whitespace-nowrap">
                         <Button size="sm" variant="outline" onClick={() => setRosterSession(s)}>
@@ -1204,6 +1214,8 @@ export default function WoFBIAttendanceTab() {
               <Label>Notes</Label>
               <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
+
+            <RecordedBySelect visible={isAdmin} value={form.recorded_by} onChange={(v) => setForm({ ...form, recorded_by: v })} />
 
             {editSession && (
               <div className="space-y-1.5">

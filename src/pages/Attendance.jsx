@@ -23,6 +23,7 @@ import CheckInPanel from "@/components/attendance/CheckInPanel";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import ModuleTour from "@/components/tour/ModuleTour";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { formatDateTime } from "@/lib/utils";
 
 function CheckInsList({ records }) {
   if (!records.length) {
@@ -70,7 +71,7 @@ export default function Attendance() {
   const isMobile = useIsMobile();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const [form, setForm] = useState({ title: "", session_type: "Sunday Service", session_date: "", notes: "", unit: "" });
+  const [form, setForm] = useState({ title: "", session_type: "Sunday Service", session_date: "", notes: "", unit: "", recorded_by: "" });
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [unitFilter, setUnitFilter] = useState("all");
@@ -84,6 +85,40 @@ export default function Attendance() {
       return data;
     },
   });
+
+  // Church members with an app account — options for the admin-only "Recorded by" picker
+  const { data: recorderMembers = [] } = useQuery({
+    queryKey: ["attendance-recorders", tenantId],
+    enabled: !!tenantId && isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members")
+        .select("user_id, first_name, last_name")
+        .eq("tenant_id", tenantId)
+        .not("user_id", "is", null)
+        .order("first_name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const recorderOptions = useMemo(() => {
+    const seen = new Set();
+    const list = [];
+    for (const m of recorderMembers) {
+      if (!m.user_id || seen.has(m.user_id)) continue;
+      seen.add(m.user_id);
+      list.push({ user_id: m.user_id, name: `${m.first_name || ""} ${m.last_name || ""}`.trim() || "Unnamed member" });
+    }
+    if (user?.id && !seen.has(user.id)) list.unshift({ user_id: user.id, name: "You" });
+    return list;
+  }, [recorderMembers, user?.id]);
+
+  const recorderName = (id) => {
+    if (!id) return "—";
+    const m = recorderOptions.find((o) => o.user_id === id);
+    return m?.name || "—";
+  };
 
   const { data: wsfCentres = [] } = useQuery({
     queryKey: ["wsf-centres-for-attendance", tenantId, isAdmin],
@@ -271,7 +306,7 @@ export default function Attendance() {
         session_date: formData.session_date,
         notes: formData.notes || null,
         unit: formData.unit || null,
-        created_by: user?.id || null,
+        created_by: (isAdmin && formData.recorded_by) || user?.id || null,
       }));
       if (error) throw error;
     },
@@ -539,10 +574,17 @@ export default function Attendance() {
                       {s.status === "closed" && <Lock className="h-3 w-3 text-muted-foreground shrink-0" />}
                     </p>
                     <p className="text-xs text-muted-foreground">{s.session_type} · {s.session_date}</p>
-                    {(s.unit || s.profiles?.full_name) && (
+                    {(s.unit || s.profiles?.full_name || s.created_by) && (
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {[s.unit, s.profiles?.full_name && `Created by ${s.profiles.full_name}`].filter(Boolean).join(" · ")}
+                        {[
+                          s.unit,
+                          (s.profiles?.full_name || (s.created_by ? recorderName(s.created_by) : null)) &&
+                            `Recorded by ${s.profiles?.full_name || recorderName(s.created_by)}`,
+                        ].filter(Boolean).join(" · ")}
                       </p>
+                    )}
+                    {s.created_at && (
+                      <p className="text-xs text-muted-foreground mt-0.5">Recorded on {formatDateTime(s.created_at)}</p>
                     )}
                     {(s.male_count > 0 || s.female_count > 0) && (
                       <p className="text-xs text-muted-foreground mt-0.5">
@@ -752,6 +794,17 @@ export default function Attendance() {
                     </SelectContent>
                   </Select>
                 )}
+              </div>
+            )}
+            {isAdmin && (
+              <div>
+                <Label>Recorded by</Label>
+                <Select value={form.recorded_by || user?.id || ""} onValueChange={v => setForm(f => ({ ...f, recorded_by: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select member" /></SelectTrigger>
+                  <SelectContent>
+                    {recorderOptions.map(o => <SelectItem key={o.user_id} value={o.user_id}>{o.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             )}
             <div><Label>Notes</Label><Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>
