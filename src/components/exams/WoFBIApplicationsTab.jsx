@@ -783,6 +783,7 @@ export default function WoFBIApplicationsTab() {
                   <TableHead>Edition</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="hidden lg:table-cell">Reviewed by</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
