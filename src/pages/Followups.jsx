@@ -341,7 +341,7 @@ export default function Followups() {
                 label="Print"
                 buildRows={() => ({
                   title: "Follow-ups Report",
-                  headers: ["Name", "Type", "Status", "Priority", "Assigned To", "Due Date", "Completed", "Notes"],
+                  headers: ["Name", "Type", "Status", "Priority", "Assigned To", "Due Date", "Completed", "Created", "Notes"],
                   rows: filtered.map(f => [
                     f.person_name,
                     f.followup_type,
@@ -350,6 +350,7 @@ export default function Followups() {
                     f.assigned_to ? (profileMap[f.assigned_to] || "Unassigned") : "Unassigned",
                     f.due_date || "",
                     f.completed_date || "",
+                    formatDateTime(f.created_at, ""),
                     f.notes || f.description || "",
                   ]),
                 })}
