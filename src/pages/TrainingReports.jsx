@@ -548,20 +548,21 @@ export default function TrainingReports() {
                 </div>
               )}
 
-              <div>
-                <Label>Recorded by</Label>
-                <Select value={form.recorded_by || user?.id || ""} onValueChange={(v) => set("recorded_by", v)}>
-                  <SelectTrigger><SelectValue placeholder="Select person recording this session" /></SelectTrigger>
-                  <SelectContent>
-                    {recorderOptions.map((p) => (
-                      <SelectItem key={p.user_id} value={p.user_id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-
-                  </SelectContent>
-                </Select>
-              </div>
+              {isAdmin && (
+                <div>
+                  <Label>Recorded by</Label>
+                  <Select value={form.recorded_by || user?.id || ""} onValueChange={(v) => set("recorded_by", v)}>
+                    <SelectTrigger><SelectValue placeholder="Select person recording this session" /></SelectTrigger>
+                    <SelectContent>
+                      {recorderOptions.map((p) => (
+                        <SelectItem key={p.user_id} value={p.user_id}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div>
                 <Label>Notes</Label>

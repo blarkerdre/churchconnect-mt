@@ -542,6 +542,7 @@ export default function WSFAttendanceTab({ centres }) {
         allCentres={availableCentres}
         reporterOptions={reporterOptions}
         currentUserId={user?.id}
+        canChooseReporter={isAdmin}
       />
 
       <PasswordConfirmDialog
