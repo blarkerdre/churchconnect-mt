@@ -599,6 +599,8 @@ export default function TrainingReports() {
                     <TableHead className="text-center">F</TableHead>
                     <TableHead className="text-center">HG</TableHead>
                     <TableHead className="text-center">WB</TableHead>
+                    <TableHead className="hidden lg:table-cell whitespace-nowrap">Recorded by</TableHead>
+                    <TableHead className="hidden lg:table-cell whitespace-nowrap">Recorded on</TableHead>
                     <TableHead className="w-10"></TableHead>
                    </TableRow>
                 </TableHeader>
