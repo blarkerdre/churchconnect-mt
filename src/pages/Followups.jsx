@@ -233,7 +233,7 @@ export default function Followups() {
   });
 
   const downloadCSV = () => {
-    const headers = ["Name", "Type", "Status", "Priority", "Assigned To", "Due Date", "Completed Date", "Notes"];
+    const headers = ["Name", "Type", "Status", "Priority", "Assigned To", "Due Date", "Completed Date", "Created", "Last Updated", "Notes"];
     const rows = filtered.map(f => [
       f.person_name,
       f.followup_type,
@@ -242,6 +242,8 @@ export default function Followups() {
       f.assigned_to ? (profileMap[f.assigned_to] || "Unassigned") : "Unassigned",
       f.due_date || "",
       f.completed_date || "",
+      formatDateTime(f.created_at, ""),
+      formatDateTime(f.updated_at, ""),
       (f.notes || f.description || "").replace(/,/g, " "),
     ]);
     const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
