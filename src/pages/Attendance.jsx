@@ -573,10 +573,17 @@ export default function Attendance() {
                       {s.status === "closed" && <Lock className="h-3 w-3 text-muted-foreground shrink-0" />}
                     </p>
                     <p className="text-xs text-muted-foreground">{s.session_type} · {s.session_date}</p>
-                    {(s.unit || s.profiles?.full_name) && (
+                    {(s.unit || s.profiles?.full_name || s.created_by) && (
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {[s.unit, s.profiles?.full_name && `Created by ${s.profiles.full_name}`].filter(Boolean).join(" · ")}
+                        {[
+                          s.unit,
+                          (s.profiles?.full_name || (s.created_by ? recorderName(s.created_by) : null)) &&
+                            `Recorded by ${s.profiles?.full_name || recorderName(s.created_by)}`,
+                        ].filter(Boolean).join(" · ")}
                       </p>
+                    )}
+                    {s.created_at && (
+                      <p className="text-xs text-muted-foreground mt-0.5">Recorded on {formatDateTime(s.created_at)}</p>
                     )}
                     {(s.male_count > 0 || s.female_count > 0) && (
                       <p className="text-xs text-muted-foreground mt-0.5">
