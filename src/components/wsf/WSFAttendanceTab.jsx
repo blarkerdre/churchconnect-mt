@@ -540,6 +540,8 @@ export default function WSFAttendanceTab({ centres }) {
         report={editing}
         onSave={(data) => saveMutation.mutateAsync(data)}
         allCentres={availableCentres}
+        reporterOptions={reporterOptions}
+        currentUserId={user?.id}
       />
 
       <PasswordConfirmDialog
