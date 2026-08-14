@@ -305,7 +305,7 @@ export default function Attendance() {
         session_date: formData.session_date,
         notes: formData.notes || null,
         unit: formData.unit || null,
-        created_by: user?.id || null,
+        created_by: (isAdmin && formData.recorded_by) || user?.id || null,
       }));
       if (error) throw error;
     },
