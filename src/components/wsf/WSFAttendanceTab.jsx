@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { format } from "date-fns";
+import { formatDateTime } from "@/lib/utils";
 import WSFAttendanceFormDialog from "./WSFAttendanceFormDialog";
 import PrintReportButton from "@/components/PrintReportButton";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
@@ -71,13 +72,73 @@ export default function WSFAttendanceTab({ centres }) {
     enabled: canAccess,
   });
 
+  // Home Cell leaders / hosts (possible reporters)
+  const leaderMemberIds = useMemo(() => {
+    const ids = new Set();
+    centres.forEach(c => {
+      if (c.leader_id) ids.add(c.leader_id);
+      if (c.host_member_id) ids.add(c.host_member_id);
+    });
+    return Array.from(ids);
+  }, [centres]);
+
+  const { data: leaderMembers = [] } = useQuery({
+    queryKey: ["wsf-reporter-members", tenantId, leaderMemberIds],
+    enabled: leaderMemberIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await scopeQuery(
+        supabase.from("members").select("id, user_id, first_name, last_name").in("id", leaderMemberIds)
+      );
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: tenantProfiles = [] } = useQuery({
+    queryKey: ["wsf-reporter-profiles", tenantId],
+    enabled: !!tenantId && canAccess,
+    queryFn: async () => {
+      const { data, error } = await scopeQuery(
+        supabase.from("profiles").select("user_id, full_name, email")
+      );
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const reporterNameMap = useMemo(() => {
+    const m = {};
+    tenantProfiles.forEach(p => {
+      if (p.user_id) m[p.user_id] = p.full_name || p.email || "—";
+    });
+    leaderMembers.forEach(mem => {
+      if (mem.user_id) m[mem.user_id] = `${mem.first_name || ""} ${mem.last_name || ""}`.trim() || m[mem.user_id] || "—";
+    });
+    return m;
+  }, [tenantProfiles, leaderMembers]);
+
+  const reporterOptions = useMemo(() => {
+    const list = [];
+    const seen = new Set();
+    leaderMembers.forEach(mem => {
+      if (mem.user_id && !seen.has(mem.user_id)) {
+        seen.add(mem.user_id);
+        list.push({ user_id: mem.user_id, name: reporterNameMap[mem.user_id] || "—" });
+      }
+    });
+    if (user?.id && !seen.has(user.id)) {
+      list.push({ user_id: user.id, name: reporterNameMap[user.id] || "Me" });
+    }
+    return list.sort((a, b) => a.name.localeCompare(b.name));
+  }, [leaderMembers, reporterNameMap, user?.id]);
+
   const saveMutation = useMutation({
     mutationFn: async (payload) => {
       if (editing) {
         const { error } = await supabase.from("wsf_attendance_reports").update(payload).eq("id", editing.id).eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("wsf_attendance_reports").insert(withTenant({ ...payload, reported_by: user?.id }));
+        const { error } = await supabase.from("wsf_attendance_reports").insert(withTenant({ reported_by: user?.id, ...payload }));
         if (error) throw error;
       }
     },
@@ -169,27 +230,29 @@ export default function WSFAttendanceTab({ centres }) {
     ? `${dateFrom || "…"} → ${dateTo || "…"}`
     : "All time";
 
+  const reporterName = (r) => (r.reported_by ? (reporterNameMap[r.reported_by] || "—") : "—");
+
   const buildPrintRows = () => ({
     title: "Home Cell Attendance Report",
-    headers: ["Date", "Centre", "Venue", "Male", "Female", "Adults", "Children", "Total", "1st Timers", "Testimonies"],
+    headers: ["Date", "Centre", "Venue", "Male", "Female", "Adults", "Children", "Total", "1st Timers", "Testimonies", "Reported by", "Recorded on"],
     rows: filteredReports.map(r => {
       const adults = r.male + r.female;
       const total = adults + r.children;
       const venue = r.held_at_home_cell === false ? "Off-venue" : "At cell";
-      return [format(new Date(r.meeting_date), "dd MMM yyyy"), r.wsf_centres?.name || "—", venue, r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies];
+      return [format(new Date(r.meeting_date), "dd MMM yyyy"), r.wsf_centres?.name || "—", venue, r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies, reporterName(r), formatDateTime(r.created_at)];
     }),
   });
 
   const downloadReport = () => {
     const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const rows = [
-      ["Date","Centre","Venue","Male","Female","Adults","Children","Total","First Timers","Testimonies","Notes"].join(","),
+      ["Date","Centre","Venue","Male","Female","Adults","Children","Total","First Timers","Testimonies","Notes","Reported by","Recorded on"].join(","),
       ...filteredReports.map(r => {
         const adults = r.male + r.female;
         const total = adults + r.children;
         const venue = r.held_at_home_cell === false ? "Off-venue" : "At cell";
         return [
-          r.meeting_date, esc(r.wsf_centres?.name || ""), venue, r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies, esc(r.notes || "")
+          r.meeting_date, esc(r.wsf_centres?.name || ""), venue, r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies, esc(r.notes || ""), esc(reporterName(r)), esc(formatDateTime(r.created_at))
         ].join(",");
       }),
     ];
@@ -404,6 +467,8 @@ export default function WSFAttendanceTab({ centres }) {
                   <TableHead className="text-center">Total</TableHead>
                   <TableHead className="text-center">1st Timers</TableHead>
                   <TableHead className="text-center">Testimonies</TableHead>
+                  <TableHead className="hidden md:table-cell">Reported by</TableHead>
+                  <TableHead className="hidden lg:table-cell whitespace-nowrap">Recorded on</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -413,7 +478,12 @@ export default function WSFAttendanceTab({ centres }) {
                   const total = adults + r.children;
                   return (
                     <TableRow key={r.id}>
-                      <TableCell className="font-medium">{format(new Date(r.meeting_date), "dd MMM yyyy")}</TableCell>
+                      <TableCell className="font-medium">
+                        {format(new Date(r.meeting_date), "dd MMM yyyy")}
+                        <span className="block md:hidden text-[10px] font-normal text-muted-foreground">
+                          {reporterName(r)} · {formatDateTime(r.created_at)}
+                        </span>
+                      </TableCell>
                       <TableCell>{r.wsf_centres?.name || "—"}</TableCell>
                       <TableCell>
                         {r.held_at_home_cell === false ? (
@@ -433,6 +503,13 @@ export default function WSFAttendanceTab({ centres }) {
                       </TableCell>
                       <TableCell className="text-center">{r.first_timers}</TableCell>
                       <TableCell className="text-center">{r.testimonies}</TableCell>
+                      <TableCell className="hidden md:table-cell">{reporterName(r)}</TableCell>
+                      <TableCell className="hidden lg:table-cell whitespace-nowrap">
+                        {formatDateTime(r.created_at)}
+                        {r.updated_at && r.created_at && new Date(r.updated_at) - new Date(r.created_at) > 60000 && (
+                          <span className="block text-[10px] text-muted-foreground">edited {formatDateTime(r.updated_at)}</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           {canWrite && (
@@ -463,6 +540,8 @@ export default function WSFAttendanceTab({ centres }) {
         report={editing}
         onSave={(data) => saveMutation.mutateAsync(data)}
         allCentres={availableCentres}
+        reporterOptions={reporterOptions}
+        currentUserId={user?.id}
       />
 
       <PasswordConfirmDialog
