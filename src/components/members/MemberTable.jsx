@@ -77,6 +77,7 @@ export default function MemberTable({ members, onEdit, onDelete, onEmail, readOn
               <TableCell className="text-center"><YesNo value={m.water_baptism} /></TableCell>
               <TableCell className="text-center"><YesNo value={m.winners_satellite} /></TableCell>
               <TableCell className="text-center"><YesNo value={m.holy_spirit_baptism} /></TableCell>
+              <TableCell className="hidden lg:table-cell text-xs text-slate-500 whitespace-nowrap">{formatDateTime(m.created_at)}</TableCell>
               {(!readOnly || onEmail) && (
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
