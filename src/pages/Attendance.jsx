@@ -70,7 +70,7 @@ export default function Attendance() {
   const isMobile = useIsMobile();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const [form, setForm] = useState({ title: "", session_type: "Sunday Service", session_date: "", notes: "", unit: "" });
+  const [form, setForm] = useState({ title: "", session_type: "Sunday Service", session_date: "", notes: "", unit: "", recorded_by: "" });
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [unitFilter, setUnitFilter] = useState("all");
@@ -84,6 +84,40 @@ export default function Attendance() {
       return data;
     },
   });
+
+  // Church members with an app account — options for the admin-only "Recorded by" picker
+  const { data: recorderMembers = [] } = useQuery({
+    queryKey: ["attendance-recorders", tenantId],
+    enabled: !!tenantId && isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members")
+        .select("user_id, first_name, last_name")
+        .eq("tenant_id", tenantId)
+        .not("user_id", "is", null)
+        .order("first_name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const recorderOptions = useMemo(() => {
+    const seen = new Set();
+    const list = [];
+    for (const m of recorderMembers) {
+      if (!m.user_id || seen.has(m.user_id)) continue;
+      seen.add(m.user_id);
+      list.push({ user_id: m.user_id, name: `${m.first_name || ""} ${m.last_name || ""}`.trim() || "Unnamed member" });
+    }
+    if (user?.id && !seen.has(user.id)) list.unshift({ user_id: user.id, name: "You" });
+    return list;
+  }, [recorderMembers, user?.id]);
+
+  const recorderName = (id) => {
+    if (!id) return "—";
+    const m = recorderOptions.find((o) => o.user_id === id);
+    return m?.name || "—";
+  };
 
   const { data: wsfCentres = [] } = useQuery({
     queryKey: ["wsf-centres-for-attendance", tenantId, isAdmin],
