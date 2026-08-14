@@ -167,7 +167,7 @@ export default function TrainingReports() {
   };
 
   const resetForm = () => {
-    setForm(emptyForm);
+    setForm({ ...emptyForm, recorded_by: user?.id || "" });
     setAttendees({});
     setAttendeeSearch("");
     setEditingId(null);
