@@ -72,13 +72,73 @@ export default function WSFAttendanceTab({ centres }) {
     enabled: canAccess,
   });
 
+  // Home Cell leaders / hosts (possible reporters)
+  const leaderMemberIds = useMemo(() => {
+    const ids = new Set();
+    centres.forEach(c => {
+      if (c.leader_id) ids.add(c.leader_id);
+      if (c.host_member_id) ids.add(c.host_member_id);
+    });
+    return Array.from(ids);
+  }, [centres]);
+
+  const { data: leaderMembers = [] } = useQuery({
+    queryKey: ["wsf-reporter-members", tenantId, leaderMemberIds],
+    enabled: leaderMemberIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await scopeQuery(
+        supabase.from("members").select("id, user_id, first_name, last_name").in("id", leaderMemberIds)
+      );
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: tenantProfiles = [] } = useQuery({
+    queryKey: ["wsf-reporter-profiles", tenantId],
+    enabled: !!tenantId && canAccess,
+    queryFn: async () => {
+      const { data, error } = await scopeQuery(
+        supabase.from("profiles").select("user_id, full_name, email")
+      );
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const reporterNameMap = useMemo(() => {
+    const m = {};
+    tenantProfiles.forEach(p => {
+      if (p.user_id) m[p.user_id] = p.full_name || p.email || "—";
+    });
+    leaderMembers.forEach(mem => {
+      if (mem.user_id) m[mem.user_id] = `${mem.first_name || ""} ${mem.last_name || ""}`.trim() || m[mem.user_id] || "—";
+    });
+    return m;
+  }, [tenantProfiles, leaderMembers]);
+
+  const reporterOptions = useMemo(() => {
+    const list = [];
+    const seen = new Set();
+    leaderMembers.forEach(mem => {
+      if (mem.user_id && !seen.has(mem.user_id)) {
+        seen.add(mem.user_id);
+        list.push({ user_id: mem.user_id, name: reporterNameMap[mem.user_id] || "—" });
+      }
+    });
+    if (user?.id && !seen.has(user.id)) {
+      list.push({ user_id: user.id, name: reporterNameMap[user.id] || "Me" });
+    }
+    return list.sort((a, b) => a.name.localeCompare(b.name));
+  }, [leaderMembers, reporterNameMap, user?.id]);
+
   const saveMutation = useMutation({
     mutationFn: async (payload) => {
       if (editing) {
         const { error } = await supabase.from("wsf_attendance_reports").update(payload).eq("id", editing.id).eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("wsf_attendance_reports").insert(withTenant({ ...payload, reported_by: user?.id }));
+        const { error } = await supabase.from("wsf_attendance_reports").insert(withTenant({ reported_by: user?.id, ...payload }));
         if (error) throw error;
       }
     },
