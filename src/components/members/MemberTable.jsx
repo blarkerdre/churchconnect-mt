@@ -51,6 +51,7 @@ export default function MemberTable({ members, onEdit, onDelete, onEmail, readOn
                 <div>
                   <p className="font-medium text-slate-800">{m.first_name} {m.last_name}</p>
                   {m.gender && <p className="text-xs text-slate-400">{m.gender}</p>}
+                  <p className="text-xs text-slate-400 lg:hidden">Added {formatDateTime(m.created_at)}</p>
                 </div>
               </TableCell>
               <TableCell>
