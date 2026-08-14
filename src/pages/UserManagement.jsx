@@ -468,6 +468,9 @@ export default function UserManagement() {
                           )}
                         </div>
                       </td>
+                      <td className="p-3 sm:p-4 text-xs text-muted-foreground hidden lg:table-cell whitespace-nowrap">
+                        {formatDateTime(p.created_at)}
+                      </td>
                       <td className="p-3 sm:p-4 hidden md:table-cell">
                         {canChange ? (
                           <div className="space-y-1.5">
