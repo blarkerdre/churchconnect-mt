@@ -7,6 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { format } from "date-fns";
+import { useRecorderOptions } from "@/components/shared/RecordedBySelect";
+import { formatDateTime } from "@/lib/utils";
 
 const resultColor = {
   pass: "bg-chart-3/10 text-chart-3",
@@ -16,6 +18,7 @@ const resultColor = {
 
 export default function InspectionHistoryDialog({ open, onOpenChange, item }) {
   const { tenantId } = useTenantQuery();
+  const { nameFor: recorderName } = useRecorderOptions(open);
 
   const { data: inspections = [], isLoading } = useQuery({
     queryKey: ["inspection-history", item?.id, tenantId],
