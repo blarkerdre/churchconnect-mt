@@ -14,6 +14,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import SignPostDialog from "./SignPostDialog";
 import ReferralTimeline from "./ReferralTimeline";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
+import { formatDateTime } from "@/lib/utils";
 
 const NEXT_STEPS = {
   "First Timer": [
@@ -287,6 +288,18 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
               <div className="space-y-0.5">
                 <p className="text-xs text-muted-foreground flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Completed</p>
                 <p className="font-medium text-chart-3">{format(new Date(followup.completed_date), "dd MMM yyyy")}</p>
+              </div>
+            )}
+            {followup.created_at && (
+              <div className="space-y-0.5">
+                <p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> Created</p>
+                <p className="font-medium text-foreground">{formatDateTime(followup.created_at)}</p>
+              </div>
+            )}
+            {followup.updated_at && (
+              <div className="space-y-0.5">
+                <p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> Last Updated</p>
+                <p className="font-medium text-foreground">{formatDateTime(followup.updated_at)}</p>
               </div>
             )}
           </div>

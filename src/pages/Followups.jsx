@@ -20,6 +20,7 @@ import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import ModuleTour from "@/components/tour/ModuleTour";
+import { formatDateTime } from "@/lib/utils";
 
 const priorityColors = { "Urgent": "bg-destructive/10 text-destructive", "High": "bg-chart-5/10 text-chart-5", "Medium": "bg-accent/10 text-accent", "Low": "bg-muted text-muted-foreground" };
 const statusColors = { "Pending": "bg-accent/10 text-accent", "In Progress": "bg-primary/10 text-primary", "Completed": "bg-chart-3/10 text-chart-3", "Overdue": "bg-destructive/10 text-destructive" };
@@ -233,7 +234,7 @@ export default function Followups() {
   });
 
   const downloadCSV = () => {
-    const headers = ["Name", "Type", "Status", "Priority", "Assigned To", "Due Date", "Completed Date", "Notes"];
+    const headers = ["Name", "Type", "Status", "Priority", "Assigned To", "Due Date", "Completed Date", "Created", "Last Updated", "Notes"];
     const rows = filtered.map(f => [
       f.person_name,
       f.followup_type,
@@ -242,6 +243,8 @@ export default function Followups() {
       f.assigned_to ? (profileMap[f.assigned_to] || "Unassigned") : "Unassigned",
       f.due_date || "",
       f.completed_date || "",
+      formatDateTime(f.created_at, ""),
+      formatDateTime(f.updated_at, ""),
       (f.notes || f.description || "").replace(/,/g, " "),
     ]);
     const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
@@ -339,7 +342,7 @@ export default function Followups() {
                 label="Print"
                 buildRows={() => ({
                   title: "Follow-ups Report",
-                  headers: ["Name", "Type", "Status", "Priority", "Assigned To", "Due Date", "Completed", "Notes"],
+                  headers: ["Name", "Type", "Status", "Priority", "Assigned To", "Due Date", "Completed", "Created", "Notes"],
                   rows: filtered.map(f => [
                     f.person_name,
                     f.followup_type,
@@ -348,6 +351,7 @@ export default function Followups() {
                     f.assigned_to ? (profileMap[f.assigned_to] || "Unassigned") : "Unassigned",
                     f.due_date || "",
                     f.completed_date || "",
+                    formatDateTime(f.created_at, ""),
                     f.notes || f.description || "",
                   ]),
                 })}
@@ -396,6 +400,7 @@ export default function Followups() {
                         {f.due_date && (
                           <span className="flex items-center gap-1"><CalendarCheck className="h-3 w-3" /> {f.due_date}</span>
                         )}
+                        <span className="flex items-center gap-1">Created {formatDateTime(f.created_at)}</span>
                         {isConvertible && (
                           <button
                             onClick={(e) => {

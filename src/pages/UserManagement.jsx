@@ -18,6 +18,7 @@ import WSFLeaderAssignments from "@/components/users/WSFLeaderAssignments";
 import BulkUnitAssignDialog from "@/components/users/BulkUnitAssignDialog";
 import TenantInvitePanel from "@/components/tenants/TenantInvitePanel";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { formatDateTime } from "@/lib/utils";
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 import ModuleTour from "@/components/tour/ModuleTour";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
@@ -382,6 +383,7 @@ export default function UserManagement() {
                    <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden md:table-cell">Email</th>
                    <th data-tour="um-roles" className="text-left p-3 sm:p-4 font-medium text-muted-foreground">Roles</th>
                    <th className={`text-left p-3 sm:p-4 font-medium text-muted-foreground ${(roleFilter === "unit_leader" || roleFilter === "wsf_leader") ? "" : "hidden lg:table-cell"}`}>Assignments</th>
+                   <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden lg:table-cell whitespace-nowrap">Joined</th>
                    <th className="text-left p-3 sm:p-4 font-medium text-muted-foreground hidden md:table-cell">Manage Roles</th>
                    <th className="text-right p-3 sm:p-4 font-medium text-muted-foreground">Actions</th>
                  </tr>
@@ -466,6 +468,9 @@ export default function UserManagement() {
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </div>
+                      </td>
+                      <td className="p-3 sm:p-4 text-xs text-muted-foreground hidden lg:table-cell whitespace-nowrap">
+                        {formatDateTime(p.created_at)}
                       </td>
                       <td className="p-3 sm:p-4 hidden md:table-cell">
                         {canChange ? (
