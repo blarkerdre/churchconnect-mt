@@ -107,7 +107,7 @@ export default function WoFBIApplicationsTab() {
         scopeQuery(
           supabase
             .from("course_registrations")
-            .select("id, member_id, course_id, session_id, status, registered_at, registration_email_sent_at, exam_link_sent_at, course:exam_titles(id, name), member:members(id, first_name, last_name, email, phone, user_id), edition:exam_sessions(id, name)")
+            .select("id, member_id, course_id, session_id, status, registered_at, approved_at, approved_by, registration_email_sent_at, exam_link_sent_at, course:exam_titles(id, name), member:members(id, first_name, last_name, email, phone, user_id), edition:exam_sessions(id, name)")
         )
       ).order("registered_at", { ascending: false });
       if (error) throw error;
