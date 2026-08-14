@@ -174,6 +174,7 @@ export default function ChurchAttendance() {
       testimonies: String(r.testimonies ?? ""),
       cars: String(r.cars ?? ""),
       notes: r.notes || "",
+      recorded_by: r.recorded_by || user?.id || "",
     });
     setOpen(true);
   };
