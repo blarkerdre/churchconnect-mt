@@ -22,6 +22,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import PrintReportButton from "@/components/PrintReportButton";
 import ModuleTour from "@/components/tour/ModuleTour";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import { formatDateTime } from "@/lib/utils";
 
 const DEFAULT_SERVICE_TYPES = ["Sunday Service", "Midweek Service", "Special Program", "Thanksgiving Service", "Other"];
 
@@ -38,6 +39,7 @@ const emptyForm = {
   testimonies: "",
   cars: "",
   notes: "",
+  recorded_by: "",
 };
 
 export default function ChurchAttendance() {
