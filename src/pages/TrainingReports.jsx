@@ -553,11 +553,12 @@ export default function TrainingReports() {
                 <Select value={form.recorded_by || user?.id || ""} onValueChange={(v) => set("recorded_by", v)}>
                   <SelectTrigger><SelectValue placeholder="Select person recording this session" /></SelectTrigger>
                   <SelectContent>
-                    {profiles.map((p) => (
+                    {recorderOptions.map((p) => (
                       <SelectItem key={p.user_id} value={p.user_id}>
-                        {p.full_name || p.email || "Unknown"}
+                        {p.name}
                       </SelectItem>
                     ))}
+
                   </SelectContent>
                 </Select>
               </div>
