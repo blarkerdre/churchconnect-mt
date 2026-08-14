@@ -663,7 +663,7 @@ export default function TrainingReports() {
                         </TableRow>
                         {expandedRow === r.id && (
                           <TableRow>
-                            <TableCell colSpan={8} className="bg-muted/20 p-3 space-y-4">
+                            <TableCell colSpan={10} className="bg-muted/20 p-3 space-y-4">
                               <TrainingAttendeesPanel report={r} />
                               {canAttachments && (
                                 <div className="pt-3 border-t">
