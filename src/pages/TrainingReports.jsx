@@ -121,6 +121,25 @@ export default function TrainingReports() {
     },
   });
 
+  // Users in this church, for the "Recorded by" dropdown
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["training-recorder-profiles", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await scopeQuery(
+        supabase.from("profiles").select("user_id, full_name, email").order("full_name", { ascending: true })
+      );
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const profileMap = useMemo(() => {
+    const map = {};
+    profiles.forEach(p => { map[p.user_id] = p.full_name || p.email || "Unknown"; });
+    return map;
+  }, [profiles]);
+
   const filteredMembers = useMemo(() => {
     const s = attendeeSearch.trim().toLowerCase();
     if (!s) return [];
