@@ -56,9 +56,10 @@ export default function InspectionHistoryDialog({ open, onOpenChange, item }) {
                   </div>
                   <Badge className={resultColor[insp.overall_result]}>{insp.overall_result.replace("_", " ")}</Badge>
                 </div>
-                {insp.signature_name && (
-                  <div className="text-xs text-muted-foreground">By: {insp.signature_name}</div>
-                )}
+                <div className="text-xs text-muted-foreground">
+                  Inspected by {insp.signature_name || recorderName(insp.inspected_by)}
+                  {insp.created_at ? ` · Recorded on ${formatDateTime(insp.created_at)}` : ""}
+                </div>
                 {insp.notes && <div className="text-sm">{insp.notes}</div>}
                 {insp.responses?.length > 0 && (
                   <ul className="text-xs space-y-1 mt-2">
