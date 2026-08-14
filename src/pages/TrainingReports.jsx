@@ -190,6 +190,7 @@ export default function TrainingReports() {
       holy_ghost_baptism: r.holy_ghost_baptism ?? "",
       water_baptism: r.water_baptism ?? "",
       notes: r.notes || "",
+      recorded_by: r.recorded_by || user?.id || "",
     });
     setAttendees({});
     setAttendeeSearch("");
