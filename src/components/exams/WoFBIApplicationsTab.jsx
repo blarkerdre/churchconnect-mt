@@ -906,7 +906,10 @@ export default function WoFBIApplicationsTab() {
               {detail?.source === "direct" ? "Direct enrolment" : "Application"} — {detail?.first_name} {detail?.last_name}
             </DialogTitle>
             <DialogDescription>
-              {detail?.source === "direct" ? "Registered" : "Submitted"} {detail && new Date(detail.created_at).toLocaleString()} · {detail?.email || "—"} · Course: {detail?.course?.name || "—"}
+              {detail?.source === "direct" ? "Registered" : "Submitted"} {detail && formatDateTime(detail.created_at)} · {detail?.email || "—"} · Course: {detail?.course?.name || "—"}
+              {detail && (detail.reviewed_at || detail.reviewed_by) && (
+                <span className="block">Reviewed by {reviewerName(detail.reviewed_by)} · {formatDateTime(detail.reviewed_at)}</span>
+              )}
             </DialogDescription>
           </DialogHeader>
           {detail && (
