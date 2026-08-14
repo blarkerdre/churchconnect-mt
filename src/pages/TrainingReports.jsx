@@ -291,11 +291,12 @@ export default function TrainingReports() {
       holy_ghost_baptism: parseInt(form.holy_ghost_baptism) || 0,
       water_baptism: parseInt(form.water_baptism) || 0,
       notes: form.notes || null,
+      recorded_by: form.recorded_by || user?.id || null,
     };
     if (editingId) {
       updateMutation.mutate({ id: editingId, payload });
     } else {
-      saveMutation.mutate({ ...payload, recorded_by: user?.id });
+      saveMutation.mutate(payload);
     }
   };
 
