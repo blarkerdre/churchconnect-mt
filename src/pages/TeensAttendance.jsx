@@ -1044,6 +1044,7 @@ export default function TeensAttendance({ embedded = false }) {
           open={formSession !== null}
           onOpenChange={(o) => !o && setFormSession(null)}
           session={formSession?.id ? formSession : null}
+          isAdmin={isAdmin}
           onSaved={() => { refetch(); qc.invalidateQueries({ queryKey: ["teen-sessions"] }); setFormSession(null); }}
         />
       )}
