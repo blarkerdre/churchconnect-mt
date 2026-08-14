@@ -516,6 +516,13 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
       <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <TenantDialogHeader>{member ? "Edit Member" : "Register New Member"}</TenantDialogHeader>
 
+        {member && (
+          <p className="text-xs text-muted-foreground pt-2">
+            Added on {formatDateTime(member.created_at)}
+            {member.updated_at ? ` · Last updated ${formatDateTime(member.updated_at)}` : ""}
+          </p>
+        )}
+
         <div className="space-y-6 py-4">
           {/* Personal Details */}
           <div>
