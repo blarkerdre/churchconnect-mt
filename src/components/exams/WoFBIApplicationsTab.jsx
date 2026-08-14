@@ -164,6 +164,33 @@ export default function WoFBIApplicationsTab() {
     );
   }, [appRows, regRows, tenantId]);
 
+  // Resolve reviewer (approver) names from members of this church.
+  const { data: reviewerMembers = [] } = useQuery({
+    queryKey: ["wofbi-app-reviewers", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("members")
+        .select("user_id, first_name, last_name")
+        .eq("tenant_id", tenantId)
+        .not("user_id", "is", null);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const reviewerNameMap = useMemo(() => {
+    const m = {};
+    reviewerMembers.forEach((p) => {
+      if (p.user_id) m[p.user_id] = [p.first_name, p.last_name].filter(Boolean).join(" ") || "—";
+    });
+    return m;
+  }, [reviewerMembers]);
+
+  const reviewerName = (id) => (id ? reviewerNameMap[id] || (id === user?.id ? "You" : "—") : "—");
+
+
+
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }) => {
       const app = applications.find((a) => a.id === id);
