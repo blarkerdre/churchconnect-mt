@@ -908,6 +908,7 @@ export default function TeensAttendance({ embedded = false }) {
   const canManage = isAdmin || isLeader;         // create/edit/delete/report
   const canWrite = canManage || isMember;         // create + close + sign in/out
   const canDelete = isAdmin || isLeader;
+  const { nameFor: recorderName } = useRecorderOptions(canWrite);
 
   const [formSession, setFormSession] = useState(null); // {} for new, session for edit
   const [qrOpen, setQrOpen] = useState(false);
