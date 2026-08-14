@@ -507,6 +507,8 @@ export default function ChurchAttendance() {
                     <TableHead className="text-center">Testimonies</TableHead>
                     <TableHead className="text-center">Cars</TableHead>
                      <TableHead className="text-center">Total</TableHead>
+                     <TableHead className="hidden md:table-cell">Recorded by</TableHead>
+                     <TableHead className="hidden md:table-cell">Recorded on</TableHead>
                      <TableHead className="w-10"></TableHead>
                    </TableRow>
                 </TableHeader>
@@ -514,7 +516,12 @@ export default function ChurchAttendance() {
                   {filteredReports.map((r) => (
                     <React.Fragment key={r.id}>
                       <TableRow>
-                        <TableCell className="text-sm">{format(parseISO(r.service_date), "dd MMM yyyy")}</TableCell>
+                        <TableCell className="text-sm">
+                          {format(parseISO(r.service_date), "dd MMM yyyy")}
+                          <span className="block md:hidden text-[11px] text-muted-foreground mt-0.5">
+                            {recorderName(r.recorded_by)} · {formatDateTime(r.created_at)}
+                          </span>
+                        </TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="text-xs">{r.service_type}</Badge>
                           {r.title && <span className="block text-xs text-muted-foreground mt-0.5">{r.title}</span>}
