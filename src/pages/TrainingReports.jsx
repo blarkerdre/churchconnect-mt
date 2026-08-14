@@ -617,12 +617,22 @@ export default function TrainingReports() {
                               {r.training_type}
                             </Badge>
                             {r.title && <span className="block text-xs text-muted-foreground mt-0.5">{r.title}</span>}
+                            <span className="block lg:hidden text-xs text-muted-foreground mt-0.5">
+                              {recorderName(r)} · {formatDateTime(r.created_at)}
+                            </span>
                           </TableCell>
                           <TableCell className="text-center font-semibold">{r.total_attendance}</TableCell>
                           <TableCell className="text-center">{r.male}</TableCell>
                           <TableCell className="text-center">{r.female}</TableCell>
                           <TableCell className="text-center">{r.holy_ghost_baptism}</TableCell>
                           <TableCell className="text-center">{r.water_baptism}</TableCell>
+                          <TableCell className="hidden lg:table-cell text-xs whitespace-nowrap">{recorderName(r)}</TableCell>
+                          <TableCell className="hidden lg:table-cell text-xs text-muted-foreground whitespace-nowrap">
+                            {formatDateTime(r.created_at)}
+                            {r.updated_at && r.updated_at !== r.created_at && (
+                              <span className="block text-[10px]">edited {formatDateTime(r.updated_at)}</span>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center justify-end gap-1">
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)} title="Attendees">
