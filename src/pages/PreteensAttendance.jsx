@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import PreteensPersistentQRDialog from "@/components/preteens/PreteensPersistentQRDialog";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import RecordedBySelect, { useRecorderOptions } from "@/components/shared/RecordedBySelect";
+import { formatDateTime } from "@/lib/utils";
 
 const SESSION_TYPES = [
   "Sunday Service",
@@ -196,6 +198,7 @@ function SessionFormDialog({ open, onOpenChange, session, onSaved, isAdmin = fal
           </div>
           <div><Label>Late after</Label><Input type="time" value={form.late_after} onChange={(e) => setForm({ ...form, late_after: e.target.value })} /></div>
           <div><Label>Notes</Label><Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+          <RecordedBySelect visible={isAdmin} value={form.recorded_by} onChange={(v) => setForm({ ...form, recorded_by: v })} />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -905,6 +908,7 @@ export default function PreteensAttendance({ embedded = false }) {
   const canManage = isAdmin || isLeader;         // create/edit/delete/report
   const canWrite = canManage || isMember;         // create + close + sign in/out
   const canDelete = isAdmin || isLeader;
+  const { nameFor: recorderName } = useRecorderOptions(canWrite);
 
   const [formSession, setFormSession] = useState(null); // {} for new, session for edit
   const [qrOpen, setQrOpen] = useState(false);
