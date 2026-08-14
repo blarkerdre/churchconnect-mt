@@ -815,6 +815,16 @@ export default function WoFBIApplicationsTab() {
                       </div>
                     </TableCell>
                     <TableCell><Badge variant={STATUS_VARIANT[a.status] || "secondary"} className="capitalize">{a.status}</Badge></TableCell>
+                    <TableCell className="hidden lg:table-cell text-xs">
+                      {a.reviewed_at || a.reviewed_by ? (
+                        <>
+                          {reviewerName(a.reviewed_by)}
+                          <span className="block text-[11px] text-muted-foreground">{formatDateTime(a.reviewed_at)}</span>
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button size="sm" variant="outline" onClick={() => setDetail(a)} className="gap-1.5">
