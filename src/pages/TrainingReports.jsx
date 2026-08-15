@@ -444,7 +444,7 @@ export default function TrainingReports() {
 
               <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
                 <p className="text-sm font-semibold text-foreground flex items-center gap-2"><Users className="h-4 w-4" /> Attendance</p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
                   <div>
                     <Label className="text-xs">Male</Label>
                     <Input type="number" min="0" value={form.male} onChange={(e) => set("male", e.target.value)} />
