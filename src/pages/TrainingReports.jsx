@@ -462,7 +462,7 @@ export default function TrainingReports() {
 
               <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
                 <p className="text-sm font-semibold text-foreground flex items-center gap-2"><Flame className="h-4 w-4" /> Spiritual Outcomes</p>
-                <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   <div>
                     <Label className="text-xs">Holy Ghost Baptism</Label>
                     <Input type="number" min="0" value={form.holy_ghost_baptism} onChange={(e) => set("holy_ghost_baptism", e.target.value)} />
