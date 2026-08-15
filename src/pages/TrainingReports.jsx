@@ -390,30 +390,31 @@ export default function TrainingReports() {
     <div className="space-y-6">
     <ModuleTour tourId="training-reports-v1" />
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" /> Training Report
+            <TrendingUp className="h-5 w-5 text-primary shrink-0" /> Training Report
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Record attendance and outcomes for training sessions</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {canManageCertificates && (
             <>
-              <Button asChild size="sm" variant="outline" className="gap-1.5">
-                <Link to={certReportPath}><Award className="h-4 w-4" /> Certificates Report</Link>
+              <Button asChild size="sm" variant="outline" className="gap-1.5 flex-1 sm:flex-none min-w-0">
+                <Link to={certReportPath}><Award className="h-4 w-4 shrink-0" /> <span className="truncate">Certificates Report</span></Link>
               </Button>
-              <Button asChild size="sm" variant="outline" className="gap-1.5">
-                <Link to={certApprovalsPath}><ClipboardList className="h-4 w-4" /> Certificate Approvals</Link>
+              <Button asChild size="sm" variant="outline" className="gap-1.5 flex-1 sm:flex-none min-w-0">
+                <Link to={certApprovalsPath}><ClipboardList className="h-4 w-4 shrink-0" /> <span className="truncate">Certificate Approvals</span></Link>
               </Button>
             </>
           )}
         {canRecordSession && (
           <Dialog open={open} onOpenChange={handleDialogOpenChange}>
             <DialogTrigger asChild>
-              <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Record Session</Button>
+              <Button size="sm" className="gap-1.5 w-full sm:w-auto"><Plus className="h-4 w-4" /> Record Session</Button>
             </DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
+
             <DialogHeader>
               <DialogTitle>{editingId ? "Edit Training Session" : "Record Training Session"}</DialogTitle>
             </DialogHeader>
