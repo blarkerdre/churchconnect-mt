@@ -390,36 +390,38 @@ export default function TrainingReports() {
     <div className="space-y-6">
     <ModuleTour tourId="training-reports-v1" />
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" /> Training Report
+            <TrendingUp className="h-5 w-5 text-primary shrink-0" /> Training Report
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Record attendance and outcomes for training sessions</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {canManageCertificates && (
             <>
-              <Button asChild size="sm" variant="outline" className="gap-1.5">
-                <Link to={certReportPath}><Award className="h-4 w-4" /> Certificates Report</Link>
+              <Button asChild size="sm" variant="outline" className="gap-1.5 flex-1 sm:flex-none min-w-0">
+                <Link to={certReportPath}><Award className="h-4 w-4 shrink-0" /> <span className="truncate">Certificates Report</span></Link>
               </Button>
-              <Button asChild size="sm" variant="outline" className="gap-1.5">
-                <Link to={certApprovalsPath}><ClipboardList className="h-4 w-4" /> Certificate Approvals</Link>
+              <Button asChild size="sm" variant="outline" className="gap-1.5 flex-1 sm:flex-none min-w-0">
+                <Link to={certApprovalsPath}><ClipboardList className="h-4 w-4 shrink-0" /> <span className="truncate">Certificate Approvals</span></Link>
               </Button>
             </>
           )}
         {canRecordSession && (
           <Dialog open={open} onOpenChange={handleDialogOpenChange}>
             <DialogTrigger asChild>
-              <Button size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Record Session</Button>
+              <Button size="sm" className="gap-1.5 w-full sm:w-auto"><Plus className="h-4 w-4" /> Record Session</Button>
             </DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
+
             <DialogHeader>
               <DialogTitle>{editingId ? "Edit Training Session" : "Record Training Session"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2">
+
                   <Label>Training Type *</Label>
                   <Select value={form.training_type} onValueChange={(v) => set("training_type", v)}>
                     <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
@@ -442,7 +444,7 @@ export default function TrainingReports() {
 
               <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
                 <p className="text-sm font-semibold text-foreground flex items-center gap-2"><Users className="h-4 w-4" /> Attendance</p>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
                   <div>
                     <Label className="text-xs">Male</Label>
                     <Input type="number" min="0" value={form.male} onChange={(e) => set("male", e.target.value)} />
@@ -460,7 +462,7 @@ export default function TrainingReports() {
 
               <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
                 <p className="text-sm font-semibold text-foreground flex items-center gap-2"><Flame className="h-4 w-4" /> Spiritual Outcomes</p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   <div>
                     <Label className="text-xs">Holy Ghost Baptism</Label>
                     <Input type="number" min="0" value={form.holy_ghost_baptism} onChange={(e) => set("holy_ghost_baptism", e.target.value)} />
@@ -492,10 +494,11 @@ export default function TrainingReports() {
                   {attendeeSearch && filteredMembers.length > 0 && (
                     <div className="border rounded-md bg-background max-h-40 overflow-y-auto">
                       {filteredMembers.map(m => (
-                        <label key={m.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted cursor-pointer text-xs">
+                        <label key={m.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted cursor-pointer text-xs min-w-0">
                           <Checkbox checked={!!attendees[m.id]} onCheckedChange={() => toggleAttendee(m)} />
-                          <span className="truncate">{m.first_name} {m.last_name}</span>
-                          {m.email && <span className="text-muted-foreground truncate ml-auto">{m.email}</span>}
+                          <span className="truncate flex-1 min-w-0">{m.first_name} {m.last_name}</span>
+                          {m.email && <span className="text-muted-foreground truncate max-w-[45%] hidden sm:inline">{m.email}</span>}
+
                         </label>
                       ))}
                     </div>
@@ -581,23 +584,23 @@ export default function TrainingReports() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-foreground">{totalSessions}</p><p className="text-xs text-muted-foreground">Sessions</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-primary">{totalAttendance}</p><p className="text-xs text-muted-foreground">Total Attendance</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-orange-500">{totalHGBaptism}</p><p className="text-xs text-muted-foreground">HG Baptisms</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-blue-500">{totalWBaptism}</p><p className="text-xs text-muted-foreground">Water Baptisms</p></CardContent></Card>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-foreground">{totalSessions}</p><p className="text-[11px] sm:text-xs text-muted-foreground">Sessions</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-primary">{totalAttendance}</p><p className="text-[11px] sm:text-xs text-muted-foreground">Total Attendance</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-orange-500">{totalHGBaptism}</p><p className="text-[11px] sm:text-xs text-muted-foreground">HG Baptisms</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-blue-500">{totalWBaptism}</p><p className="text-[11px] sm:text-xs text-muted-foreground">Water Baptisms</p></CardContent></Card>
       </div>
 
       {/* Filter + Table */}
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-col lg:flex-row lg:flex-wrap lg:items-center lg:justify-between gap-3">
             <CardTitle className="text-base font-display">Session Records</CardTitle>
             <div className="flex flex-wrap items-center gap-2">
-              <Input type="date" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} className="w-36 text-xs" placeholder="From" />
-              <Input type="date" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} className="w-36 text-xs" placeholder="To" />
+              <Input type="date" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} className="flex-1 min-w-0 sm:w-36 sm:flex-none text-xs" placeholder="From" />
+              <Input type="date" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} className="flex-1 min-w-0 sm:w-36 sm:flex-none text-xs" placeholder="To" />
               <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
                   {TRAINING_TYPES.map((t) => (
@@ -606,19 +609,95 @@ export default function TrainingReports() {
                 </SelectContent>
               </Select>
               {canCsvExport && (
-                <Button variant="outline" size="sm" onClick={handleDownloadCSV} disabled={reports.length === 0} className="gap-1.5">
+                <Button variant="outline" size="sm" onClick={handleDownloadCSV} disabled={reports.length === 0} className="gap-1.5 flex-1 sm:flex-none">
                   <Download className="h-3.5 w-3.5" /> CSV
                 </Button>
               )}
               {canPrint && <PrintReportButton buildRows={buildPrintRows} label="Print" />}
             </div>
           </div>
+
         </CardHeader>
         <CardContent>
           {reports.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">No training reports recorded yet</p>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/* Mobile card list */}
+            <div className="md:hidden space-y-3">
+              {reports.map((r) => {
+                const cfg = getTypeConfig(r.training_type);
+                return (
+                  <div key={r.id} className="rounded-lg border bg-card p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">{format(parseISO(r.session_date), "dd MMM yyyy")}</p>
+                        <Badge variant="secondary" className="text-xs gap-1 mt-1">
+                          {cfg.icon && <cfg.icon className={`h-3 w-3 ${cfg.color || ""}`} />}
+                          <span className="truncate max-w-[140px]">{r.training_type}</span>
+                        </Badge>
+                        {r.title && <span className="block text-xs text-muted-foreground mt-0.5 break-words">{r.title}</span>}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)} title="Attendees">
+                          <Users className="h-3.5 w-3.5" />
+                        </Button>
+                        {isAdmin && (
+                          <>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(r)} title="Edit">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={async () => {
+                                if (await confirmDelete({ title: "Delete training session", itemName: r.training_type || "this session", highImpact: true, impacts: ["All attendee records for this session will be deleted."] })) {
+                                  deleteMutation.mutate(r.id);
+                                }
+                              }}
+                              title="Delete"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-5 gap-1 rounded-md bg-muted/40 p-2 text-center">
+                      {[["Total", r.total_attendance], ["M", r.male], ["F", r.female], ["HG", r.holy_ghost_baptism], ["WB", r.water_baptism]].map(([label, val]) => (
+                        <div key={label}>
+                          <p className="text-sm font-semibold leading-tight">{val}</p>
+                          <p className="text-[10px] text-muted-foreground">{label}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <p className="text-[11px] text-muted-foreground break-words">
+                      {recorderName(r)} · {formatDateTime(r.created_at)}
+                      {r.updated_at && r.updated_at !== r.created_at && (
+                        <span className="block">edited {formatDateTime(r.updated_at)}</span>
+                      )}
+                    </p>
+
+                    {expandedRow === r.id && (
+                      <div className="rounded-md bg-muted/20 p-2 space-y-4 overflow-x-auto">
+                        <TrainingAttendeesPanel report={r} />
+                        {canAttachments && (
+                          <div className="pt-3 border-t">
+                            <ReportAttachments relatedTable="training_reports" relatedId={r.id} />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -640,7 +719,7 @@ export default function TrainingReports() {
                     return (
                       <React.Fragment key={r.id}>
                         <TableRow>
-                          <TableCell className="text-sm">{format(parseISO(r.session_date), "dd MMM yyyy")}</TableCell>
+                          <TableCell className="text-sm whitespace-nowrap">{format(parseISO(r.session_date), "dd MMM yyyy")}</TableCell>
                           <TableCell>
                             <Badge variant="secondary" className="text-xs gap-1">
                               {cfg.icon && <cfg.icon className={`h-3 w-3 ${cfg.color || ""}`} />}
@@ -709,7 +788,9 @@ export default function TrainingReports() {
                 </TableBody>
               </Table>
             </div>
+            </>
           )}
+
         </CardContent>
       </Card>
     </div>
