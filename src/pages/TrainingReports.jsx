@@ -583,23 +583,23 @@ export default function TrainingReports() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-foreground">{totalSessions}</p><p className="text-xs text-muted-foreground">Sessions</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-primary">{totalAttendance}</p><p className="text-xs text-muted-foreground">Total Attendance</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-orange-500">{totalHGBaptism}</p><p className="text-xs text-muted-foreground">HG Baptisms</p></CardContent></Card>
-        <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-2xl font-display font-bold text-blue-500">{totalWBaptism}</p><p className="text-xs text-muted-foreground">Water Baptisms</p></CardContent></Card>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-foreground">{totalSessions}</p><p className="text-[11px] sm:text-xs text-muted-foreground">Sessions</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-primary">{totalAttendance}</p><p className="text-[11px] sm:text-xs text-muted-foreground">Total Attendance</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-orange-500">{totalHGBaptism}</p><p className="text-[11px] sm:text-xs text-muted-foreground">HG Baptisms</p></CardContent></Card>
+        <Card className="border-0 shadow-sm"><CardContent className="p-3 sm:p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-blue-500">{totalWBaptism}</p><p className="text-[11px] sm:text-xs text-muted-foreground">Water Baptisms</p></CardContent></Card>
       </div>
 
       {/* Filter + Table */}
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-col lg:flex-row lg:flex-wrap lg:items-center lg:justify-between gap-3">
             <CardTitle className="text-base font-display">Session Records</CardTitle>
             <div className="flex flex-wrap items-center gap-2">
-              <Input type="date" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} className="w-36 text-xs" placeholder="From" />
-              <Input type="date" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} className="w-36 text-xs" placeholder="To" />
+              <Input type="date" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} className="flex-1 min-w-0 sm:w-36 sm:flex-none text-xs" placeholder="From" />
+              <Input type="date" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} className="flex-1 min-w-0 sm:w-36 sm:flex-none text-xs" placeholder="To" />
               <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full sm:w-40"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
                   {TRAINING_TYPES.map((t) => (
@@ -608,13 +608,14 @@ export default function TrainingReports() {
                 </SelectContent>
               </Select>
               {canCsvExport && (
-                <Button variant="outline" size="sm" onClick={handleDownloadCSV} disabled={reports.length === 0} className="gap-1.5">
+                <Button variant="outline" size="sm" onClick={handleDownloadCSV} disabled={reports.length === 0} className="gap-1.5 flex-1 sm:flex-none">
                   <Download className="h-3.5 w-3.5" /> CSV
                 </Button>
               )}
               {canPrint && <PrintReportButton buildRows={buildPrintRows} label="Print" />}
             </div>
           </div>
+
         </CardHeader>
         <CardContent>
           {reports.length === 0 ? (
