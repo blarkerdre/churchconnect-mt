@@ -618,7 +618,82 @@ export default function TrainingReports() {
           {reports.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">No training reports recorded yet</p>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/* Mobile card list */}
+            <div className="md:hidden space-y-3">
+              {reports.map((r) => {
+                const cfg = getTypeConfig(r.training_type);
+                return (
+                  <div key={r.id} className="rounded-lg border bg-card p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">{format(parseISO(r.session_date), "dd MMM yyyy")}</p>
+                        <Badge variant="secondary" className="text-xs gap-1 mt-1">
+                          {cfg.icon && <cfg.icon className={`h-3 w-3 ${cfg.color || ""}`} />}
+                          <span className="truncate max-w-[140px]">{r.training_type}</span>
+                        </Badge>
+                        {r.title && <span className="block text-xs text-muted-foreground mt-0.5 break-words">{r.title}</span>}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedRow(expandedRow === r.id ? null : r.id)} title="Attendees">
+                          <Users className="h-3.5 w-3.5" />
+                        </Button>
+                        {isAdmin && (
+                          <>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(r)} title="Edit">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={async () => {
+                                if (await confirmDelete({ title: "Delete training session", itemName: r.training_type || "this session", highImpact: true, impacts: ["All attendee records for this session will be deleted."] })) {
+                                  deleteMutation.mutate(r.id);
+                                }
+                              }}
+                              title="Delete"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-5 gap-1 rounded-md bg-muted/40 p-2 text-center">
+                      {[["Total", r.total_attendance], ["M", r.male], ["F", r.female], ["HG", r.holy_ghost_baptism], ["WB", r.water_baptism]].map(([label, val]) => (
+                        <div key={label}>
+                          <p className="text-sm font-semibold leading-tight">{val}</p>
+                          <p className="text-[10px] text-muted-foreground">{label}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <p className="text-[11px] text-muted-foreground break-words">
+                      {recorderName(r)} · {formatDateTime(r.created_at)}
+                      {r.updated_at && r.updated_at !== r.created_at && (
+                        <span className="block">edited {formatDateTime(r.updated_at)}</span>
+                      )}
+                    </p>
+
+                    {expandedRow === r.id && (
+                      <div className="rounded-md bg-muted/20 p-2 space-y-4 overflow-x-auto">
+                        <TrainingAttendeesPanel report={r} />
+                        {canAttachments && (
+                          <div className="pt-3 border-t">
+                            <ReportAttachments relatedTable="training_reports" relatedId={r.id} />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -640,7 +715,7 @@ export default function TrainingReports() {
                     return (
                       <React.Fragment key={r.id}>
                         <TableRow>
-                          <TableCell className="text-sm">{format(parseISO(r.session_date), "dd MMM yyyy")}</TableCell>
+                          <TableCell className="text-sm whitespace-nowrap">{format(parseISO(r.session_date), "dd MMM yyyy")}</TableCell>
                           <TableCell>
                             <Badge variant="secondary" className="text-xs gap-1">
                               {cfg.icon && <cfg.icon className={`h-3 w-3 ${cfg.color || ""}`} />}
@@ -709,7 +784,9 @@ export default function TrainingReports() {
                 </TableBody>
               </Table>
             </div>
+            </>
           )}
+
         </CardContent>
       </Card>
     </div>
