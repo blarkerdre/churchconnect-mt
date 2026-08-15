@@ -494,10 +494,11 @@ export default function TrainingReports() {
                   {attendeeSearch && filteredMembers.length > 0 && (
                     <div className="border rounded-md bg-background max-h-40 overflow-y-auto">
                       {filteredMembers.map(m => (
-                        <label key={m.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted cursor-pointer text-xs">
+                        <label key={m.id} className="flex items-center gap-2 px-2 py-1.5 hover:bg-muted cursor-pointer text-xs min-w-0">
                           <Checkbox checked={!!attendees[m.id]} onCheckedChange={() => toggleAttendee(m)} />
-                          <span className="truncate">{m.first_name} {m.last_name}</span>
-                          {m.email && <span className="text-muted-foreground truncate ml-auto">{m.email}</span>}
+                          <span className="truncate flex-1 min-w-0">{m.first_name} {m.last_name}</span>
+                          {m.email && <span className="text-muted-foreground truncate max-w-[45%] hidden sm:inline">{m.email}</span>}
+
                         </label>
                       ))}
                     </div>
