@@ -419,8 +419,9 @@ export default function TrainingReports() {
               <DialogTitle>{editingId ? "Edit Training Session" : "Record Training Session"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="sm:col-span-2">
+
                   <Label>Training Type *</Label>
                   <Select value={form.training_type} onValueChange={(v) => set("training_type", v)}>
                     <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
