@@ -417,21 +417,21 @@ function ReportView({ rows, trainingTypes, profileMap }) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0">
       <Card className="border-0 shadow-sm">
-        <CardContent className="p-4 flex flex-wrap items-end gap-3">
-          <div>
-            <label className="text-xs text-muted-foreground">From</label>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-8 text-xs w-36" />
+        <CardContent className="p-3 sm:p-4 flex flex-wrap items-end gap-2 sm:gap-3">
+          <div className="w-[calc(50%-0.25rem)] sm:w-auto">
+            <label className="text-xs text-muted-foreground block">From</label>
+            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-8 text-xs w-full sm:w-36" />
           </div>
-          <div>
-            <label className="text-xs text-muted-foreground">To</label>
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-8 text-xs w-36" />
+          <div className="w-[calc(50%-0.25rem)] sm:w-auto">
+            <label className="text-xs text-muted-foreground block">To</label>
+            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-8 text-xs w-full sm:w-36" />
           </div>
-          <div>
+          <div className="w-full sm:w-auto">
             <label className="text-xs text-muted-foreground block">Status</label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
@@ -441,24 +441,25 @@ function ReportView({ rows, trainingTypes, profileMap }) {
               </SelectContent>
             </Select>
           </div>
-          <div>
+          <div className="w-full sm:w-auto">
             <label className="text-xs text-muted-foreground block">Training type</label>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All types</SelectItem>
                 {trainingTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
-          <div className="ml-auto flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleCSV} disabled={byType.length === 0} className="gap-1.5">
+          <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleCSV} disabled={byType.length === 0} className="gap-1.5 flex-1 sm:flex-none">
               <Download className="h-3.5 w-3.5" /> CSV
             </Button>
             <PrintReportButton buildRows={() => ({ title: "Certificate Approvals Report", headers, rows: buildRows() })} label="Print" />
           </div>
         </CardContent>
       </Card>
+
 
       <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
         {[
