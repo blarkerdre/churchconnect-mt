@@ -195,31 +195,37 @@ export default function CertificateApprovals() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
-            <Award className="h-5 w-5 text-primary" /> Certificate Approvals
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-xl font-display font-bold text-foreground flex items-center gap-2">
+            <Award className="h-5 w-5 text-primary shrink-0" /> Certificate Approvals
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Review members signposted by the Training Rep unit for certificate issuance</p>
         </div>
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="pending">Pending ({counts.pending || 0})</TabsTrigger>
-          <TabsTrigger value="approved" className="gap-1.5">
-            Approved ({counts.approved || 0})
-            {stuckCount > 0 && (
-              <Badge variant="destructive" className="h-4 px-1.5 text-[10px]">{stuckCount}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="declined">Declined ({counts.declined || 0})</TabsTrigger>
-          <TabsTrigger value="issued">Issued ({counts.issued || 0})</TabsTrigger>
-          <TabsTrigger value="all">All ({counts.all || 0})</TabsTrigger>
-          <TabsTrigger value="report">Report</TabsTrigger>
-        </TabsList>
+        <div className="relative -mx-1 px-1">
+          <div className="overflow-x-auto scrollbar-none">
+            <TabsList className="w-max gap-1 px-1">
+              <TabsTrigger value="pending" className="text-xs px-2.5 whitespace-nowrap">Pending ({counts.pending || 0})</TabsTrigger>
+              <TabsTrigger value="approved" className="gap-1.5 text-xs px-2.5 whitespace-nowrap">
+                Approved ({counts.approved || 0})
+                {stuckCount > 0 && (
+                  <Badge variant="destructive" className="h-4 px-1.5 text-[10px]">{stuckCount}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="declined" className="text-xs px-2.5 whitespace-nowrap">Declined ({counts.declined || 0})</TabsTrigger>
+              <TabsTrigger value="issued" className="text-xs px-2.5 whitespace-nowrap">Issued ({counts.issued || 0})</TabsTrigger>
+              <TabsTrigger value="all" className="text-xs px-2.5 whitespace-nowrap">All ({counts.all || 0})</TabsTrigger>
+              <TabsTrigger value="report" className="text-xs px-2.5 whitespace-nowrap">Report</TabsTrigger>
+            </TabsList>
+          </div>
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-background to-transparent sm:hidden" />
+        </div>
       </Tabs>
+
 
       {tab === "report" && (
         <ReportView rows={rows} trainingTypes={trainingTypes} profileMap={profileMap} />
