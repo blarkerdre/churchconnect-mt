@@ -236,22 +236,26 @@ export default function CertificateApprovals() {
 
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 min-w-0">
             <CardTitle className="text-base font-display">Signposted Members</CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
-              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name or email" className="w-48 h-8 text-xs" />
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name or email" className="w-full sm:w-48 h-8 text-xs" />
               <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full sm:w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All types</SelectItem>
                   {trainingTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="sm" onClick={handleCSV} disabled={filtered.length === 0} className="gap-1.5">
-                <Download className="h-3.5 w-3.5" /> CSV
-              </Button>
-              <PrintReportButton buildRows={() => ({ title: "Certificate Approvals", headers, rows: buildRows() })} label="Print" />
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Button variant="outline" size="sm" onClick={handleCSV} disabled={filtered.length === 0} className="gap-1.5 flex-1 sm:flex-none">
+                  <Download className="h-3.5 w-3.5" /> CSV
+                </Button>
+                <PrintReportButton buildRows={() => ({ title: "Certificate Approvals", headers, rows: buildRows() })} label="Print" />
+              </div>
             </div>
+          </div>
+
           </div>
         </CardHeader>
         <CardContent>
