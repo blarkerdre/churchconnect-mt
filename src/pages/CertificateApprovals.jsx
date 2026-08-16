@@ -207,7 +207,7 @@ export default function CertificateApprovals() {
 
       <Tabs value={tab} onValueChange={setTab}>
         <div className="relative -mx-1 px-1">
-          <div className="overflow-x-auto scrollbar-none">
+          <div className="overflow-x-auto">
             <TabsList className="w-max gap-1 px-1">
               <TabsTrigger value="pending" className="text-xs px-2.5 whitespace-nowrap">Pending ({counts.pending || 0})</TabsTrigger>
               <TabsTrigger value="approved" className="gap-1.5 text-xs px-2.5 whitespace-nowrap">
