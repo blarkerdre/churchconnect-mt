@@ -461,7 +461,7 @@ function ReportView({ rows, trainingTypes, profileMap }) {
       </Card>
 
 
-      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 sm:gap-3">
         {[
           { label: "Total", value: stats.total },
           { label: "Pending", value: stats.pending || 0 },
@@ -471,9 +471,9 @@ function ReportView({ rows, trainingTypes, profileMap }) {
           { label: "Avg days to decision", value: stats.avgDays },
         ].map(s => (
           <Card key={s.label} className="border-0 shadow-sm">
-            <CardContent className="p-3 text-center">
-              <p className="text-xl font-display font-bold text-foreground">{s.value}</p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{s.label}</p>
+            <CardContent className="p-2.5 sm:p-3 text-center">
+              <p className="text-lg sm:text-xl font-display font-bold text-foreground">{s.value}</p>
+              <p className="text-[10px] leading-tight text-muted-foreground uppercase tracking-wide">{s.label}</p>
             </CardContent>
           </Card>
         ))}
@@ -485,32 +485,35 @@ function ReportView({ rows, trainingTypes, profileMap }) {
           {byType.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">No records match the selected filters</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Training Type</TableHead>
-                  <TableHead className="text-center">Total</TableHead>
-                  <TableHead className="text-center">Pending</TableHead>
-                  <TableHead className="text-center">Approved</TableHead>
-                  <TableHead className="text-center">Declined</TableHead>
-                  <TableHead className="text-center">Issued</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {byType.map(g => (
-                  <TableRow key={g.type}>
-                    <TableCell className="font-medium text-sm">{g.type}</TableCell>
-                    <TableCell className="text-center">{g.total}</TableCell>
-                    <TableCell className="text-center">{g.pending || 0}</TableCell>
-                    <TableCell className="text-center">{g.approved || 0}</TableCell>
-                    <TableCell className="text-center">{g.declined || 0}</TableCell>
-                    <TableCell className="text-center">{g.issued || 0}</TableCell>
+            <div className="overflow-x-auto">
+              <Table className="min-w-[520px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Training Type</TableHead>
+                    <TableHead className="text-center">Total</TableHead>
+                    <TableHead className="text-center">Pending</TableHead>
+                    <TableHead className="text-center">Approved</TableHead>
+                    <TableHead className="text-center">Declined</TableHead>
+                    <TableHead className="text-center">Issued</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {byType.map(g => (
+                    <TableRow key={g.type}>
+                      <TableCell className="font-medium text-sm">{g.type}</TableCell>
+                      <TableCell className="text-center">{g.total}</TableCell>
+                      <TableCell className="text-center">{g.pending || 0}</TableCell>
+                      <TableCell className="text-center">{g.approved || 0}</TableCell>
+                      <TableCell className="text-center">{g.declined || 0}</TableCell>
+                      <TableCell className="text-center">{g.issued || 0}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
+
       </Card>
     </div>
   );
