@@ -255,8 +255,6 @@ export default function CertificateApprovals() {
               </div>
             </div>
           </div>
-
-          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
