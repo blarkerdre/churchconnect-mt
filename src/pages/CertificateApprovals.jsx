@@ -338,22 +338,24 @@ export default function CertificateApprovals() {
 
 
       <Dialog open={!!declineFor} onOpenChange={(v) => !v && setDeclineFor(null)}>
-        <DialogContent>
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Decline certificate</DialogTitle>
             <DialogDescription>Provide a reason for declining this certificate issuance.</DialogDescription>
           </DialogHeader>
           <Textarea value={declineNotes} onChange={(e) => setDeclineNotes(e.target.value)} rows={3} placeholder="Reason (required)" />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeclineFor(null)}>Cancel</Button>
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:gap-2">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setDeclineFor(null)}>Cancel</Button>
             <Button
               variant="destructive"
+              className="w-full sm:w-auto"
               disabled={!declineNotes.trim() || declineMutation.isPending}
               onClick={() => declineMutation.mutate({ id: declineFor.id, notes: declineNotes.trim() })}
             >
               {declineMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Decline
             </Button>
           </DialogFooter>
+
         </DialogContent>
       </Dialog>
     </div>
