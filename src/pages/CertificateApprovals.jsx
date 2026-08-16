@@ -195,31 +195,37 @@ export default function CertificateApprovals() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
-            <Award className="h-5 w-5 text-primary" /> Certificate Approvals
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-xl font-display font-bold text-foreground flex items-center gap-2">
+            <Award className="h-5 w-5 text-primary shrink-0" /> Certificate Approvals
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Review members signposted by the Training Rep unit for certificate issuance</p>
         </div>
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="pending">Pending ({counts.pending || 0})</TabsTrigger>
-          <TabsTrigger value="approved" className="gap-1.5">
-            Approved ({counts.approved || 0})
-            {stuckCount > 0 && (
-              <Badge variant="destructive" className="h-4 px-1.5 text-[10px]">{stuckCount}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="declined">Declined ({counts.declined || 0})</TabsTrigger>
-          <TabsTrigger value="issued">Issued ({counts.issued || 0})</TabsTrigger>
-          <TabsTrigger value="all">All ({counts.all || 0})</TabsTrigger>
-          <TabsTrigger value="report">Report</TabsTrigger>
-        </TabsList>
+        <div className="relative -mx-1 px-1">
+          <div className="overflow-x-auto">
+            <TabsList className="w-max gap-1 px-1">
+              <TabsTrigger value="pending" className="text-xs px-2.5 whitespace-nowrap">Pending ({counts.pending || 0})</TabsTrigger>
+              <TabsTrigger value="approved" className="gap-1.5 text-xs px-2.5 whitespace-nowrap">
+                Approved ({counts.approved || 0})
+                {stuckCount > 0 && (
+                  <Badge variant="destructive" className="h-4 px-1.5 text-[10px]">{stuckCount}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="declined" className="text-xs px-2.5 whitespace-nowrap">Declined ({counts.declined || 0})</TabsTrigger>
+              <TabsTrigger value="issued" className="text-xs px-2.5 whitespace-nowrap">Issued ({counts.issued || 0})</TabsTrigger>
+              <TabsTrigger value="all" className="text-xs px-2.5 whitespace-nowrap">All ({counts.all || 0})</TabsTrigger>
+              <TabsTrigger value="report" className="text-xs px-2.5 whitespace-nowrap">Report</TabsTrigger>
+            </TabsList>
+          </div>
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-background to-transparent sm:hidden" />
+        </div>
       </Tabs>
+
 
       {tab === "report" && (
         <ReportView rows={rows} trainingTypes={trainingTypes} profileMap={profileMap} />
@@ -230,22 +236,26 @@ export default function CertificateApprovals() {
 
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 min-w-0">
             <CardTitle className="text-base font-display">Signposted Members</CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
-              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name or email" className="w-48 h-8 text-xs" />
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name or email" className="w-full sm:w-48 h-8 text-xs" />
               <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full sm:w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All types</SelectItem>
                   {trainingTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="sm" onClick={handleCSV} disabled={filtered.length === 0} className="gap-1.5">
-                <Download className="h-3.5 w-3.5" /> CSV
-              </Button>
-              <PrintReportButton buildRows={() => ({ title: "Certificate Approvals", headers, rows: buildRows() })} label="Print" />
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Button variant="outline" size="sm" onClick={handleCSV} disabled={filtered.length === 0} className="gap-1.5 flex-1 sm:flex-none">
+                  <Download className="h-3.5 w-3.5" /> CSV
+                </Button>
+                <PrintReportButton buildRows={() => ({ title: "Certificate Approvals", headers, rows: buildRows() })} label="Print" />
+              </div>
             </div>
+          </div>
+
           </div>
         </CardHeader>
         <CardContent>
@@ -328,22 +338,24 @@ export default function CertificateApprovals() {
 
 
       <Dialog open={!!declineFor} onOpenChange={(v) => !v && setDeclineFor(null)}>
-        <DialogContent>
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Decline certificate</DialogTitle>
             <DialogDescription>Provide a reason for declining this certificate issuance.</DialogDescription>
           </DialogHeader>
           <Textarea value={declineNotes} onChange={(e) => setDeclineNotes(e.target.value)} rows={3} placeholder="Reason (required)" />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeclineFor(null)}>Cancel</Button>
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:gap-2">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setDeclineFor(null)}>Cancel</Button>
             <Button
               variant="destructive"
+              className="w-full sm:w-auto"
               disabled={!declineNotes.trim() || declineMutation.isPending}
               onClick={() => declineMutation.mutate({ id: declineFor.id, notes: declineNotes.trim() })}
             >
               {declineMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />} Decline
             </Button>
           </DialogFooter>
+
         </DialogContent>
       </Dialog>
     </div>
@@ -405,21 +417,21 @@ function ReportView({ rows, trainingTypes, profileMap }) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0">
       <Card className="border-0 shadow-sm">
-        <CardContent className="p-4 flex flex-wrap items-end gap-3">
-          <div>
-            <label className="text-xs text-muted-foreground">From</label>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-8 text-xs w-36" />
+        <CardContent className="p-3 sm:p-4 flex flex-wrap items-end gap-2 sm:gap-3">
+          <div className="w-[calc(50%-0.25rem)] sm:w-auto">
+            <label className="text-xs text-muted-foreground block">From</label>
+            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-8 text-xs w-full sm:w-36" />
           </div>
-          <div>
-            <label className="text-xs text-muted-foreground">To</label>
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-8 text-xs w-36" />
+          <div className="w-[calc(50%-0.25rem)] sm:w-auto">
+            <label className="text-xs text-muted-foreground block">To</label>
+            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-8 text-xs w-full sm:w-36" />
           </div>
-          <div>
+          <div className="w-full sm:w-auto">
             <label className="text-xs text-muted-foreground block">Status</label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
@@ -429,18 +441,18 @@ function ReportView({ rows, trainingTypes, profileMap }) {
               </SelectContent>
             </Select>
           </div>
-          <div>
+          <div className="w-full sm:w-auto">
             <label className="text-xs text-muted-foreground block">Training type</label>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All types</SelectItem>
                 {trainingTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
-          <div className="ml-auto flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleCSV} disabled={byType.length === 0} className="gap-1.5">
+          <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleCSV} disabled={byType.length === 0} className="gap-1.5 flex-1 sm:flex-none">
               <Download className="h-3.5 w-3.5" /> CSV
             </Button>
             <PrintReportButton buildRows={() => ({ title: "Certificate Approvals Report", headers, rows: buildRows() })} label="Print" />
@@ -448,7 +460,8 @@ function ReportView({ rows, trainingTypes, profileMap }) {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 sm:gap-3">
         {[
           { label: "Total", value: stats.total },
           { label: "Pending", value: stats.pending || 0 },
@@ -458,9 +471,9 @@ function ReportView({ rows, trainingTypes, profileMap }) {
           { label: "Avg days to decision", value: stats.avgDays },
         ].map(s => (
           <Card key={s.label} className="border-0 shadow-sm">
-            <CardContent className="p-3 text-center">
-              <p className="text-xl font-display font-bold text-foreground">{s.value}</p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{s.label}</p>
+            <CardContent className="p-2.5 sm:p-3 text-center">
+              <p className="text-lg sm:text-xl font-display font-bold text-foreground">{s.value}</p>
+              <p className="text-[10px] leading-tight text-muted-foreground uppercase tracking-wide">{s.label}</p>
             </CardContent>
           </Card>
         ))}
@@ -472,32 +485,35 @@ function ReportView({ rows, trainingTypes, profileMap }) {
           {byType.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">No records match the selected filters</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Training Type</TableHead>
-                  <TableHead className="text-center">Total</TableHead>
-                  <TableHead className="text-center">Pending</TableHead>
-                  <TableHead className="text-center">Approved</TableHead>
-                  <TableHead className="text-center">Declined</TableHead>
-                  <TableHead className="text-center">Issued</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {byType.map(g => (
-                  <TableRow key={g.type}>
-                    <TableCell className="font-medium text-sm">{g.type}</TableCell>
-                    <TableCell className="text-center">{g.total}</TableCell>
-                    <TableCell className="text-center">{g.pending || 0}</TableCell>
-                    <TableCell className="text-center">{g.approved || 0}</TableCell>
-                    <TableCell className="text-center">{g.declined || 0}</TableCell>
-                    <TableCell className="text-center">{g.issued || 0}</TableCell>
+            <div className="overflow-x-auto">
+              <Table className="min-w-[520px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Training Type</TableHead>
+                    <TableHead className="text-center">Total</TableHead>
+                    <TableHead className="text-center">Pending</TableHead>
+                    <TableHead className="text-center">Approved</TableHead>
+                    <TableHead className="text-center">Declined</TableHead>
+                    <TableHead className="text-center">Issued</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {byType.map(g => (
+                    <TableRow key={g.type}>
+                      <TableCell className="font-medium text-sm">{g.type}</TableCell>
+                      <TableCell className="text-center">{g.total}</TableCell>
+                      <TableCell className="text-center">{g.pending || 0}</TableCell>
+                      <TableCell className="text-center">{g.approved || 0}</TableCell>
+                      <TableCell className="text-center">{g.declined || 0}</TableCell>
+                      <TableCell className="text-center">{g.issued || 0}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
+
       </Card>
     </div>
   );
