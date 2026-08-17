@@ -224,12 +224,12 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[92vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-full max-w-6xl max-h-[92vh] overflow-y-auto p-4 sm:p-6">
         <TenantDialogHeader>Generate Follow-up Report</TenantDialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-5 sm:space-y-6 py-3 sm:py-4">
           {/* Filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 min-w-0">
             <div className="space-y-1.5">
               <Label>Report Type</Label>
               <Select value={reportType} onValueChange={setReportType}>
