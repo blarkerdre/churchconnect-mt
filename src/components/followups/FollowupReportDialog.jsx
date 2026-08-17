@@ -326,13 +326,13 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
           </div>
 
           {/* Summary */}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-            <Card className="border-0 shadow-sm"><CardContent className="p-3 text-center"><p className="text-xl font-bold">{stats.total}</p><p className="text-xs text-muted-foreground">Follow-ups</p></CardContent></Card>
-            <Card className="border-0 shadow-sm"><CardContent className="p-3 text-center"><p className="text-xl font-bold text-accent">{stats.byStatus.Pending}</p><p className="text-xs text-muted-foreground">Pending</p></CardContent></Card>
-            <Card className="border-0 shadow-sm"><CardContent className="p-3 text-center"><p className="text-xl font-bold text-primary">{stats.byStatus["In Progress"]}</p><p className="text-xs text-muted-foreground">In Progress</p></CardContent></Card>
-            <Card className="border-0 shadow-sm"><CardContent className="p-3 text-center"><p className="text-xl font-bold text-chart-3">{stats.byStatus.Completed}</p><p className="text-xs text-muted-foreground">Completed ({stats.completionRate}%)</p></CardContent></Card>
-            <Card className="border-0 shadow-sm"><CardContent className="p-3 text-center"><p className="text-xl font-bold text-destructive">{stats.byStatus.Overdue}</p><p className="text-xs text-muted-foreground">Overdue</p></CardContent></Card>
-            <Card className="border-0 shadow-sm"><CardContent className="p-3 text-center"><p className="text-xl font-bold">{stats.avgDays}</p><p className="text-xs text-muted-foreground">Avg days · {stats.referrals} sign-posts</p></CardContent></Card>
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-2 sm:gap-3">
+            <Card className="border-0 shadow-sm"><CardContent className="p-2 sm:p-3 text-center"><p className="text-lg sm:text-xl font-bold">{stats.total}</p><p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">Follow-ups</p></CardContent></Card>
+            <Card className="border-0 shadow-sm"><CardContent className="p-2 sm:p-3 text-center"><p className="text-lg sm:text-xl font-bold text-accent">{stats.byStatus.Pending}</p><p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">Pending</p></CardContent></Card>
+            <Card className="border-0 shadow-sm"><CardContent className="p-2 sm:p-3 text-center"><p className="text-lg sm:text-xl font-bold text-primary">{stats.byStatus["In Progress"]}</p><p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">In Progress</p></CardContent></Card>
+            <Card className="border-0 shadow-sm"><CardContent className="p-2 sm:p-3 text-center"><p className="text-lg sm:text-xl font-bold text-chart-3">{stats.byStatus.Completed}</p><p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">Completed ({stats.completionRate}%)</p></CardContent></Card>
+            <Card className="border-0 shadow-sm"><CardContent className="p-2 sm:p-3 text-center"><p className="text-lg sm:text-xl font-bold text-destructive">{stats.byStatus.Overdue}</p><p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">Overdue</p></CardContent></Card>
+            <Card className="border-0 shadow-sm"><CardContent className="p-2 sm:p-3 text-center"><p className="text-lg sm:text-xl font-bold">{stats.avgDays}</p><p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">Avg days · {stats.referrals} sign-posts</p></CardContent></Card>
           </div>
 
           {/* Preview */}
@@ -343,9 +343,9 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
               ) : flatRows.length === 0 ? (
                 <p className="text-center text-sm text-muted-foreground py-10">No records match the filters.</p>
               ) : (
-                <table className="w-full text-xs">
+                <table className="w-full min-w-[900px] text-xs">
                   <thead className="bg-muted sticky top-0">
-                    <tr>{headers.map(h => <th key={h} className="text-left px-3 py-2 font-semibold">{h}</th>)}</tr>
+                    <tr>{headers.map(h => <th key={h} className="text-left px-3 py-2 font-semibold whitespace-nowrap">{h}</th>)}</tr>
                   </thead>
                   <tbody>
                     {grouped.map(g => (
@@ -360,7 +360,12 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
                         {g.rows.map((it, i) => (
                           <tr key={`${g.key}-${i}`} className="border-t border-border">
                             {toCells(it).map((c, j) => (
-                              <td key={j} className="px-3 py-1.5 align-top">{c || "—"}</td>
+                              <td
+                                key={j}
+                                className={`px-3 py-1.5 align-top ${j === headers.length - 1 ? "max-w-[260px]" : "whitespace-nowrap"}`}
+                              >
+                                {c || "—"}
+                              </td>
                             ))}
                           </tr>
                         ))}
@@ -373,12 +378,14 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-          <Button variant="outline" onClick={downloadCSV} disabled={!flatRows.length}>
+        <DialogFooter className="gap-2 flex-col sm:flex-row">
+          <Button variant="outline" className="w-full sm:w-auto" onClick={() => onOpenChange(false)}>Close</Button>
+          <Button variant="outline" className="w-full sm:w-auto" onClick={downloadCSV} disabled={!flatRows.length}>
             <Download className="h-4 w-4 mr-2" /> Download CSV
           </Button>
-          <PrintReportButton label="Print Report" buildRows={buildPrintRows} />
+          <div className="w-full sm:w-auto [&>button]:w-full sm:[&>button]:w-auto">
+            <PrintReportButton label="Print Report" buildRows={buildPrintRows} />
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
