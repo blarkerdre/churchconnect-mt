@@ -230,7 +230,7 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
         <div className="space-y-5 sm:space-y-6 py-3 sm:py-4">
           {/* Filters */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 min-w-0">
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label>Report Type</Label>
               <Select value={reportType} onValueChange={setReportType}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -242,7 +242,7 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label>Date Basis</Label>
               <Select value={dateBasis} onValueChange={setDateBasis} disabled={reportType === "signposts"}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -254,7 +254,7 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label>Group By</Label>
               <Select value={groupBy} onValueChange={setGroupBy}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -268,16 +268,16 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label>From</Label>
               <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label>To</Label>
               <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label>Status</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -290,7 +290,7 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label>Type</Label>
               <Select value={typeFilter} onValueChange={setTypeFilter} disabled={reportType === "signposts"}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -301,7 +301,7 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label>Priority</Label>
               <Select value={priorityFilter} onValueChange={setPriorityFilter} disabled={reportType === "signposts"}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -312,7 +312,7 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label>Assigned To</Label>
               <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
