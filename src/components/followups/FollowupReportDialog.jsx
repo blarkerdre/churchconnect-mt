@@ -224,13 +224,13 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[92vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-full max-w-6xl max-h-[92vh] overflow-y-auto p-4 sm:p-6">
         <TenantDialogHeader>Generate Follow-up Report</TenantDialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-5 sm:space-y-6 py-3 sm:py-4">
           {/* Filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="space-y-1.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 min-w-0">
+            <div className="space-y-1.5 min-w-0">
               <Label>Report Type</Label>
               <Select value={reportType} onValueChange={setReportType}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -242,7 +242,7 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label>Date Basis</Label>
               <Select value={dateBasis} onValueChange={setDateBasis} disabled={reportType === "signposts"}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -254,7 +254,7 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label>Group By</Label>
               <Select value={groupBy} onValueChange={setGroupBy}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -268,16 +268,16 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label>From</Label>
               <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label>To</Label>
               <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label>Status</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -290,7 +290,7 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label>Type</Label>
               <Select value={typeFilter} onValueChange={setTypeFilter} disabled={reportType === "signposts"}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -301,7 +301,7 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label>Priority</Label>
               <Select value={priorityFilter} onValueChange={setPriorityFilter} disabled={reportType === "signposts"}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -312,7 +312,7 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0">
               <Label>Assigned To</Label>
               <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -326,13 +326,13 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
           </div>
 
           {/* Summary */}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-            <Card className="border-0 shadow-sm"><CardContent className="p-3 text-center"><p className="text-xl font-bold">{stats.total}</p><p className="text-xs text-muted-foreground">Follow-ups</p></CardContent></Card>
-            <Card className="border-0 shadow-sm"><CardContent className="p-3 text-center"><p className="text-xl font-bold text-accent">{stats.byStatus.Pending}</p><p className="text-xs text-muted-foreground">Pending</p></CardContent></Card>
-            <Card className="border-0 shadow-sm"><CardContent className="p-3 text-center"><p className="text-xl font-bold text-primary">{stats.byStatus["In Progress"]}</p><p className="text-xs text-muted-foreground">In Progress</p></CardContent></Card>
-            <Card className="border-0 shadow-sm"><CardContent className="p-3 text-center"><p className="text-xl font-bold text-chart-3">{stats.byStatus.Completed}</p><p className="text-xs text-muted-foreground">Completed ({stats.completionRate}%)</p></CardContent></Card>
-            <Card className="border-0 shadow-sm"><CardContent className="p-3 text-center"><p className="text-xl font-bold text-destructive">{stats.byStatus.Overdue}</p><p className="text-xs text-muted-foreground">Overdue</p></CardContent></Card>
-            <Card className="border-0 shadow-sm"><CardContent className="p-3 text-center"><p className="text-xl font-bold">{stats.avgDays}</p><p className="text-xs text-muted-foreground">Avg days · {stats.referrals} sign-posts</p></CardContent></Card>
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-2 sm:gap-3">
+            <Card className="border-0 shadow-sm"><CardContent className="p-2 sm:p-3 text-center"><p className="text-lg sm:text-xl font-bold">{stats.total}</p><p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">Follow-ups</p></CardContent></Card>
+            <Card className="border-0 shadow-sm"><CardContent className="p-2 sm:p-3 text-center"><p className="text-lg sm:text-xl font-bold text-accent">{stats.byStatus.Pending}</p><p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">Pending</p></CardContent></Card>
+            <Card className="border-0 shadow-sm"><CardContent className="p-2 sm:p-3 text-center"><p className="text-lg sm:text-xl font-bold text-primary">{stats.byStatus["In Progress"]}</p><p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">In Progress</p></CardContent></Card>
+            <Card className="border-0 shadow-sm"><CardContent className="p-2 sm:p-3 text-center"><p className="text-lg sm:text-xl font-bold text-chart-3">{stats.byStatus.Completed}</p><p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">Completed ({stats.completionRate}%)</p></CardContent></Card>
+            <Card className="border-0 shadow-sm"><CardContent className="p-2 sm:p-3 text-center"><p className="text-lg sm:text-xl font-bold text-destructive">{stats.byStatus.Overdue}</p><p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">Overdue</p></CardContent></Card>
+            <Card className="border-0 shadow-sm"><CardContent className="p-2 sm:p-3 text-center"><p className="text-lg sm:text-xl font-bold">{stats.avgDays}</p><p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">Avg days · {stats.referrals} sign-posts</p></CardContent></Card>
           </div>
 
           {/* Preview */}
@@ -343,9 +343,9 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
               ) : flatRows.length === 0 ? (
                 <p className="text-center text-sm text-muted-foreground py-10">No records match the filters.</p>
               ) : (
-                <table className="w-full text-xs">
+                <table className="w-full min-w-[900px] text-xs">
                   <thead className="bg-muted sticky top-0">
-                    <tr>{headers.map(h => <th key={h} className="text-left px-3 py-2 font-semibold">{h}</th>)}</tr>
+                    <tr>{headers.map(h => <th key={h} className="text-left px-3 py-2 font-semibold whitespace-nowrap">{h}</th>)}</tr>
                   </thead>
                   <tbody>
                     {grouped.map(g => (
@@ -360,7 +360,12 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
                         {g.rows.map((it, i) => (
                           <tr key={`${g.key}-${i}`} className="border-t border-border">
                             {toCells(it).map((c, j) => (
-                              <td key={j} className="px-3 py-1.5 align-top">{c || "—"}</td>
+                              <td
+                                key={j}
+                                className={`px-3 py-1.5 align-top ${j === headers.length - 1 ? "max-w-[260px]" : "whitespace-nowrap"}`}
+                              >
+                                {c || "—"}
+                              </td>
                             ))}
                           </tr>
                         ))}
@@ -373,12 +378,14 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-          <Button variant="outline" onClick={downloadCSV} disabled={!flatRows.length}>
+        <DialogFooter className="gap-2 flex-col sm:flex-row">
+          <Button variant="outline" className="w-full sm:w-auto" onClick={() => onOpenChange(false)}>Close</Button>
+          <Button variant="outline" className="w-full sm:w-auto" onClick={downloadCSV} disabled={!flatRows.length}>
             <Download className="h-4 w-4 mr-2" /> Download CSV
           </Button>
-          <PrintReportButton label="Print Report" buildRows={buildPrintRows} />
+          <div className="w-full sm:w-auto [&>button]:w-full sm:[&>button]:w-auto">
+            <PrintReportButton label="Print Report" buildRows={buildPrintRows} />
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
