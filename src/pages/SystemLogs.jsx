@@ -622,6 +622,9 @@ const isSystemActor = (log) => !log.user_id || !!(log.details || {}).source;
 
 const ISO_TS = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 
+// Marker written by the audit trigger in place of personal free-text content.
+const HIDDEN_MARKER = "[content hidden]";
+
 // Compact "field: old → new" list from before/after payloads.
 function diffFields(details) {
   const before = details?.before;
@@ -639,8 +642,14 @@ function diffFields(details) {
   };
   return keys
     .filter((k) => JSON.stringify(before[k]) !== JSON.stringify(after[k]))
-    .map((k) => ({ field: prettyField(k), from: fmt(before[k]), to: fmt(after[k]) }));
+    .map((k) => ({
+      field: prettyField(k),
+      from: fmt(before[k]),
+      to: fmt(after[k]),
+      hidden: before[k] === HIDDEN_MARKER || after[k] === HIDDEN_MARKER,
+    }));
 }
+
 
 
 const AUDIT_CSV_HEADERS = [
