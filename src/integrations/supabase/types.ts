@@ -6175,6 +6175,293 @@ export type Database = {
           },
         ]
       }
+      trivia_answers: {
+        Row: {
+          attempt_id: string
+          created_at: string
+          id: string
+          is_correct: boolean
+          question_id: string
+          selected_index: number | null
+          tenant_id: string
+        }
+        Insert: {
+          attempt_id: string
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          question_id: string
+          selected_index?: number | null
+          tenant_id: string
+        }
+        Update: {
+          attempt_id?: string
+          created_at?: string
+          id?: string
+          is_correct?: boolean
+          question_id?: string
+          selected_index?: number | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trivia_answers_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "trivia_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trivia_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "trivia_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trivia_attempts: {
+        Row: {
+          completed_at: string
+          correct_count: number
+          created_at: string
+          display_name: string | null
+          duration_seconds: number
+          id: string
+          player_key: string
+          player_kind: string
+          preteen_id: string | null
+          quiz_id: string
+          score: number
+          teen_id: string | null
+          tenant_id: string
+          total_count: number
+          user_id: string | null
+        }
+        Insert: {
+          completed_at?: string
+          correct_count?: number
+          created_at?: string
+          display_name?: string | null
+          duration_seconds?: number
+          id?: string
+          player_key: string
+          player_kind?: string
+          preteen_id?: string | null
+          quiz_id: string
+          score?: number
+          teen_id?: string | null
+          tenant_id: string
+          total_count?: number
+          user_id?: string | null
+        }
+        Update: {
+          completed_at?: string
+          correct_count?: number
+          created_at?: string
+          display_name?: string | null
+          duration_seconds?: number
+          id?: string
+          player_key?: string
+          player_kind?: string
+          preteen_id?: string | null
+          quiz_id?: string
+          score?: number
+          teen_id?: string | null
+          tenant_id?: string
+          total_count?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trivia_attempts_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "trivia_quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trivia_questions: {
+        Row: {
+          active: boolean
+          audience: string
+          correct_index: number
+          created_at: string
+          created_by: string | null
+          difficulty: string
+          explanation: string | null
+          id: string
+          options: Json
+          prompt: string
+          reference: string | null
+          source: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          audience?: string
+          correct_index?: number
+          created_at?: string
+          created_by?: string | null
+          difficulty?: string
+          explanation?: string | null
+          id?: string
+          options?: Json
+          prompt: string
+          reference?: string | null
+          source?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          audience?: string
+          correct_index?: number
+          created_at?: string
+          created_by?: string | null
+          difficulty?: string
+          explanation?: string | null
+          id?: string
+          options?: Json
+          prompt?: string
+          reference?: string | null
+          source?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      trivia_quiz_questions: {
+        Row: {
+          created_at: string
+          id: string
+          position: number
+          question_id: string
+          quiz_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          position?: number
+          question_id: string
+          quiz_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          position?: number
+          question_id?: string
+          quiz_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trivia_quiz_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "trivia_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trivia_quiz_questions_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "trivia_quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trivia_quizzes: {
+        Row: {
+          audience: string
+          created_at: string
+          ends_on: string
+          id: string
+          kind: string
+          starts_on: string
+          tenant_id: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          audience?: string
+          created_at?: string
+          ends_on: string
+          id?: string
+          kind?: string
+          starts_on: string
+          tenant_id: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          audience?: string
+          created_at?: string
+          ends_on?: string
+          id?: string
+          kind?: string
+          starts_on?: string
+          tenant_id?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      trivia_streaks: {
+        Row: {
+          created_at: string
+          current_streak: number
+          display_name: string | null
+          id: string
+          last_played_on: string | null
+          longest_streak: number
+          player_key: string
+          player_kind: string
+          preteen_id: string | null
+          teen_id: string | null
+          tenant_id: string
+          total_points: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          current_streak?: number
+          display_name?: string | null
+          id?: string
+          last_played_on?: string | null
+          longest_streak?: number
+          player_key: string
+          player_kind?: string
+          preteen_id?: string | null
+          teen_id?: string | null
+          tenant_id: string
+          total_points?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          current_streak?: number
+          display_name?: string | null
+          id?: string
+          last_played_on?: string | null
+          longest_streak?: number
+          player_key?: string
+          player_kind?: string
+          preteen_id?: string | null
+          teen_id?: string | null
+          tenant_id?: string
+          total_points?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       trustpilot_reviews: {
         Row: {
           body: string
@@ -7450,6 +7737,10 @@ export type Database = {
         Args: { _name: string; _tenant: string }
         Returns: undefined
       }
+      ensure_trivia_quizzes: {
+        Args: { _tenant_id: string }
+        Returns: undefined
+      }
       get_active_church_unit_names: {
         Args: { _tenant_slug?: string }
         Returns: {
@@ -7595,6 +7886,33 @@ export type Database = {
       get_tenant_storage_usage_mb: {
         Args: { _tenant_id: string }
         Returns: number
+      }
+      get_trivia_leaderboard: {
+        Args: {
+          _audience?: string
+          _limit?: number
+          _scope?: string
+          _tenant_id: string
+        }
+        Returns: {
+          current_streak: number
+          display_name: string
+          player_key: string
+          player_kind: string
+          plays: number
+          points: number
+        }[]
+      }
+      get_trivia_quiz_safe: {
+        Args: { _quiz_id: string; _tenant_id: string }
+        Returns: {
+          difficulty: string
+          options: Json
+          prompt: string
+          q_position: number
+          question_id: string
+          reference: string
+        }[]
       }
       get_upcoming_birthdays: {
         Args: { _days_ahead?: number; _tenant_id: string }
@@ -7952,6 +8270,17 @@ export type Database = {
           id: string
           last_name: string
         }[]
+      }
+      submit_trivia_attempt: {
+        Args: {
+          _answers: Json
+          _child_id?: string
+          _duration_seconds?: number
+          _player_kind?: string
+          _quiz_id: string
+          _tenant_id: string
+        }
+        Returns: Json
       }
       task_is_in_user_unit: {
         Args: { _task_id: string; _tenant_id: string; _user_id: string }
