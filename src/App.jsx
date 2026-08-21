@@ -218,7 +218,7 @@ function AppPages() {
         <Route path="/sermon-notes" element={<FeatureGate path="/sermon-notes"><SermonNotes /></FeatureGate>} />
         <Route path="/testimony" element={<FeatureGate path="/testimony"><Testimony /></FeatureGate>} />
         <Route path="/trivia" element={<FeatureGate path="/trivia"><ProtectedRoute><Trivia /></ProtectedRoute></FeatureGate>} />
-
+        <Route path="/unit-tasks" element={<Navigate to="/church-unit?tab=tasks" replace />} />
         <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
         <Route path="/reports" element={<ReportsRoute><Reports /></ReportsRoute>} />
         <Route path="/certificates-report" element={<CertificateApprovalsRoute><CertificatesReport /></CertificateApprovalsRoute>} />
