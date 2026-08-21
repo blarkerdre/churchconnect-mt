@@ -41,6 +41,8 @@ const Onboard = lazy(() => import("@/pages/Onboard"));
 const TenantAdmin = lazy(() => import("@/pages/TenantAdmin"));
 const Presentation = lazy(() => import("@/pages/Presentation"));
 const SermonNotes = lazy(() => import("@/pages/SermonNotes"));
+const Trivia = lazy(() => import("@/pages/Trivia"));
+
 const Testimony = lazy(() => import("@/pages/Testimony"));
 const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 const Trust = lazy(() => import("@/pages/Trust"));
