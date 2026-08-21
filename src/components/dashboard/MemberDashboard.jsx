@@ -228,6 +228,10 @@ export default function MemberDashboard({ currentUser, myMember }) {
       {/* Self Check-In */}
       <SelfCheckInWidget />
 
+      {/* Daily Bible Trivia */}
+      <TriviaWidget />
+
+
       {/* Sign-posted referrals (visible to anyone assigned as a leader) */}
       <SignPostedToMeWidget />
 
