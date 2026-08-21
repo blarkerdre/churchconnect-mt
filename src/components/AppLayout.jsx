@@ -63,6 +63,8 @@ const allNavItems = [
   { name: "Bible School", icon: BookOpen, path: "/exam-management", access: null },
   { name: "Sermon Notes", icon: FileText, path: "/sermon-notes", access: null },
   { name: "Testimony", icon: MessageSquareHeart, path: "/testimony", access: null },
+  { name: "Bible Trivia", icon: Star, path: "/trivia", access: null },
+
   { name: "Home Cell Report", icon: Globe, path: "/wsf", access: "wsf" },
   { name: "User Management", icon: Shield, path: "/user-management", access: "admin" },
   { name: "System Logs", icon: FileText, path: "/system-logs", access: "admin" },
