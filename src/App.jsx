@@ -41,6 +41,8 @@ const Onboard = lazy(() => import("@/pages/Onboard"));
 const TenantAdmin = lazy(() => import("@/pages/TenantAdmin"));
 const Presentation = lazy(() => import("@/pages/Presentation"));
 const SermonNotes = lazy(() => import("@/pages/SermonNotes"));
+const Trivia = lazy(() => import("@/pages/Trivia"));
+
 const Testimony = lazy(() => import("@/pages/Testimony"));
 const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 const Trust = lazy(() => import("@/pages/Trust"));
@@ -215,6 +217,7 @@ function AppPages() {
         <Route path="/user-management" element={<AdminRoute><UserManagement /></AdminRoute>} />
         <Route path="/sermon-notes" element={<FeatureGate path="/sermon-notes"><SermonNotes /></FeatureGate>} />
         <Route path="/testimony" element={<FeatureGate path="/testimony"><Testimony /></FeatureGate>} />
+        <Route path="/trivia" element={<FeatureGate path="/trivia"><ProtectedRoute><Trivia /></ProtectedRoute></FeatureGate>} />
         <Route path="/unit-tasks" element={<Navigate to="/church-unit?tab=tasks" replace />} />
         <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
         <Route path="/reports" element={<ReportsRoute><Reports /></ReportsRoute>} />
