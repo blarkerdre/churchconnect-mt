@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 
 import MemberFeed from "@/components/profile/MemberFeed";
 import SelfCheckInWidget from "@/components/attendance/SelfCheckInWidget";
+import TriviaWidget from "@/components/trivia/TriviaWidget";
+
 import SignPostedToMeWidget from "@/components/dashboard/SignPostedToMeWidget";
 
 import { BirthdayBanner, UpcomingBirthdayItem } from "@/components/dashboard/BirthdayCelebration";
