@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { isAuthorizedScheduler } from '../_shared/scheduler-auth.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,16 +15,15 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
-  // Restrict to service-role callers (pg_cron / internal invocation)
-  const bearer = (req.headers.get('Authorization') ?? '').replace('Bearer ', '')
-  if (!serviceKey || bearer !== serviceKey) {
+  const client = createClient(supabaseUrl, serviceKey)
+
+  // Restrict to the scheduler / internal service callers
+  if (!(await isAuthorizedScheduler(req, client))) {
     return new Response(JSON.stringify({ error: 'Forbidden' }), {
       status: 403,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
-
-  const client = createClient(supabaseUrl, serviceKey)
 
   // Fetch due scheduled communications
   const { data: scheduled, error: fetchErr } = await client
