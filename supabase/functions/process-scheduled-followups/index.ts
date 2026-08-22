@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { assertSmsQuota, QuotaExceededError } from "../_shared/sms-quota.ts";
 import { validateOutboundUrl, validateMethod } from "../_shared/url-validator.ts";
+import { isAuthorizedScheduler } from "../_shared/scheduler-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,16 +22,15 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Restrict to service-role callers (pg_cron / internal invocation)
-    const bearer = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
-    if (!serviceKey || bearer !== serviceKey) {
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    // Restrict to the scheduler / internal service callers
+    if (!(await isAuthorizedScheduler(req, supabase))) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const supabase = createClient(supabaseUrl, serviceKey);
 
     // Fetch due scheduled messages
     const { data: messages, error: fetchErr } = await supabase
