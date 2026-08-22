@@ -7741,6 +7741,7 @@ export type Database = {
         Args: { _tenant_id: string }
         Returns: undefined
       }
+      expire_stale_followup_messages: { Args: never; Returns: undefined }
       get_active_church_unit_names: {
         Args: { _tenant_slug?: string }
         Returns: {
