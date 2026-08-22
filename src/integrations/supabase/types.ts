@@ -2847,6 +2847,24 @@ export type Database = {
           },
         ]
       }
+      internal_job_tokens: {
+        Row: {
+          created_at: string
+          name: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          name: string
+          token: string
+        }
+        Update: {
+          created_at?: string
+          name?: string
+          token?: string
+        }
+        Relationships: []
+      }
       inventory_categories: {
         Row: {
           created_at: string
@@ -7741,6 +7759,7 @@ export type Database = {
         Args: { _tenant_id: string }
         Returns: undefined
       }
+      expire_stale_followup_messages: { Args: never; Returns: undefined }
       get_active_church_unit_names: {
         Args: { _tenant_slug?: string }
         Returns: {
