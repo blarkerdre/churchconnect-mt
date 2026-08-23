@@ -525,9 +525,19 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
         )}
 
         <div className="space-y-6 py-4">
+          {member && isAdmin && (
+            <MemberPhotoUploader
+              member={member}
+              tenantId={tenantId}
+              photoUrl={form.photo_url}
+              onChange={(path) => set("photo_url", path)}
+            />
+          )}
+
           {/* Personal Details */}
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Personal Details</h3>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5"><Label>First Name *</Label><Input value={form.first_name} onChange={(e) => set("first_name", e.target.value)} /></div>
               <div className="space-y-1.5"><Label>Last Name *</Label><Input value={form.last_name} onChange={(e) => set("last_name", e.target.value)} /></div>
