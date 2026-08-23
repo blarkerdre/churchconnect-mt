@@ -7660,8 +7660,16 @@ export type Database = {
           }
       auto_manage_exam_sessions: { Args: never; Returns: undefined }
       auto_manage_wofbi_sessions: { Args: never; Returns: undefined }
+      can_admin_member_photo_folder: {
+        Args: { _folder: string }
+        Returns: boolean
+      }
       can_manage_unit_task: {
         Args: { _task_id: string; _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_view_member_photo_folder: {
+        Args: { _folder: string }
         Returns: boolean
       }
       cascade_delete_bible_school_records: {
