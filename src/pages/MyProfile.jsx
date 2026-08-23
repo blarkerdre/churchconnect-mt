@@ -141,7 +141,7 @@ function ProfilePhotoUpload({ member, user, onUpdated }) {
       <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
         {uploading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Camera className="h-4 w-4 text-white" />}
       </div>
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+      <input ref={fileRef} type="file" accept={ACCEPTED_PHOTO_TYPES} className="hidden" onChange={handleUpload} />
     </div>
   );
 }
