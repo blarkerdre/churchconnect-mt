@@ -30,14 +30,24 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 
-    // Shared-secret guard: trigger calls with service-role bearer token
+    // Shared-secret guard: trigger calls with service-role bearer or job token
     const authHeader = req.headers.get("authorization") || "";
     const token = authHeader.replace(/^Bearer\s+/i, "");
-    if (token !== serviceKey) {
+    let authorized = !!serviceKey && token === serviceKey;
+    if (!authorized) {
+      const jobToken = req.headers.get("x-job-token") || "";
+      if (jobToken) {
+        const { data } = await createClient(supabaseUrl, serviceKey)
+          .from("internal_job_tokens").select("token").eq("name", "scheduler").maybeSingle();
+        authorized = !!data?.token && data.token === jobToken;
+      }
+    }
+    if (!authorized) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
 
     if (!VAPID_PRIVATE_KEY) {

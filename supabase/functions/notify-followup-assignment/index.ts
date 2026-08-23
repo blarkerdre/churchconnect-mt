@@ -24,25 +24,34 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify authentication - accept service role (from DB trigger) or authenticated user
+    // Verify authentication - accept service role / job token (DB trigger) or authenticated user
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const svcClient = createClient(supabaseUrl, serviceKey);
+
+    const jobToken = req.headers.get("x-job-token") || "";
+    let isServiceRole = false;
+    if (jobToken) {
+      const { data } = await svcClient
+        .from("internal_job_tokens").select("token").eq("name", "scheduler").maybeSingle();
+      isServiceRole = !!data?.token && data.token === jobToken;
     }
 
-    const token = authHeader.replace("Bearer ", "");
-    const isServiceRole = token === serviceKey;
+    if (!isServiceRole) {
+      if (!authHeader?.startsWith("Bearer ")) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      isServiceRole = authHeader.replace("Bearer ", "") === serviceKey;
+    }
 
-    const svcClient = createClient(supabaseUrl, serviceKey);
     let callerUserId: string | null = null;
 
     if (!isServiceRole) {
       // Validate as user JWT
       const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
-        global: { headers: { Authorization: authHeader } },
+        global: { headers: { Authorization: authHeader! } },
       });
       const { data: { user }, error: userError } = await anonClient.auth.getUser();
       if (userError || !user) {
@@ -53,6 +62,7 @@ Deno.serve(async (req) => {
       }
       callerUserId = user.id;
     }
+
 
     const supabase = svcClient;
 
