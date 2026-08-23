@@ -16,7 +16,7 @@ import { Loader2, User, Mail, Phone, MapPin, Calendar, CheckCircle2, XCircle, Ch
 import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
 import { suggestClosestWSFCentre } from "@/lib/wsf-suggest";
-import { assertStorageAvailable } from "@/lib/storageQuota";
+import { uploadProfilePhoto, removeOldProfilePhoto, friendlyUploadError, ACCEPTED_PHOTO_TYPES } from "@/lib/image-upload";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
 import MyCertificates from "@/components/certificates/MyCertificates";
 import { MemberAvatar } from "@/components/members/MemberAvatar";
@@ -97,11 +97,13 @@ function ProfilePhotoUpload({ member, user, onUpdated }) {
     if (!file) return;
     setUploading(true);
     try {
-      await assertStorageAvailable(member?.tenant_id, file.size);
-      const ext = file.name.split(".").pop();
-      const path = `${user.id}/${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from("profile-photos").upload(path, file, { upsert: true });
-      if (uploadError) throw uploadError;
+      const previousPath = member?.photo_url || null;
+      const path = await uploadProfilePhoto({
+        file,
+        folder: user.id,
+        previousPath,
+        tenantId: member?.tenant_id,
+      });
       // Store the storage PATH (not a URL). The bucket is private and reads use signed URLs.
       const { error: rpcError } = await supabase.rpc(
         "update_own_member_profile",
@@ -111,15 +113,18 @@ function ProfilePhotoUpload({ member, user, onUpdated }) {
         })
       );
       if (rpcError) throw rpcError;
+      await removeOldProfilePhoto(previousPath, path);
       onUpdated();
       toast({ title: "Profile photo updated" });
     } catch (err) {
       console.error("Photo upload error:", err);
-      toast({ title: "Upload failed", description: `${err.message}${err.statusCode ? ` (${err.statusCode})` : ""}`, variant: "destructive" });
+      toast({ title: "Upload failed", description: friendlyUploadError(err), variant: "destructive" });
     } finally {
       setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
     }
   };
+
 
   return (
     <div className="relative shrink-0 cursor-pointer group" onClick={() => fileRef.current?.click()}>
@@ -136,7 +141,7 @@ function ProfilePhotoUpload({ member, user, onUpdated }) {
       <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
         {uploading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <Camera className="h-4 w-4 text-white" />}
       </div>
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+      <input ref={fileRef} type="file" accept={ACCEPTED_PHOTO_TYPES} className="hidden" onChange={handleUpload} />
     </div>
   );
 }
