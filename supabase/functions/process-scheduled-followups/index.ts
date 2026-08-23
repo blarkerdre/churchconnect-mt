@@ -21,24 +21,56 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Restrict to the scheduler / internal service callers
+    let body: Record<string, unknown> = {};
+    try { body = await req.json(); } catch (_e) { body = {}; }
+    const requestedId = typeof body.message_id === "string" ? body.message_id : null;
+
+    // Scheduler / internal service callers, or an authenticated user asking to
+    // dispatch one specific message they can see (the "Send Now" button).
+    let allowedId: string | null = null;
     if (!(await isAuthorizedScheduler(req, supabase))) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      const authHeader = req.headers.get("Authorization") || "";
+      if (!requestedId || !authHeader.startsWith("Bearer ")) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
       });
+      const { data: visible, error: visibleErr } = await userClient
+        .from("followup_scheduled_messages")
+        .select("id")
+        .eq("id", requestedId)
+        .maybeSingle();
+      if (visibleErr || !visible) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      allowedId = requestedId;
     }
 
     // Fetch due scheduled messages
-    const { data: messages, error: fetchErr } = await supabase
+    let query = supabase
       .from("followup_scheduled_messages")
       .select("*")
-      .eq("status", "scheduled")
-      .lte("scheduled_at", new Date().toISOString())
-      .limit(50);
+      .eq("status", "scheduled");
+
+    if (allowedId) {
+      query = query.eq("id", allowedId);
+    } else {
+      query = query.lte("scheduled_at", new Date().toISOString()).limit(50);
+      if (requestedId) query = query.eq("id", requestedId);
+    }
+
+    const { data: messages, error: fetchErr } = await query;
 
     if (fetchErr) {
       console.error("Failed to fetch scheduled messages:", fetchErr);
@@ -55,8 +87,11 @@ Deno.serve(async (req) => {
       });
     }
 
+
     let sent = 0;
     let failed = 0;
+    const errors: string[] = [];
+
 
     for (const msg of messages) {
       try {
@@ -98,13 +133,15 @@ Deno.serve(async (req) => {
           .update({ status: "failed", error_message: errorMsg, updated_at: new Date().toISOString() })
           .eq("id", msg.id);
         failed++;
+        errors.push(errorMsg);
       }
     }
 
     console.log(`Processed ${messages.length} scheduled followup messages: ${sent} sent, ${failed} failed`);
 
     return new Response(
-      JSON.stringify({ processed: messages.length, sent, failed }),
+      JSON.stringify({ processed: messages.length, sent, failed, errors }),
+
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
