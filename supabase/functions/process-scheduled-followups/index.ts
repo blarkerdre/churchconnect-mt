@@ -90,6 +90,8 @@ Deno.serve(async (req) => {
 
     let sent = 0;
     let failed = 0;
+    const errors: string[] = [];
+
 
     for (const msg of messages) {
       try {
@@ -131,13 +133,15 @@ Deno.serve(async (req) => {
           .update({ status: "failed", error_message: errorMsg, updated_at: new Date().toISOString() })
           .eq("id", msg.id);
         failed++;
+        errors.push(errorMsg);
       }
     }
 
     console.log(`Processed ${messages.length} scheduled followup messages: ${sent} sent, ${failed} failed`);
 
     return new Response(
-      JSON.stringify({ processed: messages.length, sent, failed }),
+      JSON.stringify({ processed: messages.length, sent, failed, errors }),
+
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
