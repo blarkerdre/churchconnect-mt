@@ -131,6 +131,7 @@ export default function FollowupMessageDialog({
         created_by: user?.id,
       };
 
+      let messageId = existingMessage?.id || null;
       if (existingMessage?.id) {
         const { error } = await supabase
           .from("followup_scheduled_messages")
@@ -139,15 +140,31 @@ export default function FollowupMessageDialog({
           .eq("tenant_id", tenantId);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("followup_scheduled_messages")
-          .insert(withTenant(payload));
+          .insert(withTenant(payload))
+          .select("id")
+          .single();
         if (error) throw error;
+        messageId = data?.id || null;
       }
 
-      toast({ title: sendMode === "now" ? "Message queued for sending" : "Message scheduled" });
+      if (sendMode === "now" && messageId) {
+        const { data: result, error: fnErr } = await supabase.functions.invoke(
+          "process-scheduled-followups",
+          { body: { message_id: messageId } }
+        );
+        if (fnErr) throw new Error(fnErr.message);
+        if (result?.failed > 0) {
+          throw new Error(result?.errors?.[0] || "Message failed to send");
+        }
+        toast({ title: result?.sent > 0 ? "Message sent" : "Message queued for sending" });
+      } else {
+        toast({ title: "Message scheduled" });
+      }
       onSaved?.();
       onOpenChange(false);
+
     } catch (err) {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
