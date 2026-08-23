@@ -25,6 +25,7 @@ import { logAudit } from "@/lib/audit";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useConsentText, renderConsentText } from "@/hooks/useConsentText";
 import MemberJourneyTimeline from "@/components/members/MemberJourneyTimeline";
+import MemberPhotoUploader from "@/components/members/MemberPhotoUploader";
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 import { diffUnitMembership, submitJoinRequests } from "@/hooks/usePendingJoinRequests";
 import { Info as InfoIcon } from "lucide-react";
