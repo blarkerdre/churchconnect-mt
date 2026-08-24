@@ -12,9 +12,8 @@ import {
 
 /**
  * Admin-facing avatar uploader used in the member edit dialog.
- * Photos live in the member's own user folder when the member has a linked
- * account, otherwise in a `member-<id>` folder (both covered by storage RLS
- * scoped to the member's church).
+ * Photos live in a `member-<id>` folder, which storage RLS scopes to the
+ * member's church for admin writes and church-wide reads.
  */
 export default function MemberPhotoUploader({ member, tenantId, photoUrl, onChange }) {
   const fileRef = useRef(null);
@@ -26,7 +25,10 @@ export default function MemberPhotoUploader({ member, tenantId, photoUrl, onChan
     setUploading(true);
     try {
       const previousPath = photoUrl || member.photo_url || null;
-      const folder = member.user_id || `member-${member.id}`;
+      // Always use the tenant-scoped `member-<id>` folder: storage RLS only
+      // lets admins write there (a member's own uid folder is writable by that
+      // member alone).
+      const folder = `member-${member.id}`;
       const path = await uploadProfilePhoto({ file, folder, previousPath, tenantId });
 
       const { error } = await supabase
