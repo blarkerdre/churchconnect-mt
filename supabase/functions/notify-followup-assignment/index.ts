@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     // Load the real follow-up record — never trust client-supplied content
     const { data: followup, error: fuErr } = await supabase
       .from("followups")
-      .select("id, tenant_id, assigned_to, member_name, description, followup_type")
+      .select("id, tenant_id, assigned_to, member_id, description, followup_type, members:member_id(first_name, last_name)")
       .eq("id", followup_id)
       .maybeSingle();
 
@@ -91,7 +91,8 @@ Deno.serve(async (req) => {
 
     const tenant_id = followup.tenant_id;
     const assigned_to = followup.assigned_to;
-    const member_name = followup.member_name;
+    const m = (followup as { members?: { first_name?: string; last_name?: string } | null }).members;
+    const member_name = [m?.first_name, m?.last_name].filter(Boolean).join(" ") || "a member";
     const description = followup.description;
     const followup_type = followup.followup_type;
 
