@@ -66,6 +66,7 @@ async function moveToDlq(
     recipient_email: payload.to,
     status: 'dlq',
     error_message: reason,
+    tenant_id: (payload.tenant_id as string | undefined) ?? null,
   })
   const { error } = await supabase.rpc('move_to_dlq', {
     source_queue: queue,
@@ -277,6 +278,7 @@ Deno.serve(async (req) => {
           template_name: payload.label || queue,
           recipient_email: payload.to,
           status: 'sent',
+          tenant_id: (payload.tenant_id as string | undefined) ?? null,
         })
 
         // Delete from queue
@@ -305,6 +307,7 @@ Deno.serve(async (req) => {
             recipient_email: payload.to,
             status: 'rate_limited',
             error_message: errorMsg.slice(0, 1000),
+            tenant_id: (payload.tenant_id as string | undefined) ?? null,
           })
 
           const retryAfterSecs = getRetryAfterSeconds(error)
@@ -342,6 +345,7 @@ Deno.serve(async (req) => {
           recipient_email: payload.to,
           status: 'failed',
           error_message: errorMsg.slice(0, 1000),
+          tenant_id: (payload.tenant_id as string | undefined) ?? null,
         })
         if (payload?.message_id && typeof payload.message_id === 'string') {
           failedAttemptsByMessageId.set(payload.message_id, failedAttempts + 1)
