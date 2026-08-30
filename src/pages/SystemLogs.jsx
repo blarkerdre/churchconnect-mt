@@ -79,6 +79,19 @@ const emailStatusConfig = {
 };
 const PAGE_SIZE = 50;
 
+// Turn raw email API errors into a short plain-English reason.
+function explainEmailError(msg) {
+  if (!msg) return "";
+  if (msg.includes("missing_unsubscribe")) return "Rejected: missing unsubscribe link (fixed)";
+  if (msg.includes("run_failed") || msg.includes("new idempotency key")) return "Retry rejected as duplicate of a failed send";
+  if (msg.includes("domain_not_verified")) return "Email domain was not verified";
+  if (msg.includes("TTL exceeded")) return "Expired before the sender could process it";
+  if (msg.includes("Max retries")) return "Gave up after 5 failed attempts";
+  if (msg.includes("Emails disabled")) return "Email sending was disabled";
+  return msg;
+}
+
+
 function EmailMiniStat({ title, value, icon: Icon, color }) {
   const colorMap = { blue: "bg-blue-50 text-blue-600", emerald: "bg-emerald-50 text-emerald-600", rose: "bg-rose-50 text-rose-600", amber: "bg-amber-50 text-amber-600" };
   return (
@@ -178,11 +191,17 @@ function EmailLogsPanel() {
               return (
                 <TableRow key={row.id}>
                   <TableCell className="font-mono text-xs">{row.template_name}</TableCell>
-                  <TableCell className="text-xs max-w-[180px] truncate">{row.recipient_email}</TableCell>
-                  <TableCell><Badge className={cfg.color}>{row.status}</Badge></TableCell>
+                  <TableCell className="text-xs max-w-[180px] truncate">
+                    {row.recipient_email}
+                    {(row.status === "dlq" || row.status === "failed") && row.error_message && (
+                      <span className="block md:hidden text-[11px] text-destructive whitespace-normal">{explainEmailError(row.error_message)}</span>
+                    )}
+                  </TableCell>
+                  <TableCell><Badge className={cfg.color}>{row.status === "dlq" ? "failed (given up)" : row.status}</Badge></TableCell>
                   <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">{format(new Date(row.created_at), "MMM d, HH:mm")}</TableCell>
-                  <TableCell className="hidden md:table-cell text-xs text-destructive max-w-[200px] truncate">{row.error_message || "—"}</TableCell>
+                  <TableCell className="hidden md:table-cell text-xs text-destructive max-w-[240px]" title={row.error_message || ""}>{explainEmailError(row.error_message) || "—"}</TableCell>
                 </TableRow>
+
               );
             })}
           </TableBody>
