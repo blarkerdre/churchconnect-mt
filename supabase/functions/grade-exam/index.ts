@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { getOrCreateUnsubscribeToken } from "../_shared/unsubscribe-token.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -469,6 +470,8 @@ async function sendResultEmail_fn(
     const text = `Exam Result Statement\n\nHello ${memberName},\n\nYour exam for ${result.subjectName} has been graded.\n\nScore: ${result.score} / ${result.totalPoints} (${result.percentage}%)\nPass Mark: ${result.passThreshold}%\nStatus: ${statusText}\n\n${result.passed ? "Congratulations on passing!" : "You can retake the exam when ready."}\n\nView your results: ${tenantSiteUrl}/auth`;
 
     const messageId = crypto.randomUUID();
+    // Transactional sends are rejected without an unsubscribe token.
+    const unsubscribeToken = await getOrCreateUnsubscribeToken(adminClient, member.email);
 
     await adminClient.rpc("enqueue_email", {
       queue_name: "transactional_emails",
@@ -483,6 +486,7 @@ async function sendResultEmail_fn(
         label: "exam-result",
         message_id: messageId,
         idempotency_key: messageId,
+        unsubscribe_token: unsubscribeToken,
       },
     });
 
