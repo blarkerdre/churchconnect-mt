@@ -191,11 +191,17 @@ function EmailLogsPanel() {
               return (
                 <TableRow key={row.id}>
                   <TableCell className="font-mono text-xs">{row.template_name}</TableCell>
-                  <TableCell className="text-xs max-w-[180px] truncate">{row.recipient_email}</TableCell>
-                  <TableCell><Badge className={cfg.color}>{row.status}</Badge></TableCell>
+                  <TableCell className="text-xs max-w-[180px] truncate">
+                    {row.recipient_email}
+                    {(row.status === "dlq" || row.status === "failed") && row.error_message && (
+                      <span className="block md:hidden text-[11px] text-destructive whitespace-normal">{explainEmailError(row.error_message)}</span>
+                    )}
+                  </TableCell>
+                  <TableCell><Badge className={cfg.color}>{row.status === "dlq" ? "failed (given up)" : row.status}</Badge></TableCell>
                   <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">{format(new Date(row.created_at), "MMM d, HH:mm")}</TableCell>
-                  <TableCell className="hidden md:table-cell text-xs text-destructive max-w-[200px] truncate">{row.error_message || "—"}</TableCell>
+                  <TableCell className="hidden md:table-cell text-xs text-destructive max-w-[240px]" title={row.error_message || ""}>{explainEmailError(row.error_message) || "—"}</TableCell>
                 </TableRow>
+
               );
             })}
           </TableBody>
