@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { getOrCreateUnsubscribeToken } from "../_shared/unsubscribe-token.ts";
 import { checkSmsQuota } from "../_shared/sms-quota.ts";
 
 const corsHeaders = {
@@ -120,6 +121,9 @@ Deno.serve(async (req) => {
 
       const textContent = `Hi ${recipientName},\n\n${member_name} has joined your unit: ${unit_name}.\n\nPlease log in to the Church Management System to welcome them.\n\nGod bless,\n${churchName}`;
 
+      // Transactional sends are rejected without an unsubscribe token.
+      const unsubscribeToken = await getOrCreateUnsubscribeToken(supabase, recipientEmail);
+
       const payload = {
         to: recipientEmail,
         from: fromAddress,
@@ -131,6 +135,7 @@ Deno.serve(async (req) => {
         label: "unit-leader-notification",
         message_id: messageId,
         idempotency_key: messageId,
+        unsubscribe_token: unsubscribeToken,
         queued_at: new Date().toISOString(),
         ...(tenant_id ? { tenant_id } : {}),
       };
