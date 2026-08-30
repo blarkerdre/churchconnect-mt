@@ -3,6 +3,7 @@ import { renderAsync } from 'npm:@react-email/components@0.0.22'
 import { parseEmailWebhookPayload } from 'npm:@lovable.dev/email-js'
 import { WebhookError, verifyWebhookRequest } from 'npm:@lovable.dev/webhooks-js'
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { getOrCreateUnsubscribeToken } from '../_shared/unsubscribe-token.ts'
 import { SignupEmail } from '../_shared/email-templates/signup.tsx'
 import { InviteEmail } from '../_shared/email-templates/invite.tsx'
 import { MagicLinkEmail } from '../_shared/email-templates/magic-link.tsx'
@@ -255,6 +256,14 @@ async function handleWebhook(req: Request): Promise<Response> {
     ...(resolvedTenantId ? { tenant_id: resolvedTenantId } : {}),
   })
 
+  // Transactional sends are rejected with 400 missing_unsubscribe without a token.
+  let unsubscribeToken: string | undefined
+  try {
+    unsubscribeToken = await getOrCreateUnsubscribeToken(supabase, payload.data.email)
+  } catch (tokenError) {
+    console.error('Failed to get unsubscribe token', { error: tokenError, run_id, emailType })
+  }
+
   const { error: enqueueError } = await supabase.rpc('enqueue_email', {
     queue_name: 'auth_emails',
     payload: {
@@ -269,6 +278,7 @@ async function handleWebhook(req: Request): Promise<Response> {
       text,
       purpose: 'transactional',
       label: emailType,
+      ...(unsubscribeToken ? { unsubscribe_token: unsubscribeToken } : {}),
       queued_at: new Date().toISOString(),
     },
   })
