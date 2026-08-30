@@ -26,6 +26,17 @@ function isForbidden(error: unknown): boolean {
   return error instanceof Error && error.message.includes('403')
 }
 
+// Permanent validation failures (400). Retrying with the same payload can
+// never succeed, and the API rejects retries of a failed send that reuse the
+// same idempotency key with 409, masking the real cause. DLQ immediately.
+function isPermanentValidationError(error: unknown): boolean {
+  if (error && typeof error === 'object' && 'status' in error) {
+    if ((error as { status: number }).status === 400) return true
+  }
+  const msg = error instanceof Error ? error.message : String(error ?? '')
+  return msg.includes('missing_unsubscribe') || msg.includes('"status":400')
+}
+
 // Extract Retry-After seconds from a structured EmailAPIError, or default to 60s.
 function getRetryAfterSeconds(error: unknown): number {
   if (error && typeof error === 'object' && 'retryAfterSeconds' in error) {
@@ -262,7 +273,11 @@ Deno.serve(async (req) => {
             text: payload.text,
             purpose: payload.purpose,
             label: payload.label,
-            idempotency_key: payload.idempotency_key,
+            // Derive a fresh idempotency key per attempt: the API rejects a
+            // retry that reuses the key of a previously failed send (409).
+            idempotency_key: failedAttempts > 0
+              ? `${payload.idempotency_key}:${failedAttempts}`
+              : payload.idempotency_key,
             unsubscribe_token: payload.unsubscribe_token,
             message_id: payload.message_id,
           },
@@ -326,6 +341,12 @@ Deno.serve(async (req) => {
             JSON.stringify({ processed: totalProcessed, stopped: 'rate_limited' }),
             { headers: { 'Content-Type': 'application/json' } }
           )
+        }
+
+        // 400 validation failures are permanent for this payload.
+        if (isPermanentValidationError(error)) {
+          await moveToDlq(supabase, queue, msg, errorMsg.slice(0, 1000))
+          continue
         }
 
         // 403s are permanent configuration or authorization failures for this
