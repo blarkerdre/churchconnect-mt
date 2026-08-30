@@ -4,7 +4,7 @@ import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { queryClientInstance } from "@/lib/query-client";
 import { BrowserRouter as Router, Route, Routes, Navigate, useParams, useLocation } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { Suspense } from "react";
 import { lazyRetry } from "@/lib/lazy-retry";
 import { useUnitMembership } from "@/hooks/useUnitMembership";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
