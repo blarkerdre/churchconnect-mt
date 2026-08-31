@@ -3,22 +3,29 @@ import { lazy } from "react";
 /**
  * React.lazy with resilience against stale chunk hashes after a new deploy.
  * Retries the dynamic import once (cache-busted); if it still fails, clears
- * caches/service workers and hard-reloads the page a single time.
- * If a reload was already attempted in this tab, the error is rethrown so an
- * error boundary can show a recovery UI instead of an endless spinner.
+ * caches/service workers and hard-reloads the page — but at most once per
+ * cooldown window, so a permanently broken chunk cannot trap the user in an
+ * endless reload loop. When the cooldown is active, the error is rethrown so
+ * an error boundary can show a recovery UI.
  */
-const RELOAD_KEY = "__chunk_reload_attempted__";
+export const RELOAD_KEY = "__chunk_reload_attempted_at__";
+const RELOAD_COOLDOWN_MS = 60_000;
 
-function clearReloadFlag() {
+function reloadRecently() {
   try {
-    sessionStorage.removeItem(RELOAD_KEY);
-  } catch {}
+    const ts = Number(sessionStorage.getItem(RELOAD_KEY) || 0);
+    return ts > 0 && Date.now() - ts < RELOAD_COOLDOWN_MS;
+  } catch {
+    return false;
+  }
 }
 
-async function hardReload() {
+export async function hardReload() {
+  // Time-based guard: never clear on success, so a persistently failing chunk
+  // reloads at most once per cooldown window.
+  if (reloadRecently()) return false;
   try {
-    if (sessionStorage.getItem(RELOAD_KEY)) return false;
-    sessionStorage.setItem(RELOAD_KEY, "1");
+    sessionStorage.setItem(RELOAD_KEY, String(Date.now()));
   } catch {}
   try {
     if ("serviceWorker" in navigator) {
@@ -41,20 +48,16 @@ async function hardReload() {
 export function lazyRetry(factory) {
   return lazy(async () => {
     try {
-      const mod = await factory();
-      clearReloadFlag();
-      return mod;
+      return await factory();
     } catch (err) {
       // One quiet retry — covers transient network/CDN blips.
       try {
-        const mod = await factory();
-        clearReloadFlag();
-        return mod;
+        return await factory();
       } catch (err2) {
         const reloading = await hardReload();
         if (!reloading) {
-          // Already reloaded once in this tab — surface the error so an error
-          // boundary renders instead of hanging on the Suspense fallback.
+          // Reloaded recently already — surface the error so an error boundary
+          // renders instead of hanging on the Suspense fallback.
           throw err2;
         }
         // Keep the Suspense boundary pending while the page reloads.
