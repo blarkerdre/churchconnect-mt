@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { writeAudit } from '../_shared/audit.ts';
+import { sendRawManagedEmail } from '../_shared/managed-email.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,37 +10,6 @@ const corsHeaders = {
 function escHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function normalizeEmail(email: string) {
-  return email.trim().toLowerCase();
-}
-
-async function getOrCreateUnsubscribeToken(
-  supabase: ReturnType<typeof createClient>,
-  email: string,
-) {
-  const normalizedEmail = normalizeEmail(email);
-
-  const { data: existingToken, error: tokenLookupError } = await supabase
-    .from('email_unsubscribe_tokens')
-    .select('token')
-    .eq('email', normalizedEmail)
-    .is('used_at', null)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (tokenLookupError) throw tokenLookupError;
-  if (existingToken?.token) return existingToken.token;
-
-  const token = crypto.randomUUID();
-  const { error: tokenInsertError } = await supabase
-    .from('email_unsubscribe_tokens')
-    .insert({ email: normalizedEmail, token });
-
-  if (tokenInsertError) throw tokenInsertError;
-  return token;
 }
 
 function buildAudienceLabel(filters: Record<string, unknown> | null, audience: string): string {
@@ -209,10 +179,6 @@ Deno.serve(async (req) => {
     : buildAudienceLabel(filters, audience)
 
   // Build and enqueue emails
-  const senderDomain = 'notify.app.churchmanagementsuite.org'
-  const fromDomain = 'app.churchmanagementsuite.org'
-  const safeName = tenantSenderName.replace(/[",\\]/g, '')
-  const fromAddress = `"${safeName}" <noreply@${fromDomain}>`
   let enqueued = 0
   let skipped = 0
 
@@ -251,47 +217,23 @@ Deno.serve(async (req) => {
     const messageId = `email-alert-${crypto.randomUUID()}`
     const firstName = member.first_name || 'Member'
 
-    let unsubscribeToken: string
     try {
-      unsubscribeToken = await getOrCreateUnsubscribeToken(serviceClient, member.email)
-    } catch (tokenErr) {
-      console.error('Failed to get unsubscribe token', { to: member.email, error: tokenErr })
+      await sendRawManagedEmail({
+        supabase: serviceClient,
+        to: member.email,
+        subject: subject,
+        html: htmlTemplate(firstName),
+        text: `Dear ${firstName},\n\n${subject}\n\n${body}\n\nThis email was sent to ${audienceLabel} members.\n\n${tenantSenderName}`,
+        label: 'email-alert',
+        idempotencyKey: messageId,
+        tenantId: tenant_id,
+        messageId,
+        fromName: tenantSenderName,
+      })
+    } catch (sendErr) {
+      console.error('Failed to send email', { to: member.email, error: sendErr })
       continue
     }
-
-    const payload = {
-      to: member.email,
-      from: fromAddress,
-      sender_domain: senderDomain,
-      subject: subject,
-      html: htmlTemplate(firstName),
-      text: `Dear ${firstName},\n\n${subject}\n\n${body}\n\nThis email was sent to ${audienceLabel} members.\n\n${tenantSenderName}`,
-      purpose: 'transactional',
-      label: 'email-alert',
-      message_id: messageId,
-      idempotency_key: messageId,
-      unsubscribe_token: unsubscribeToken,
-      queued_at: new Date().toISOString(),
-      ...(tenant_id ? { tenant_id } : {}),
-    }
-
-    const { error: enqueueError } = await serviceClient.rpc('enqueue_email', {
-      queue_name: 'transactional_emails',
-      payload,
-    })
-
-    if (enqueueError) {
-      console.error('Failed to enqueue email', { to: member.email, error: enqueueError })
-      continue
-    }
-
-    await serviceClient.from('email_send_log').insert({
-      message_id: messageId,
-      template_name: 'email-alert',
-      recipient_email: member.email,
-      status: 'pending',
-      ...(tenant_id ? { tenant_id } : {}),
-    })
 
     enqueued++
   }
