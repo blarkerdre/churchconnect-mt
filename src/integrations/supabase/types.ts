@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_page_views: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string
+          device_type: string | null
+          id: string
+          is_authenticated: boolean
+          path: string
+          referrer: string | null
+          session_id: string
+          tenant_id: string | null
+          visitor_id: string
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          id?: string
+          is_authenticated?: boolean
+          path: string
+          referrer?: string | null
+          session_id: string
+          tenant_id?: string | null
+          visitor_id: string
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device_type?: string | null
+          id?: string
+          is_authenticated?: boolean
+          path?: string
+          referrer?: string | null
+          session_id?: string
+          tenant_id?: string | null
+          visitor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_page_views_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcement_reactions: {
         Row: {
           announcement_id: string
@@ -7668,6 +7718,7 @@ export type Database = {
         Args: { _task_id: string; _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      can_read_traffic: { Args: { _tenant_id: string }; Returns: boolean }
       can_view_member_photo_folder: {
         Args: { _folder: string }
         Returns: boolean
@@ -7913,6 +7964,60 @@ export type Database = {
       get_tenant_storage_usage_mb: {
         Args: { _tenant_id: string }
         Returns: number
+      }
+      get_traffic_by_tenant: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          page_views: number
+          tenant_id: string
+          tenant_name: string
+          visitors: number
+        }[]
+      }
+      get_traffic_locations: {
+        Args: {
+          _from: string
+          _limit?: number
+          _tenant_id: string
+          _to: string
+        }
+        Returns: {
+          city: string
+          country: string
+          page_views: number
+          visitors: number
+        }[]
+      }
+      get_traffic_series: {
+        Args: { _from: string; _tenant_id: string; _to: string }
+        Returns: {
+          day: string
+          page_views: number
+          visitors: number
+        }[]
+      }
+      get_traffic_summary: {
+        Args: { _from: string; _tenant_id: string; _to: string }
+        Returns: {
+          avg_duration_seconds: number
+          bounce_rate: number
+          page_views: number
+          views_per_visit: number
+          visitors: number
+        }[]
+      }
+      get_traffic_top_pages: {
+        Args: {
+          _from: string
+          _limit?: number
+          _tenant_id: string
+          _to: string
+        }
+        Returns: {
+          page_views: number
+          path: string
+          visitors: number
+        }[]
       }
       get_trivia_leaderboard: {
         Args: {
@@ -8218,6 +8323,7 @@ export type Database = {
         Args: { _enrolment_id: string; _pin: string }
         Returns: Json
       }
+      purge_old_analytics_page_views: { Args: never; Returns: undefined }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
