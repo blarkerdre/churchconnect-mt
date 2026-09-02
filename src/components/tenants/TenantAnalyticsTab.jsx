@@ -57,6 +57,8 @@ export default function TenantAnalyticsTab({ tenants }) {
 
   return (
     <div className="space-y-4">
+      <TrafficPanel allowTenantFilter tenants={tenants} />
+      <h3 className="text-lg font-semibold pt-2">Per-church resources</h3>
       {tenants.filter(t => !t.is_archived).map((t) => {
         const stats = analytics[t.id] || {};
         const memberUsage = t.member_limit > 0 ? Math.round((stats.members / t.member_limit) * 100) : 0;
