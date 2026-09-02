@@ -118,7 +118,7 @@ function IndividualSend({ tenantId, churchName, senderName }) {
     setSending(true);
     try {
       if (channel === "email") {
-        const { error } = await supabase.functions.invoke("send-transactional-email", {
+        const { error } = await supabase.functions.invoke("send-admin-message", {
           body: {
             templateName: "admin-direct-message",
             recipientEmail: recipient.email,
@@ -327,7 +327,7 @@ function BulkNonMembers({ tenantId, churchName, senderName }) {
       if (channel === "email") {
         for (const r of emailRecipients) {
           try {
-            const { error } = await supabase.functions.invoke("send-transactional-email", {
+            const { error } = await supabase.functions.invoke("send-admin-message", {
               body: {
                 templateName: "admin-direct-message",
                 recipientEmail: r.email,
