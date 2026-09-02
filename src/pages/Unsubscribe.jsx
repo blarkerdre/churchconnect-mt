@@ -1,12 +1,8 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MailX, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export default function Unsubscribe() {
   const [params] = useSearchParams();
@@ -14,53 +10,19 @@ export default function Unsubscribe() {
   const [status, setStatus] = useState("loading"); // loading | valid | used | invalid | success | error
   const [submitting, setSubmitting] = useState(false);
 
+  // Unsubscribe is now handled on the email platform itself: every email
+  // carries a hosted unsubscribe link in its footer. Legacy links that still
+  // point here can no longer be actioned.
   useEffect(() => {
-    if (!token) {
-      setStatus("invalid");
-      return;
-    }
-    (async () => {
-      try {
-        const res = await fetch(
-          `${SUPABASE_URL}/functions/v1/handle-email-unsubscribe?token=${encodeURIComponent(token)}`,
-          { headers: { apikey: SUPABASE_KEY } }
-        );
-        const data = await res.json();
-        if (!res.ok) {
-          setStatus("invalid");
-        } else if (data.valid === false && data.reason === "already_unsubscribed") {
-          setStatus("used");
-        } else if (data.valid) {
-          setStatus("valid");
-        } else {
-          setStatus("invalid");
-        }
-      } catch {
-        setStatus("invalid");
-      }
-    })();
+    setStatus("invalid");
   }, [token]);
 
   const handleUnsubscribe = async () => {
     setSubmitting(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("handle-email-unsubscribe", {
-        body: { token },
-      });
-      if (error) throw error;
-      if (data?.success) {
-        setStatus("success");
-      } else if (data?.reason === "already_unsubscribed") {
-        setStatus("used");
-      } else {
-        setStatus("error");
-      }
-    } catch {
-      setStatus("error");
-    } finally {
-      setSubmitting(false);
-    }
+    setStatus("invalid");
+    setSubmitting(false);
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
