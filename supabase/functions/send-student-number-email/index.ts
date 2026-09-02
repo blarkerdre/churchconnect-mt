@@ -2,6 +2,7 @@
 // after their course registration has been approved. Admin-only.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { sendLoggedTemplateEmail } from "../_shared/managed-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -86,32 +87,28 @@ Deno.serve(async (req) => {
     let emailSent = true;
     let emailError: string | null = null;
     try {
-      const { error: invokeErr } = await admin.functions.invoke("send-transactional-email", {
-        headers: { Authorization: `Bearer ${serviceKey}` },
-        body: {
-          templateName: "bible-school-student-number",
-          recipientEmail: emailLower,
-          tenant_id: reg.tenant_id,
-          idempotencyKey: `bs-student-number-${reg.id}`,
-          templateData: {
-            firstName: reg.members.first_name,
-            courseName,
-            tenantName,
-            courses: [{ name: courseName, student_number: reg.student_number }],
-          },
+      const result = await sendLoggedTemplateEmail({
+        supabase: admin,
+        templateName: "bible-school-student-number",
+        to: emailLower,
+        tenantId: reg.tenant_id,
+        idempotencyKey: `bs-student-number-${reg.id}`,
+        templateData: {
+          firstName: reg.members.first_name,
+          courseName,
+          tenantName,
+          courses: [{ name: courseName, student_number: reg.student_number }],
         },
       });
-      if (invokeErr) {
+      if (!result.sent) {
         emailSent = false;
-        const status = (invokeErr as any)?.context?.status;
-        const baseMsg = (invokeErr as any)?.message || String(invokeErr);
-        emailError = status ? `[${status}] ${baseMsg}` : baseMsg;
-        console.error("send-transactional-email returned error:", { status, invokeErr });
+        emailError = "Recipient has unsubscribed or bounced";
+        console.warn("bible-school-student-number email suppressed", { emailLower });
       }
     } catch (e) {
       emailSent = false;
       emailError = (e as Error).message || String(e);
-      console.error("send-transactional-email failed:", e);
+      console.error("sendLoggedTemplateEmail failed:", e);
     }
 
     return json({ ok: true, email_sent: emailSent, email_error: emailError });

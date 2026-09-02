@@ -3,6 +3,7 @@
 // straight into the exam page. Admin-only.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { sendLoggedTemplateEmail } from "../_shared/managed-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -271,37 +272,31 @@ Deno.serve(async (req) => {
     }
     console.log("[provision-exam-account] magic link generated", { hasLink: true });
 
-    // 5. Send email — invoke with explicit service-role Authorization so
-    // send-transactional-email's in-code auth check accepts the call.
+    // 5. Send email via the managed email helper.
     let emailSent = true;
     let emailError: string | null = null;
     try {
-      console.log("[provision-exam-account] invoking send-transactional-email", { emailLower, template: "bible-school-exam-ready", tenant_id: app.tenant_id });
-      const { data: invokeData, error: invokeErr } = await admin.functions.invoke("send-transactional-email", {
-        headers: { Authorization: `Bearer ${serviceKey}` },
-        body: {
-          templateName: "bible-school-exam-ready",
-          recipientEmail: emailLower,
-          tenant_id: app.tenant_id,
-          idempotencyKey: `bs-exam-ready-${app.id || registration_id || memberId}-${Date.now()}`,
-          templateData: {
-            firstName: app.first_name,
-            courseName,
-            magicLink,
-            tenantName,
-            courses,
-          },
+      console.log("[provision-exam-account] sending via sendLoggedTemplateEmail", { emailLower, template: "bible-school-exam-ready", tenant_id: app.tenant_id });
+      const result = await sendLoggedTemplateEmail({
+        supabase: admin,
+        templateName: "bible-school-exam-ready",
+        to: emailLower,
+        tenantId: app.tenant_id,
+        idempotencyKey: `bs-exam-ready-${app.id || registration_id || memberId}-${Date.now()}`,
+        templateData: {
+          firstName: app.first_name,
+          courseName,
+          magicLink,
+          tenantName,
+          courses,
         },
       });
-      if (invokeErr) {
+      if (!result.sent) {
         emailSent = false;
-        const status = (invokeErr as any)?.context?.status;
-        const ctxBody = (invokeErr as any)?.context?.body;
-        const baseMsg = (invokeErr as any)?.message || String(invokeErr);
-        emailError = status ? `[${status}] ${baseMsg}` : baseMsg;
-        console.error("[provision-exam-account] send-transactional-email returned error", { status, message: baseMsg, ctxBody, invokeData });
+        emailError = "Recipient has unsubscribed or bounced";
+        console.warn("[provision-exam-account] bible-school-exam-ready email suppressed", { emailLower });
       } else {
-        console.log("[provision-exam-account] send-transactional-email ok", { invokeData });
+        console.log("[provision-exam-account] sendLoggedTemplateEmail ok");
         if (app.course_id && memberId) {
           // Stamp exam_link_sent_at so the UI can accurately show "Sent" / "Resend link".
           await admin
@@ -315,7 +310,7 @@ Deno.serve(async (req) => {
     } catch (e) {
       emailSent = false;
       emailError = (e as Error).message || String(e);
-      console.error("[provision-exam-account] send-transactional-email threw", e);
+      console.error("[provision-exam-account] sendLoggedTemplateEmail threw", e);
       // Non-fatal — return link so admin can share manually if needed.
     }
 

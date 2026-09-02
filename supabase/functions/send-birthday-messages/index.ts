@@ -2,6 +2,7 @@
 // Triggered both by hourly pg_cron (no body) and manually from the UI
 // (body: { tenant_id?, member_id?, channels? }).
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { sendLoggedTemplateEmail } from "../_shared/managed-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -281,13 +282,12 @@ Deno.serve(async (req) => {
             if (!member.email) {
               errMsg = "Member has no email address";
             } else {
-              const r = await postWithRetry(
-                `${supabaseUrl}/functions/v1/send-transactional-email`,
-                serviceKey,
-                {
+              try {
+                const result = await sendLoggedTemplateEmail({
+                  supabase: svc,
                   templateName: "birthday-greeting",
-                  recipientEmail: member.email,
-                  tenant_id: t.tenant_id,
+                  to: member.email,
+                  tenantId: t.tenant_id,
                   idempotencyKey: isManual
                     ? `birthday-test-${member.id}-${Date.now()}`
                     : `birthday-${member.id}-${todayDate}`,
@@ -298,10 +298,12 @@ Deno.serve(async (req) => {
                     subject: t.email_subject,
                     body: t.email_body,
                   },
-                },
-              );
-              if (r.ok) ok = true;
-              else errMsg = r.error || `Email send failed (${r.status ?? "network"})`;
+                });
+                if (result.sent) ok = true;
+                else errMsg = "Recipient has unsubscribed or bounced";
+              } catch (emailErr) {
+                errMsg = emailErr instanceof Error ? emailErr.message : String(emailErr);
+              }
             }
           } else if (channel === "sms" || channel === "whatsapp") {
             if (!member.phone) {
