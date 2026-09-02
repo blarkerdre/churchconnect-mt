@@ -36,3 +36,5 @@ project_id = "qfordhikmtgedfybktjg"
     verify_jwt = false
   [functions.send-push]
     verify_jwt = false
+  [functions.track-pageview]
+    verify_jwt = false
