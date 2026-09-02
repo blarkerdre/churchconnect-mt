@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { getOrCreateUnsubscribeToken } from "../_shared/unsubscribe-token.ts";
 import { checkSmsQuota } from "../_shared/sms-quota.ts";
+import { sendRawManagedEmail } from "../_shared/managed-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
