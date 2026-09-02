@@ -96,7 +96,10 @@ export function trackPageView({ isAuthenticated = false } = {}) {
   };
 
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/track-pageview`;
-  const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+  const body = JSON.stringify(payload);
+  // text/plain keeps this a "simple" CORS request, so the browser sends it
+  // immediately with no preflight (which sendBeacon cannot recover from).
+  const blob = new Blob([body], { type: "text/plain;charset=UTF-8" });
 
   try {
     if (navigator.sendBeacon && navigator.sendBeacon(url, blob)) return;
@@ -104,10 +107,14 @@ export function trackPageView({ isAuthenticated = false } = {}) {
     /* fall through to fetch */
   }
 
+  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    headers: {
+      "Content-Type": "text/plain;charset=UTF-8",
+      ...(anonKey ? { apikey: anonKey, Authorization: `Bearer ${anonKey}` } : {}),
+    },
+    body,
     keepalive: true,
   }).catch(() => {});
 }
