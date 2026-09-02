@@ -8040,6 +8040,18 @@ export type Database = {
           visitors: number
         }[]
       }
+      get_traffic_countries: {
+        Args: {
+          _from: string
+          _limit?: number
+          _tenant_id: string
+          _to: string
+        }
+        Returns: {
+          country: string
+          visitors: number
+        }[]
+      }
       get_traffic_devices: {
         Args: { _from: string; _tenant_id: string; _to: string }
         Returns: {
