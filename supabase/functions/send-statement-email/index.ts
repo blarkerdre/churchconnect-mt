@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { generateAndUploadStatement } from "../_shared/generate-statement.ts";
 import { formatSessionLabel } from "../_shared/statement-pdf.ts";
+import { sendRawManagedEmail } from "../_shared/managed-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -155,56 +156,22 @@ ${pdfResult.signed_url}
   const messageId = `statement-${crypto.randomUUID()}`;
   const recipient = member.email.trim().toLowerCase();
 
-  // Unsubscribe token
-  const { data: tokenRow } = await supabase
-    .from("email_unsubscribe_tokens")
-    .select("token")
-    .eq("email", recipient)
-    .maybeSingle();
-
-  let unsubToken = tokenRow?.token;
-  if (!unsubToken) {
-    unsubToken = crypto.randomUUID();
-    await supabase
-      .from("email_unsubscribe_tokens")
-      .upsert(
-        { email: recipient, token: unsubToken },
-        { onConflict: "email", ignoreDuplicates: true },
-      );
-    const { data: stored } = await supabase
-      .from("email_unsubscribe_tokens")
-      .select("token")
-      .eq("email", recipient)
-      .maybeSingle();
-    if (stored?.token) unsubToken = stored.token;
-  }
-
-  await supabase.rpc("enqueue_email", {
-    queue_name: "transactional_emails",
-    payload: {
+  try {
+    await sendRawManagedEmail({
+      supabase,
       to: recipient,
-      from: `"${String(senderName).replace(/"/g, "")}" <noreply@${ROOT_DOMAIN}>`,
-      sender_domain: SENDER_DOMAIN,
       subject: `Statement of Result: ${course.name}`,
       html,
       text,
-      purpose: "transactional",
       label: "statement-of-result",
-      message_id: messageId,
-      idempotency_key: messageId,
-      unsubscribe_token: unsubToken,
-      queued_at: new Date().toISOString(),
-      tenant_id: tenant.id,
-    },
-  });
-
-  await supabase.from("email_send_log").insert({
-    message_id: messageId,
-    template_name: "statement-of-result",
-    recipient_email: recipient,
-    status: "pending",
-    tenant_id: tenant.id,
-  });
+      idempotencyKey: messageId,
+      tenantId: tenant.id,
+      messageId,
+      fromName: String(senderName),
+    });
+  } catch (sendErr) {
+    return { ok: false, error: (sendErr as Error).message };
+  }
 
   return { ok: true, email: member.email };
 }
