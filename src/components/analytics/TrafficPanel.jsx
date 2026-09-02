@@ -11,8 +11,9 @@ import { format, parseISO } from "date-fns";
 const RANGES = [
   { value: "7", label: "Last 7 days" },
   { value: "30", label: "Last 30 days" },
-  { value: "90", label: "Last 90 days" },
+  { value: "90", label: "Last 3 months" },
 ];
+
 
 function fmtNumber(n) {
   const v = Number(n || 0);
@@ -40,8 +41,9 @@ function StatCard({ label, value, active }) {
  * Pass tenantId = null with allowTenantFilter to show platform-wide traffic (super admins).
  */
 export default function TrafficPanel({ tenantId = null, allowTenantFilter = false, tenants = [] }) {
-  const [range, setRange] = useState("30");
+  const [range, setRange] = useState("90");
   const [tenantFilter, setTenantFilter] = useState("all");
+
 
   const scopeTenantId = allowTenantFilter ? (tenantFilter === "all" ? null : tenantFilter) : tenantId;
 
