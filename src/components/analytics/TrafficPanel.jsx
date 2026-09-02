@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Loader2, Globe, MapPin } from "lucide-react";
+import { Loader2, Globe, MapPin, Share2, Smartphone } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 const RANGES = [
@@ -160,8 +160,9 @@ export default function TrafficPanel({ tenantId = null, allowTenantFilter = fals
         <div>
           <h3 className="text-lg font-semibold">Traffic &amp; Locations</h3>
           <p className="text-sm text-muted-foreground">
-            Anonymous visitor analytics. No IP addresses are stored.
+            Anonymous visitor analytics, matching the published app figures. No IP addresses are stored.
           </p>
+
         </div>
         <div className="flex gap-2">
           {allowTenantFilter && (
@@ -257,6 +258,50 @@ export default function TrafficPanel({ tenantId = null, allowTenantFilter = fals
             ))}
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2"><Share2 className="h-4 w-4" />Sources</CardTitle>
+            <CardDescription>Where visitors came from</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {sources.length === 0 && <p className="text-sm text-muted-foreground">No data yet.</p>}
+            {sources.map((s) => (
+              <div key={s.source} className="space-y-1">
+                <div className="flex justify-between text-sm gap-2">
+                  <span className="truncate">{s.source}</span>
+                  <span className="text-muted-foreground">{s.visitors}</span>
+                </div>
+                <div className="h-2 rounded bg-muted overflow-hidden">
+                  <div className="h-full bg-primary" style={{ width: `${(Number(s.visitors || 0) / maxSource) * 100}%` }} />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2"><Smartphone className="h-4 w-4" />Devices</CardTitle>
+            <CardDescription>Visitors by device type</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {devices.length === 0 && <p className="text-sm text-muted-foreground">No data yet.</p>}
+            {devices.map((d) => (
+              <div key={d.device} className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="capitalize">{d.device}</span>
+                  <span className="text-muted-foreground">{d.visitors}</span>
+                </div>
+                <div className="h-2 rounded bg-muted overflow-hidden">
+                  <div className="h-full bg-primary" style={{ width: `${(Number(d.visitors || 0) / maxDevice) * 100}%` }} />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+
 
         <Card>
           <CardHeader className="pb-2">
