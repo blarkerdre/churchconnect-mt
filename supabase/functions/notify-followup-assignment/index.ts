@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { getOrCreateUnsubscribeToken } from "../_shared/unsubscribe-token.ts";
 import { checkSmsQuota } from "../_shared/sms-quota.ts";
+import { sendRawManagedEmail } from "../_shared/managed-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -178,8 +178,6 @@ Deno.serve(async (req) => {
 
     // Send email notification via queue
     if (recipientEmail) {
-      const senderDomain = "notify.app.churchmanagementsuite.org";
-      const fromAddress = `"${churchShortName}" <noreply@app.churchmanagementsuite.org>`;
       const messageId = `followup-assign-${crypto.randomUUID()}`;
 
       const htmlContent = `
@@ -211,41 +209,22 @@ Deno.serve(async (req) => {
 </body>
 </html>`;
 
-      // Transactional sends are rejected without an unsubscribe token.
-      const unsubscribeToken = await getOrCreateUnsubscribeToken(supabase, recipientEmail);
-
-      const payload = {
-        to: recipientEmail,
-        from: fromAddress,
-        sender_domain: senderDomain,
-        subject,
-        html: htmlContent,
-        text: bodyText,
-        purpose: "transactional",
-        label: "followup-assignment",
-        message_id: messageId,
-        idempotency_key: messageId,
-        unsubscribe_token: unsubscribeToken,
-        queued_at: new Date().toISOString(),
-        ...(tenant_id ? { tenant_id } : {}),
-      };
-
-      const { error: enqueueError } = await supabase.rpc("enqueue_email", {
-        queue_name: "transactional_emails",
-        payload,
-      });
-
-      if (enqueueError) {
-        console.error("Failed to enqueue follow-up email:", enqueueError);
-      } else {
-        await supabase.from("email_send_log").insert({
-          message_id: messageId,
-          template_name: "followup-assignment",
-          recipient_email: recipientEmail,
-          status: "pending",
-          ...(tenant_id ? { tenant_id } : {}),
+      try {
+        await sendRawManagedEmail({
+          supabase,
+          to: recipientEmail,
+          subject,
+          html: htmlContent,
+          text: bodyText,
+          label: "followup-assignment",
+          idempotencyKey: messageId,
+          tenantId: tenant_id,
+          messageId,
+          fromName: churchShortName,
         });
-        console.log("Follow-up assignment email enqueued for", recipientEmail);
+        console.log("Follow-up assignment email sent to", recipientEmail);
+      } catch (sendError) {
+        console.error("Failed to send follow-up email:", sendError);
       }
     }
 

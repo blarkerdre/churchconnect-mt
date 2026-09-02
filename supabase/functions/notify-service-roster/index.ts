@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkSmsQuota } from "../_shared/sms-quota.ts";
+import { sendRawManagedEmail } from "../_shared/managed-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -204,30 +205,7 @@ Deno.serve(async (req) => {
 
         // Email
         if (email) {
-          const normalizedEmail = email.trim().toLowerCase();
-          let unsubscribeToken: string | null = null;
-          const { data: existingToken } = await supabase
-            .from("email_unsubscribe_tokens")
-            .select("token").eq("email", normalizedEmail).is("used_at", null)
-            .order("created_at", { ascending: false }).limit(1).maybeSingle();
-          if (existingToken?.token) {
-            unsubscribeToken = existingToken.token;
-          } else {
-            const newToken = crypto.randomUUID();
-            const { error: tokErr } = await supabase
-              .from("email_unsubscribe_tokens")
-              .insert({ email: normalizedEmail, token: newToken });
-            if (tokErr) {
-              const { data: retry } = await supabase
-                .from("email_unsubscribe_tokens")
-                .select("token").eq("email", normalizedEmail).is("used_at", null)
-                .order("created_at", { ascending: false }).limit(1).maybeSingle();
-              unsubscribeToken = retry?.token || null;
-            } else {
-              unsubscribeToken = newToken;
-            }
-          }
-          if (unsubscribeToken) {
+          {
             const messageId = `service-roster-${group.id}-${a.user_id || a.member_id}`;
             const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
@@ -250,24 +228,20 @@ Deno.serve(async (req) => {
 
             const textBody = `${rosterHeading}\n\nDear ${name},\n\nYour assignment: ${myTaskTitle}${t?.due_date ? ` (due ${t.due_date})` : ""}\n\nFull roster:\n${rosterPlainList}`;
 
-            const { error: enqErr } = await supabase.rpc("enqueue_email", {
-              queue_name: "transactional_emails",
-              payload: {
-                to: email, from: fromAddress, sender_domain: senderDomain,
+            try {
+              await sendRawManagedEmail({
+                supabase,
+                to: email,
                 subject: rosterHeading,
-                html, text: textBody,
-                purpose: "transactional", label: "service-roster",
-                message_id: messageId, idempotency_key: messageId,
-                unsubscribe_token: unsubscribeToken,
-                queued_at: new Date().toISOString(),
-                tenant_id: group.tenant_id,
-              },
-            });
-            if (!enqErr) {
-              await supabase.from("email_send_log").insert({
-                message_id: messageId, template_name: "service-roster",
-                recipient_email: email, status: "pending", tenant_id: group.tenant_id,
+                html,
+                text: textBody,
+                label: "service-roster",
+                idempotencyKey: messageId,
+                tenantId: group.tenant_id,
+                messageId,
               });
+            } catch (e) {
+              console.error("Failed to send service-roster email:", e);
             }
           }
         }
