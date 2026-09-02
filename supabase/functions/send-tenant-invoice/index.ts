@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { sendLoggedTemplateEmail } from '../_shared/managed-email.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -100,26 +101,22 @@ Deno.serve(async (req) => {
       status: invoice.status,
     }
 
-    // Invoke send-transactional-email
-    const sendResponse = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
-      method: 'POST',
-      headers: {
-        'x-internal-email-key': internalEmailKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    // Send via managed email helper
+    try {
+      const result = await sendLoggedTemplateEmail({
+        supabase: admin,
         templateName: 'tenant-invoice',
-        recipientEmail: recipient,
-        idempotencyKey: `tenant-invoice-${invoice.id}-${invoice.status}`,
-        tenant_id: invoice.tenant_id,
+        to: recipient,
         templateData,
-      }),
-    })
-
-    const sendData = await sendResponse.json().catch(() => ({}))
-    if (!sendResponse.ok || sendData?.error) {
-      const detail = sendData?.error || sendData?.message || `Email service returned HTTP ${sendResponse.status}`
-      console.error('send-transactional-email failed', { detail })
+        idempotencyKey: `tenant-invoice-${invoice.id}-${invoice.status}`,
+        tenantId: invoice.tenant_id,
+      })
+      if (!result.sent && result.reason === 'recipient_suppressed') {
+        console.warn('tenant-invoice email suppressed', { recipient })
+      }
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err)
+      console.error('sendLoggedTemplateEmail failed', { detail })
       return new Response(JSON.stringify({ error: 'Failed to send email', detail }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

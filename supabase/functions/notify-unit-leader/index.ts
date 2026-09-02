@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { getOrCreateUnsubscribeToken } from "../_shared/unsubscribe-token.ts";
 import { checkSmsQuota } from "../_shared/sms-quota.ts";
+import { sendRawManagedEmail } from "../_shared/managed-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -85,9 +85,6 @@ Deno.serve(async (req) => {
 
     // Send email
     if (recipientEmail) {
-      const senderDomain = "notify.app.churchmanagementsuite.org";
-      const safeFromName = `"${String(churchShortName).replace(/[\\"]/g, "\\$&")}"`;
-      const fromAddress = `${safeFromName} <noreply@${senderDomain}>`;
       const messageId = `unit-leader-${crypto.randomUUID()}`;
       const emailSubject = `New Member Joined Your Unit: ${unit_name}`;
 
@@ -121,41 +118,22 @@ Deno.serve(async (req) => {
 
       const textContent = `Hi ${recipientName},\n\n${member_name} has joined your unit: ${unit_name}.\n\nPlease log in to the Church Management System to welcome them.\n\nGod bless,\n${churchName}`;
 
-      // Transactional sends are rejected without an unsubscribe token.
-      const unsubscribeToken = await getOrCreateUnsubscribeToken(supabase, recipientEmail);
-
-      const payload = {
-        to: recipientEmail,
-        from: fromAddress,
-        sender_domain: senderDomain,
-        subject: emailSubject,
-        html: htmlContent,
-        text: textContent,
-        purpose: "transactional",
-        label: "unit-leader-notification",
-        message_id: messageId,
-        idempotency_key: messageId,
-        unsubscribe_token: unsubscribeToken,
-        queued_at: new Date().toISOString(),
-        ...(tenant_id ? { tenant_id } : {}),
-      };
-
-      const { error: enqueueError } = await supabase.rpc("enqueue_email", {
-        queue_name: "transactional_emails",
-        payload,
-      });
-
-      if (enqueueError) {
-        console.error("Failed to enqueue unit leader email:", enqueueError);
-      } else {
-        await supabase.from("email_send_log").insert({
-          message_id: messageId,
-          template_name: "unit-leader-notification",
-          recipient_email: recipientEmail,
-          status: "pending",
-          tenant_id,
+      try {
+        await sendRawManagedEmail({
+          supabase,
+          to: recipientEmail,
+          subject: emailSubject,
+          html: htmlContent,
+          text: textContent,
+          label: "unit-leader-notification",
+          idempotencyKey: messageId,
+          tenantId: tenant_id,
+          messageId,
+          fromName: churchShortName,
         });
-        console.log("Unit leader email enqueued for", recipientEmail);
+        console.log("Unit leader email sent to", recipientEmail);
+      } catch (sendError) {
+        console.error("Failed to send unit leader email:", sendError);
       }
     }
 

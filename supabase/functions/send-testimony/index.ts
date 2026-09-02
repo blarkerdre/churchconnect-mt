@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { sendRawManagedEmail } from "../_shared/managed-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -140,63 +141,28 @@ Deno.serve(async (req) => {
     `;
     const textBody = `New Testimony: ${title.trim()}\nFrom: ${name}${sender_email ? ` (${sender_email})` : ""}\n\nSituation:\n${situation}\n\nAction:\n${action}\n\nWhat the Lord did:\n${god_did}\n\n${share_publicly ? "Shared publicly." : "Private."}`;
 
-    // Ensure unsubscribe token exists
-    const normalizedEmail = recipientEmail.trim().toLowerCase();
-    let unsubscribeToken: string | null = null;
-    const { data: existingToken } = await supabase
-      .from("email_unsubscribe_tokens")
-      .select("token")
-      .eq("email", normalizedEmail)
-      .is("used_at", null)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (existingToken?.token) {
-      unsubscribeToken = existingToken.token as string;
-    } else {
-      const newToken = crypto.randomUUID();
-      const { error: tokenErr } = await supabase
-        .from("email_unsubscribe_tokens")
-        .insert({ email: normalizedEmail, token: newToken });
-      if (!tokenErr) unsubscribeToken = newToken;
-    }
-
     const messageId = `testimony-${crypto.randomUUID()}`;
     const subject = `New Testimony from ${name}: ${title.trim()}`;
 
-    const { error: enqueueErr } = await supabase.rpc("enqueue_email", {
-      queue_name: "transactional_emails",
-      payload: {
+    try {
+      await sendRawManagedEmail({
+        supabase,
         to: recipientEmail,
-        from: fromAddress,
-        sender_domain: SENDER_DOMAIN,
         subject,
         html: htmlBody,
         text: textBody,
-        purpose: "transactional",
         label: "testimony",
-        message_id: messageId,
-        idempotency_key: messageId,
-        unsubscribe_token: unsubscribeToken,
-        queued_at: new Date().toISOString(),
-        tenant_id,
-      },
-    });
-
-    if (enqueueErr) {
-      console.error("Failed to enqueue testimony email", enqueueErr);
+        idempotencyKey: messageId,
+        tenantId: tenant_id,
+        messageId,
+        fromName: safeName,
+      });
+    } catch (sendErr) {
+      console.error("Failed to send testimony email", sendErr);
       return new Response(JSON.stringify({ error: "Failed to queue email" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    await supabase.from("email_send_log").insert({
-      message_id: messageId,
-      template_name: "testimony",
-      recipient_email: recipientEmail,
-      status: "pending",
-      tenant_id,
-    });
 
     return new Response(JSON.stringify({ success: true, emailed: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
