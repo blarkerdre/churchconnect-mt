@@ -226,6 +226,7 @@ export default function Analytics() {
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="reports">Reports</TabsTrigger>
         {isAdmin && <TabsTrigger value="announcements">Announcements</TabsTrigger>}
+        {isAdmin && <TabsTrigger value="usage">Usage</TabsTrigger>}
       </TabsList>
 
       <TabsContent value="overview" className="space-y-6">
