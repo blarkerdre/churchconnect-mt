@@ -15,6 +15,7 @@ import AnnouncementAnalytics from "@/components/analytics/AnnouncementAnalytics"
 import FeedbackSummary from "@/components/feedback/FeedbackSummary";
 import MemberMilestoneReport from "@/components/analytics/MemberMilestoneReport";
 import StatusConversionReport from "@/components/analytics/StatusConversionReport";
+import TrafficPanel from "@/components/analytics/TrafficPanel";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks/useAuth";
 import { format, subMonths, startOfMonth, endOfMonth, parseISO } from "date-fns";
@@ -226,6 +227,7 @@ export default function Analytics() {
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="reports">Reports</TabsTrigger>
         {isAdmin && <TabsTrigger value="announcements">Announcements</TabsTrigger>}
+        {isAdmin && <TabsTrigger value="usage">Usage</TabsTrigger>}
       </TabsList>
 
       <TabsContent value="overview" className="space-y-6">
@@ -380,6 +382,12 @@ export default function Analytics() {
       {isAdmin && (
         <TabsContent value="announcements" className="space-y-6">
           <AnnouncementAnalytics />
+        </TabsContent>
+      )}
+
+      {isAdmin && (
+        <TabsContent value="usage" className="space-y-6">
+          <TrafficPanel tenantId={tenantId} />
         </TabsContent>
       )}
     </Tabs>
