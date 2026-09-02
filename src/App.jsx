@@ -329,6 +329,7 @@ function App() {
       <Router>
         <AuthProvider>
           <DeleteConfirmProvider>
+            <PageViewTracker />
             <AppRoutes />
             <MFASetupDialog />
             <CookieConsentBanner />
