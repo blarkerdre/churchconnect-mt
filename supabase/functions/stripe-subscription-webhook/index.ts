@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { sendLoggedTemplateEmail } from "../_shared/managed-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -188,11 +189,12 @@ serve(async (req) => {
           for (const admin of admins || []) {
             const email = (admin as any).profiles?.email;
             if (!email) continue;
-            await supabaseAdmin.functions.invoke("send-transactional-email", {
-              body: {
+            try {
+              await sendLoggedTemplateEmail({
+                supabase: supabaseAdmin,
                 templateName: "payment-receipt",
-                recipientEmail: email,
-                tenant_id: tenantId,
+                to: email,
+                tenantId,
                 idempotencyKey: `payment-receipt-${paymentReference}-${email}`,
                 templateData: {
                   churchName: tenantInfo?.name || "Your Church",
@@ -205,8 +207,10 @@ serve(async (req) => {
                   nextDueDate: subInfo?.next_due_date || null,
                   settingsUrl,
                 },
-              },
-            });
+              });
+            } catch (sendErr) {
+              console.error("[stripe-webhook] Failed to send receipt email to", email, sendErr);
+            }
           }
           logStep("Payment receipt emails sent", { tenantId });
         } catch (emailErr) {
