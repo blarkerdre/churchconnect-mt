@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkSmsQuota } from "../_shared/sms-quota.ts";
+import { sendRawManagedEmail } from "../_shared/managed-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -169,22 +170,6 @@ Deno.serve(async (req) => {
         const recipientEmail = profile?.email;
         const recipientName = profile?.full_name || "Leader";
         if (!recipientEmail) continue;
-        const normalizedEmail = recipientEmail.trim().toLowerCase();
-        let unsubscribeToken: string | null = null;
-        const { data: existingToken } = await supabase
-          .from("email_unsubscribe_tokens")
-          .select("token").eq("email", normalizedEmail).is("used_at", null)
-          .order("created_at", { ascending: false }).limit(1).maybeSingle();
-        if (existingToken?.token) {
-          unsubscribeToken = existingToken.token;
-        } else {
-          const newToken = crypto.randomUUID();
-          const { error: tErr } = await supabase
-            .from("email_unsubscribe_tokens")
-            .insert({ email: normalizedEmail, token: newToken });
-          if (!tErr) unsubscribeToken = newToken;
-        }
-        if (!unsubscribeToken) continue;
 
         const messageId = `driver-avail-${crypto.randomUUID()}`;
         const html = `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f4f5f7;padding:24px;">
@@ -205,23 +190,21 @@ Deno.serve(async (req) => {
   </div>
 </div></body></html>`;
         const text = `${driverName} (${driverUnit}) is available on ${dateStr}${service ? ` for ${service}` : ""}.\nPickup area: ${area}\nSeats: ${seats}${notes ? `\nNotes: ${notes}` : ""}`;
-        await supabase.rpc("enqueue_email", {
-          queue_name: "transactional_emails",
-          payload: {
+        try {
+          await sendRawManagedEmail({
+            supabase,
             to: recipientEmail,
-            from: fromAddress,
-            sender_domain: senderDomain,
             subject: `Driver availability: ${driverName}`,
-            html, text,
-            purpose: "transactional",
+            html,
+            text,
             label: "driver-availability-notification",
-            message_id: messageId,
-            idempotency_key: messageId,
-            unsubscribe_token: unsubscribeToken,
-            queued_at: new Date().toISOString(),
-            tenant_id: tenantIdIn,
-          },
-        });
+            idempotencyKey: messageId,
+            tenantId: tenantIdIn,
+            messageId,
+          });
+        } catch (e) {
+          console.error("Failed to send driver-availability email:", e);
+        }
       }
       return new Response(JSON.stringify({ ok: true, notified: leaderIds.length }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
