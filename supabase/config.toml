@@ -9,6 +9,11 @@ project_id = "qfordhikmtgedfybktjg"
     verify_jwt = false
   [functions.handle-email-suppression]
     verify_jwt = false
+  [functions.handle-email-events]
+    verify_jwt = false
+  [functions.send-admin-message]
+    verify_jwt = false
+
   [functions.handle-email-unsubscribe]
     verify_jwt = false
   [functions.preview-transactional-email]
