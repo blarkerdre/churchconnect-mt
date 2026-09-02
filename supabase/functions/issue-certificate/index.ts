@@ -2,6 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { Resvg, initWasm } from "npm:@resvg/resvg-wasm@2.6.2";
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import { writeAudit } from "../_shared/audit.ts";
+import { sendRawManagedEmail } from "../_shared/managed-email.ts";
 
 // Initialise resvg wasm once per cold-start
 let _wasmReady: Promise<void> | null = null;
@@ -915,29 +916,10 @@ async function deliverCertificate(
       .from("church-documents")
       .createSignedUrl(filePath, 60 * 60 * 24 * 7, { download: `${certificateNumber}.png` }); // 7 days
 
-    const { data: tokenRow } = await supabase
-      .from("email_unsubscribe_tokens")
-      .select("token")
-      .eq("email", member.email)
-      .maybeSingle();
-
-    let unsubToken = tokenRow?.token;
-    if (!unsubToken) {
-      unsubToken = crypto.randomUUID();
-      await supabase.from("email_unsubscribe_tokens").insert({ email: member.email, token: unsubToken });
-    }
-
-    const senderDomain = "notify.app.churchmanagementsuite.org";
     const messageId = `cert-${crypto.randomUUID()}`;
     const plainText = `Congratulations, ${member.first_name}!\n\nYou have successfully completed ${trainingType} at ${churchName}.\n\nYour certificate number is: ${certificateNumber}\n\n${signedUrl?.signedUrl ? `Download your certificate: ${signedUrl.signedUrl}\n\n` : ""}You can also download your certificate anytime from your profile page.`;
 
-    const emailPayload = {
-      to: member.email,
-      from: `Winners Chapel Cardiff <noreply@${senderDomain}>`,
-      sender_domain: senderDomain,
-      subject: `Your ${trainingType} Certificate - ${churchName}`,
-      text: plainText,
-      html: `
+    const html = `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background-color:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
@@ -957,24 +939,19 @@ async function deliverCertificate(
       </table>
     </td></tr>
   </table>
-</body></html>`,
-      purpose: "transactional",
+</body></html>`;
+
+    await sendRawManagedEmail({
+      supabase,
+      to: member.email,
+      subject: `Your ${trainingType} Certificate - ${churchName}`,
+      html,
+      text: plainText,
       label: "certificate",
-      message_id: messageId,
-      idempotency_key: messageId,
-      queued_at: new Date().toISOString(),
-      unsubscribe_token: unsubToken,
-      ...(tenantId ? { tenant_id: tenantId } : {}),
-    };
-
-    await supabase.rpc("enqueue_email", { queue_name: "transactional_emails", payload: emailPayload });
-
-    await supabase.from("email_send_log").insert({
-      message_id: messageId,
-      template_name: "certificate",
-      recipient_email: member.email,
-      status: "pending",
-      ...(tenantId ? { tenant_id: tenantId } : {}),
+      idempotencyKey: messageId,
+      tenantId: tenantId,
+      messageId,
+      fromName: "Winners Chapel Cardiff",
     });
   } catch (emailErr) {
     console.warn("Failed to send certificate email:", emailErr);
