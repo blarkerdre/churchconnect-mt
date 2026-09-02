@@ -376,45 +376,6 @@ Deno.serve(async (req) => {
 
       // Send email
       if (recipientEmail) {
-        const normalizedEmail = recipientEmail.trim().toLowerCase();
-        let unsubscribeToken: string | null = null;
-        const { data: existingToken } = await supabase
-          .from("email_unsubscribe_tokens")
-          .select("token")
-          .eq("email", normalizedEmail)
-          .is("used_at", null)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (existingToken?.token) {
-          unsubscribeToken = existingToken.token;
-        } else {
-          const newToken = crypto.randomUUID();
-          const { error: tokenErr } = await supabase
-            .from("email_unsubscribe_tokens")
-            .insert({ email: normalizedEmail, token: newToken });
-
-          if (tokenErr) {
-            const { data: retryToken } = await supabase
-              .from("email_unsubscribe_tokens")
-              .select("token")
-              .eq("email", normalizedEmail)
-              .is("used_at", null)
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            unsubscribeToken = retryToken?.token || null;
-          } else {
-            unsubscribeToken = newToken;
-          }
-        }
-
-        if (!unsubscribeToken) {
-          console.error("Skipping transport email: missing unsubscribe token", { recipientEmail });
-          continue;
-        }
-
         const messageId = `transport-${crypto.randomUUID()}`;
         const detailBlock = `
           <p style="margin:0 0 8px;color:#555;font-size:14px;"><strong>Journey:</strong> ${escHtml(journeyLabel)}</p>
@@ -460,38 +421,21 @@ Deno.serve(async (req) => {
 
         const textContent = `Hi ${recipientName},\n\n${heading}\n\nJourney: ${journeyLabel}\nPickup: ${pickup}${pickupLocationDescription ? `\nPickup location: ${pickupLocationDescription}` : ""}\nDestination: ${destination}\nDate: ${request_date}${pickup_time ? ` at ${pickup_time}` : ""}${returnLine ? `\n${returnLine}` : ""}\n\n${ctaLine}\n\n${churchName}`;
 
-        const payload = {
-          to: recipientEmail,
-          from: fromAddress,
-          sender_domain: senderDomain,
-          subject: emailSubject,
-          html: htmlContent,
-          text: textContent,
-          purpose: "transactional",
-          label: "transport-booking-notification",
-          message_id: messageId,
-          idempotency_key: messageId,
-          unsubscribe_token: unsubscribeToken,
-          queued_at: new Date().toISOString(),
-          ...(tenant_id ? { tenant_id } : {}),
-        };
-
-        const { error: enqueueError } = await supabase.rpc("enqueue_email", {
-          queue_name: "transactional_emails",
-          payload,
-        });
-
-        if (enqueueError) {
-          console.error("Failed to enqueue transport email:", enqueueError);
-        } else {
-          await supabase.from("email_send_log").insert({
-            message_id: messageId,
-            template_name: "transport-booking-notification",
-            recipient_email: recipientEmail,
-            status: "pending",
-            tenant_id,
+        try {
+          await sendRawManagedEmail({
+            supabase,
+            to: recipientEmail,
+            subject: emailSubject,
+            html: htmlContent,
+            text: textContent,
+            label: "transport-booking-notification",
+            idempotencyKey: messageId,
+            tenantId: tenant_id,
+            messageId,
           });
-          console.log("Transport email enqueued for", recipientEmail);
+          console.log("Transport email sent for", recipientEmail);
+        } catch (e) {
+          console.error("Failed to send transport email:", e);
         }
       }
 
