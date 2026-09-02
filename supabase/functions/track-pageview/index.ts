@@ -70,7 +70,14 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body = await req.json().catch(() => ({}));
+    // Body arrives as text/plain (preflight-free beacon) or application/json
+    const raw = await req.text().catch(() => "");
+    let body: Record<string, unknown> = {};
+    try {
+      body = raw ? JSON.parse(raw) : {};
+    } catch {
+      body = {};
+    }
     const path = str(body.path, 300);
     const visitorId = str(body.visitor_id, 64);
     const sessionId = str(body.session_id, 64);
