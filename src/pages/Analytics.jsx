@@ -383,6 +383,12 @@ export default function Analytics() {
           <AnnouncementAnalytics />
         </TabsContent>
       )}
+
+      {isAdmin && (
+        <TabsContent value="usage" className="space-y-6">
+          <TrafficPanel tenantId={tenantId} />
+        </TabsContent>
+      )}
     </Tabs>
   );
 }
