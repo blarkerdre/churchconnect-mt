@@ -95,6 +95,33 @@ export default function TrafficPanel({ tenantId = null, allowTenantFilter = fals
     },
   });
 
+  const countriesQ = useQuery({
+    queryKey: ["traffic-countries", ...keyBase],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_traffic_countries", { ...args, _limit: 10 });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const sourcesQ = useQuery({
+    queryKey: ["traffic-sources", ...keyBase],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_traffic_sources", { ...args, _limit: 10 });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const devicesQ = useQuery({
+    queryKey: ["traffic-devices", ...keyBase],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_traffic_devices", args);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const byTenantQ = useQuery({
     queryKey: ["traffic-by-tenant", range],
     enabled: allowTenantFilter,
@@ -113,17 +140,19 @@ export default function TrafficPanel({ tenantId = null, allowTenantFilter = fals
     views: Number(r.page_views || 0),
   }));
 
-  const countries = useMemo(() => {
-    const map = new Map();
-    for (const row of locationsQ.data || []) {
-      const c = row.country || "Unknown";
-      map.set(c, (map.get(c) || 0) + Number(row.visitors || 0));
-    }
-    return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
-  }, [locationsQ.data]);
+  const countries = useMemo(
+    () => (countriesQ.data || []).map((r) => [r.country || "Unknown", Number(r.visitors || 0)]),
+    [countriesQ.data],
+  );
+
+  const sources = sourcesQ.data || [];
+  const devices = devicesQ.data || [];
+  const maxSource = Math.max(1, ...sources.map((s) => Number(s.visitors || 0)));
+  const maxDevice = Math.max(1, ...devices.map((d) => Number(d.visitors || 0)));
 
   const maxCountry = countries[0]?.[1] || 1;
   const isLoading = summaryQ.isLoading || seriesQ.isLoading;
+
 
   return (
     <div className="space-y-4">
