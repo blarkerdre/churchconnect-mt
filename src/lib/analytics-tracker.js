@@ -76,7 +76,8 @@ let lastKey = "";
 export function trackPageView({ isAuthenticated = false } = {}) {
   if (typeof window === "undefined") return;
   if (navigator.doNotTrack === "1" || window.doNotTrack === "1") return;
-  if (import.meta.env.DEV) return;
+  // Skip local development hosts only — preview and production are tracked
+  if (/^(localhost|127\.|\[?::1)/.test(window.location.hostname)) return;
 
   const { pathname, search } = window.location;
   const path = normalisePath(pathname);
