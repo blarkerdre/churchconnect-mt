@@ -15,6 +15,7 @@ import { useTenant } from "@/contexts/TenantContext";
 import LandingPage from "@/pages/LandingPage";
 import Layout from "@/components/AppLayout";
 import Auth from "@/pages/Auth";
+import PageViewTracker from "@/hooks/usePageViewTracker";
 
 // Lazy-loaded pages — keeps initial bundle small
 const Dashboard = lazyRetry(() => import("@/pages/Dashboard"));
@@ -329,6 +330,7 @@ function App() {
       <Router>
         <AuthProvider>
           <DeleteConfirmProvider>
+            <PageViewTracker />
             <AppRoutes />
             <MFASetupDialog />
             <CookieConsentBanner />
