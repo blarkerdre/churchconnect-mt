@@ -5,14 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Loader2, Globe, MapPin } from "lucide-react";
+import { Loader2, Globe, MapPin, Share2, Smartphone } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 const RANGES = [
   { value: "7", label: "Last 7 days" },
   { value: "30", label: "Last 30 days" },
-  { value: "90", label: "Last 90 days" },
+  { value: "90", label: "Last 3 months" },
 ];
+
 
 function fmtNumber(n) {
   const v = Number(n || 0);
@@ -40,8 +41,9 @@ function StatCard({ label, value, active }) {
  * Pass tenantId = null with allowTenantFilter to show platform-wide traffic (super admins).
  */
 export default function TrafficPanel({ tenantId = null, allowTenantFilter = false, tenants = [] }) {
-  const [range, setRange] = useState("30");
+  const [range, setRange] = useState("90");
   const [tenantFilter, setTenantFilter] = useState("all");
+
 
   const scopeTenantId = allowTenantFilter ? (tenantFilter === "all" ? null : tenantFilter) : tenantId;
 
@@ -93,6 +95,33 @@ export default function TrafficPanel({ tenantId = null, allowTenantFilter = fals
     },
   });
 
+  const countriesQ = useQuery({
+    queryKey: ["traffic-countries", ...keyBase],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_traffic_countries", { ...args, _limit: 10 });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const sourcesQ = useQuery({
+    queryKey: ["traffic-sources", ...keyBase],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_traffic_sources", { ...args, _limit: 10 });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const devicesQ = useQuery({
+    queryKey: ["traffic-devices", ...keyBase],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("get_traffic_devices", args);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const byTenantQ = useQuery({
     queryKey: ["traffic-by-tenant", range],
     enabled: allowTenantFilter,
@@ -111,17 +140,19 @@ export default function TrafficPanel({ tenantId = null, allowTenantFilter = fals
     views: Number(r.page_views || 0),
   }));
 
-  const countries = useMemo(() => {
-    const map = new Map();
-    for (const row of locationsQ.data || []) {
-      const c = row.country || "Unknown";
-      map.set(c, (map.get(c) || 0) + Number(row.visitors || 0));
-    }
-    return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
-  }, [locationsQ.data]);
+  const countries = useMemo(
+    () => (countriesQ.data || []).map((r) => [r.country || "Unknown", Number(r.visitors || 0)]),
+    [countriesQ.data],
+  );
+
+  const sources = sourcesQ.data || [];
+  const devices = devicesQ.data || [];
+  const maxSource = Math.max(1, ...sources.map((s) => Number(s.visitors || 0)));
+  const maxDevice = Math.max(1, ...devices.map((d) => Number(d.visitors || 0)));
 
   const maxCountry = countries[0]?.[1] || 1;
   const isLoading = summaryQ.isLoading || seriesQ.isLoading;
+
 
   return (
     <div className="space-y-4">
@@ -129,8 +160,9 @@ export default function TrafficPanel({ tenantId = null, allowTenantFilter = fals
         <div>
           <h3 className="text-lg font-semibold">Traffic &amp; Locations</h3>
           <p className="text-sm text-muted-foreground">
-            Anonymous visitor analytics. No IP addresses are stored.
+            Anonymous visitor analytics, matching the published app figures. No IP addresses are stored.
           </p>
+
         </div>
         <div className="flex gap-2">
           {allowTenantFilter && (
@@ -226,6 +258,50 @@ export default function TrafficPanel({ tenantId = null, allowTenantFilter = fals
             ))}
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2"><Share2 className="h-4 w-4" />Sources</CardTitle>
+            <CardDescription>Where visitors came from</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {sources.length === 0 && <p className="text-sm text-muted-foreground">No data yet.</p>}
+            {sources.map((s) => (
+              <div key={s.source} className="space-y-1">
+                <div className="flex justify-between text-sm gap-2">
+                  <span className="truncate">{s.source}</span>
+                  <span className="text-muted-foreground">{s.visitors}</span>
+                </div>
+                <div className="h-2 rounded bg-muted overflow-hidden">
+                  <div className="h-full bg-primary" style={{ width: `${(Number(s.visitors || 0) / maxSource) * 100}%` }} />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2"><Smartphone className="h-4 w-4" />Devices</CardTitle>
+            <CardDescription>Visitors by device type</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {devices.length === 0 && <p className="text-sm text-muted-foreground">No data yet.</p>}
+            {devices.map((d) => (
+              <div key={d.device} className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="capitalize">{d.device}</span>
+                  <span className="text-muted-foreground">{d.visitors}</span>
+                </div>
+                <div className="h-2 rounded bg-muted overflow-hidden">
+                  <div className="h-full bg-primary" style={{ width: `${(Number(d.visitors || 0) / maxDevice) * 100}%` }} />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+
 
         <Card>
           <CardHeader className="pb-2">
