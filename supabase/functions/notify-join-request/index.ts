@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkSmsQuota } from "../_shared/sms-quota.ts";
+import { sendRawManagedEmail } from "../_shared/managed-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -261,42 +262,6 @@ Deno.serve(async (req) => {
       // Email
       if (recipientEmail) {
         const messageId = `join-req-${request_id || crypto.randomUUID()}-${uid}`;
-        const normalizedEmail = recipientEmail.trim().toLowerCase();
-
-        // Get or create unsubscribe token (one per email address)
-        let unsubscribeToken: string | null = null;
-        {
-          const { data: existing } = await supabase
-            .from("email_unsubscribe_tokens")
-            .select("token")
-            .eq("email", normalizedEmail)
-            .is("used_at", null)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          if (existing?.token) {
-            unsubscribeToken = existing.token;
-          } else {
-            const newToken = crypto.randomUUID();
-            const { error: insErr } = await supabase
-              .from("email_unsubscribe_tokens")
-              .insert({ email: normalizedEmail, token: newToken });
-            if (insErr) {
-              // Race: re-read
-              const { data: again } = await supabase
-                .from("email_unsubscribe_tokens")
-                .select("token")
-                .eq("email", normalizedEmail)
-                .is("used_at", null)
-                .order("created_at", { ascending: false })
-                .limit(1)
-                .maybeSingle();
-              unsubscribeToken = again?.token || newToken;
-            } else {
-              unsubscribeToken = newToken;
-            }
-          }
-        }
         const html = `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
@@ -325,35 +290,20 @@ Deno.serve(async (req) => {
 </body></html>`;
         const text = `Hi ${recipientName},\n\n${memberName} is requesting to join ${targetLabel} (${request_type === "unit" ? "Unit" : "Home Cell"}).\n\nPlease log in to approve or decline.\n\n${churchName}`;
 
-        const payload = {
-          to: recipientEmail,
-          from: fromAddress,
-          sender_domain: senderDomain,
-          subject,
-          html,
-          text,
-          purpose: "transactional",
-          label: "join-request-notification",
-          message_id: messageId,
-          idempotency_key: messageId,
-          queued_at: new Date().toISOString(),
-          tenant_id,
-          unsubscribe_token: unsubscribeToken,
-        };
-        const { error: enqErr } = await supabase.rpc("enqueue_email", {
-          queue_name: "transactional_emails",
-          payload,
-        });
-        if (enqErr) {
-          console.error("enqueue join-request email failed:", enqErr);
-        } else {
-          await supabase.from("email_send_log").insert({
-            message_id: messageId,
-            template_name: "join-request-notification",
-            recipient_email: recipientEmail,
-            status: "pending",
-            tenant_id,
+        try {
+          await sendRawManagedEmail({
+            supabase,
+            to: recipientEmail,
+            subject,
+            html,
+            text,
+            label: "join-request-notification",
+            idempotencyKey: messageId,
+            tenantId: tenant_id,
+            messageId,
           });
+        } catch (e) {
+          console.error("send join-request email failed:", e);
         }
       }
 

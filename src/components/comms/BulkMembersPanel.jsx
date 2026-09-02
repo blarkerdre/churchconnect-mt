@@ -79,7 +79,7 @@ export default function BulkMembersPanel({ churchName, senderName }) {
       if (channel === "email") {
         for (const r of emailRecipients) {
           try {
-            const { error } = await supabase.functions.invoke("send-transactional-email", {
+            const { error } = await supabase.functions.invoke("send-admin-message", {
               body: {
                 templateName: "admin-direct-message",
                 recipientEmail: r.email,
