@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { getOrCreateUnsubscribeToken } from "../_shared/unsubscribe-token.ts";
 import { checkSmsQuota } from "../_shared/sms-quota.ts";
+import { sendRawManagedEmail } from "../_shared/managed-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -154,9 +154,6 @@ Deno.serve(async (req) => {
 
     // Send email notification via queue
     if (recipientEmail) {
-      const senderDomain = "notify.app.churchmanagementsuite.org";
-      const safeFromName = `"${String(churchShortName).replace(/[\\"]/g, "\\$&")}"`;
-      const fromAddress = `${safeFromName} <noreply@${senderDomain}>`;
       const messageId = `pastoral-assign-${crypto.randomUUID()}`;
 
       const htmlContent = `
@@ -188,41 +185,22 @@ Deno.serve(async (req) => {
 </body>
 </html>`;
 
-      // Transactional sends are rejected without an unsubscribe token.
-      const unsubscribeToken = await getOrCreateUnsubscribeToken(supabase, recipientEmail);
-
-      const payload = {
-        to: recipientEmail,
-        from: fromAddress,
-        sender_domain: senderDomain,
-        subject: emailSubject,
-        html: htmlContent,
-        text: bodyText,
-        purpose: "transactional",
-        label: "pastoral-assignment",
-        message_id: messageId,
-        idempotency_key: messageId,
-        unsubscribe_token: unsubscribeToken,
-        queued_at: new Date().toISOString(),
-        ...(tenant_id ? { tenant_id } : {}),
-      };
-
-      const { error: enqueueError } = await supabase.rpc("enqueue_email", {
-        queue_name: "transactional_emails",
-        payload,
-      });
-
-      if (enqueueError) {
-        console.error("Failed to enqueue pastoral care email:", enqueueError);
-      } else {
-        await supabase.from("email_send_log").insert({
-          message_id: messageId,
-          template_name: "pastoral-assignment",
-          recipient_email: recipientEmail,
-          status: "pending",
-          tenant_id,
+      try {
+        await sendRawManagedEmail({
+          supabase,
+          to: recipientEmail,
+          subject: emailSubject,
+          html: htmlContent,
+          text: bodyText,
+          label: "pastoral-assignment",
+          idempotencyKey: messageId,
+          tenantId: tenant_id,
+          messageId,
+          fromName: churchShortName,
         });
-        console.log("Pastoral care assignment email enqueued for", recipientEmail);
+        console.log("Pastoral care assignment email sent to", recipientEmail);
+      } catch (sendError) {
+        console.error("Failed to send pastoral care email:", sendError);
       }
     }
 

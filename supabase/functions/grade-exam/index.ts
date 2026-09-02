@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { getOrCreateUnsubscribeToken } from "../_shared/unsubscribe-token.ts";
+import { sendRawManagedEmail } from "../_shared/managed-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -470,27 +470,21 @@ async function sendResultEmail_fn(
     const text = `Exam Result Statement\n\nHello ${memberName},\n\nYour exam for ${result.subjectName} has been graded.\n\nScore: ${result.score} / ${result.totalPoints} (${result.percentage}%)\nPass Mark: ${result.passThreshold}%\nStatus: ${statusText}\n\n${result.passed ? "Congratulations on passing!" : "You can retake the exam when ready."}\n\nView your results: ${tenantSiteUrl}/auth`;
 
     const messageId = crypto.randomUUID();
-    // Transactional sends are rejected without an unsubscribe token.
-    const unsubscribeToken = await getOrCreateUnsubscribeToken(adminClient, member.email);
 
-    await adminClient.rpc("enqueue_email", {
-      queue_name: "transactional_emails",
-      payload: {
-        to: member.email.trim().toLowerCase(),
-        from: `"${senderName.replace(/"/g, "")}" <noreply@${ROOT_DOMAIN}>`,
-        sender_domain: SENDER_DOMAIN,
-        subject: `Exam Result: ${result.subjectName} — ${statusText}`,
-        html,
-        text,
-        purpose: "transactional",
-        label: "exam-result",
-        message_id: messageId,
-        idempotency_key: messageId,
-        unsubscribe_token: unsubscribeToken,
-      },
+    await sendRawManagedEmail({
+      supabase: adminClient,
+      to: member.email.trim().toLowerCase(),
+      subject: `Exam Result: ${result.subjectName} — ${statusText}`,
+      html,
+      text,
+      label: "exam-result",
+      idempotencyKey: messageId,
+      tenantId: result.tenantId,
+      messageId,
+      fromName: senderName,
     });
 
-    console.log("Result email enqueued", { email: member.email, subjectName: result.subjectName });
+    console.log("Result email sent", { email: member.email, subjectName: result.subjectName });
   } catch (e) {
     console.error("Result email failed:", e);
   }

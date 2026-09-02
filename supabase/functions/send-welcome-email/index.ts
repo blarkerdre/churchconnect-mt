@@ -19,37 +19,6 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-async function getOrCreateUnsubscribeToken(
-  supabase: ReturnType<typeof createClient>,
-  email: string,
-) {
-  const normalizedEmail = normalizeEmail(email);
-
-  const { data: existingToken, error: tokenLookupError } = await supabase
-    .from("email_unsubscribe_tokens")
-    .select("token")
-    .eq("email", normalizedEmail)
-    .is("used_at", null)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (tokenLookupError) throw tokenLookupError;
-  if (existingToken?.token) return existingToken.token;
-
-  const token = crypto.randomUUID();
-  const { error: tokenInsertError } = await supabase
-    .from("email_unsubscribe_tokens")
-    .insert({
-      email: normalizedEmail,
-      token,
-    });
-
-  if (tokenInsertError) throw tokenInsertError;
-
-  return token;
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -124,23 +93,14 @@ Deno.serve(async (req) => {
       churchName: senderName,
     };
 
-    const [html, text, unsubscribeToken] = await Promise.all([
+    const [html, text] = await Promise.all([
       renderAsync(React.createElement(WelcomeRegistrationEmail, templateProps)),
       renderAsync(React.createElement(WelcomeRegistrationEmail, templateProps), {
         plainText: true,
-      }),
-      getOrCreateUnsubscribeToken(supabase, normalizedEmail),
+      })
     ]);
 
     const messageId = crypto.randomUUID();
-
-    await supabase.from("email_send_log").insert({
-      message_id: messageId,
-      template_name: "welcome-registration",
-      recipient_email: normalizedEmail,
-      status: "pending",
-      ...(tenant_id ? { tenant_id } : {}),
-    });
 
     if (!apiKey) {
       console.error("Missing LOVABLE_API_KEY");
@@ -169,7 +129,6 @@ Deno.serve(async (req) => {
           text,
           purpose: "transactional",
           label: "welcome-registration",
-          unsubscribe_token: unsubscribeToken,
           message_id: messageId,
           idempotency_key: messageId,
         },
