@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Users, CalendarDays, MessageSquare, TrendingUp, Phone } from "lucide-react";
+import TrafficPanel from "@/components/analytics/TrafficPanel";
 
 export default function TenantAnalyticsTab({ tenants }) {
   const { data: analytics = {}, isLoading } = useQuery({
