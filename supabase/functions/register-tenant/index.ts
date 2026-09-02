@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { sendLoggedTemplateEmail } from "../_shared/managed-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -208,17 +209,17 @@ Deno.serve(async (req) => {
     // 8. Send welcome email to the new tenant admin
     const loginUrl = `https://app.churchmanagementsuite.org/t/${slug}/auth`;
     try {
-      await admin.functions.invoke("send-transactional-email", {
-        body: {
-          templateName: "tenant-welcome",
-          recipientEmail: admin_email,
-          idempotencyKey: `tenant-welcome-${tenant.id}`,
-          templateData: {
-            name: admin_full_name || admin_email,
-            churchName: church_name,
-            slug,
-            loginUrl,
-          },
+      await sendLoggedTemplateEmail({
+        supabase: admin,
+        templateName: "tenant-welcome",
+        to: admin_email,
+        idempotencyKey: `tenant-welcome-${tenant.id}`,
+        tenantId: tenant.id,
+        templateData: {
+          name: admin_full_name || admin_email,
+          churchName: church_name,
+          slug,
+          loginUrl,
         },
       });
     } catch (e) {
@@ -248,18 +249,18 @@ Deno.serve(async (req) => {
           for (const profile of adminProfiles || []) {
             if (!profile.email) continue;
             try {
-              await admin.functions.invoke("send-transactional-email", {
-                body: {
-                  templateName: "new-tenant-notification",
-                  recipientEmail: profile.email,
-                  idempotencyKey: `new-tenant-notify-${tenant.id}-${profile.email}`,
-                  templateData: {
-                    churchName: church_name,
-                    slug,
-                    adminName: admin_full_name || admin_email,
-                    adminEmail: admin_email,
-                    createdAt,
-                  },
+              await sendLoggedTemplateEmail({
+                supabase: admin,
+                templateName: "new-tenant-notification",
+                to: profile.email,
+                idempotencyKey: `new-tenant-notify-${tenant.id}-${profile.email}`,
+                tenantId: tenant.id,
+                templateData: {
+                  churchName: church_name,
+                  slug,
+                  adminName: admin_full_name || admin_email,
+                  adminEmail: admin_email,
+                  createdAt,
                 },
               });
             } catch (e) {

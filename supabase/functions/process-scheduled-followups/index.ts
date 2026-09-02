@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { sendLoggedTemplateEmail } from "../_shared/managed-email.ts";
 import { assertSmsQuota, QuotaExceededError } from "../_shared/sms-quota.ts";
 import { validateOutboundUrl, validateMethod } from "../_shared/url-validator.ts";
 import { isAuthorizedScheduler } from "../_shared/scheduler-auth.ts";
@@ -374,29 +375,21 @@ async function sendEmail(
     if (followup?.followup_type) followupType = followup.followup_type;
   }
 
-  // Call send-transactional-email
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const response = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${serviceKey}`,
+  // Send via managed email helper.
+  const result = await sendLoggedTemplateEmail({
+    supabase,
+    templateName: "followup-reminder",
+    to: msg.recipient_email,
+    tenantId: msg.tenant_id,
+    templateData: {
+      recipientName: msg.recipient_name || "",
+      churchName,
+      message: msg.message,
+      followupType,
     },
-    body: JSON.stringify({
-      template_name: "followup-reminder",
-      recipient_email: msg.recipient_email,
-      tenant_id: msg.tenant_id,
-      templateData: {
-        recipientName: msg.recipient_name || "",
-        churchName,
-        message: msg.message,
-        followupType,
-      },
-    }),
   });
 
-  if (!response.ok) {
-    const errData = await response.json().catch(() => ({}));
-    throw new Error(`Email send failed: ${errData.error || response.statusText}`);
+  if (!result.sent) {
+    throw new Error("Email send failed: recipient has unsubscribed or bounced");
   }
 }
