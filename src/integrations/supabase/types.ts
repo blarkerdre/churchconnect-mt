@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_daily_totals: {
+        Row: {
+          avg_duration_seconds: number
+          bounce_rate: number
+          created_at: string
+          day: string
+          page_views: number
+          source: string
+          views_per_visit: number
+          visitors: number
+        }
+        Insert: {
+          avg_duration_seconds?: number
+          bounce_rate?: number
+          created_at?: string
+          day: string
+          page_views?: number
+          source?: string
+          views_per_visit?: number
+          visitors?: number
+        }
+        Update: {
+          avg_duration_seconds?: number
+          bounce_rate?: number
+          created_at?: string
+          day?: string
+          page_views?: number
+          source?: string
+          views_per_visit?: number
+          visitors?: number
+        }
+        Relationships: []
+      }
       analytics_page_views: {
         Row: {
           city: string | null
@@ -63,6 +96,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      analytics_reference_lists: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          label: string
+          period_end: string | null
+          period_start: string | null
+          source: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          label: string
+          period_end?: string | null
+          period_start?: string | null
+          source?: string
+          value?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          label?: string
+          period_end?: string | null
+          period_start?: string | null
+          source?: string
+          value?: number
+        }
+        Relationships: []
       }
       announcement_reactions: {
         Row: {
@@ -7974,6 +8040,25 @@ export type Database = {
           visitors: number
         }[]
       }
+      get_traffic_countries: {
+        Args: {
+          _from: string
+          _limit?: number
+          _tenant_id: string
+          _to: string
+        }
+        Returns: {
+          country: string
+          visitors: number
+        }[]
+      }
+      get_traffic_devices: {
+        Args: { _from: string; _tenant_id: string; _to: string }
+        Returns: {
+          device: string
+          visitors: number
+        }[]
+      }
       get_traffic_locations: {
         Args: {
           _from: string
@@ -7993,6 +8078,18 @@ export type Database = {
         Returns: {
           day: string
           page_views: number
+          visitors: number
+        }[]
+      }
+      get_traffic_sources: {
+        Args: {
+          _from: string
+          _limit?: number
+          _tenant_id: string
+          _to: string
+        }
+        Returns: {
+          source: string
           visitors: number
         }[]
       }
@@ -8440,6 +8537,12 @@ export type Database = {
       teen_self_set_pin: {
         Args: { _enrolment_id: string; _pin: string }
         Returns: Json
+      }
+      traffic_live_days: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          day: string
+        }[]
       }
       update_own_member_profile:
         | {
