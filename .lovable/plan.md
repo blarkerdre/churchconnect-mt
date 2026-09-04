@@ -1,21 +1,29 @@
-# GitHub screenshot showing you as creator
+# GitHub screenshot showing you as creator, with your full name
 
 ## Context
-The repository `blarkerdre/churchconnect-mt` is public. Most commits are pushed by the sync bot `lovable-dev[bot]` with `blarkerdre` as co-author — that attribution is authentic and I will not alter it. The clearest honest evidence of your authorship is:
-
-- The **Contributors graph** (`/graphs/contributors`) — shows `blarkerdre` with commit counts over time.
-- A **commit view filtered to you** (`/commits?author=blarkerdre`) — lists commits authored by your account.
-- The repo **header area** showing `blarkerdre/churchconnect-mt` — you as owner.
+The repository `blarkerdre/churchconnect-mt` shows commits pushed by the sync bot `lovable-dev[bot]` with `blarkerdre` as co-author. GitHub renders your **profile name** (not just username) next to commits, on the contributors graph, and on your profile — but only if the name is set on your GitHub account. I will not edit or fake attribution in an image; the plan makes the name real first, then photographs it.
 
 ## Steps
-1. Make the repository public again briefly (it may already be — I'll check first).
-2. Capture two or three screenshots with headless Playwright at desktop viewport:
-   - Repository header (`blarkerdre/churchconnect-mt`) + a code file view.
-   - Contributors graph page showing your username and commit volume.
-   - Author-filtered commit list (`?author=blarkerdre`) if it returns results.
-3. Review each capture, crop to the meaningful region, blur any personal data that isn't needed.
-4. Deliver the PNG(s) in chat as downloadable files.
+
+### Step 1 — You set your full name on GitHub (one minute)
+1. Go to https://github.com/settings/profile
+2. Set **Name** to `Adeniyi Olusegun Kugbiyi` (or your preferred form)
+3. Save.
+
+### Step 2 — Make the repo public briefly
+Same as before — flip `churchconnect-mt` to public while I capture, then back to private after.
+
+### Step 3 — I capture the images
+With headless Playwright at desktop viewport:
+1. **Commit list filtered to you** (`/commits?author=blarkerdre`) — once your name is set, commit rows render as "Adeniyi Olusegun Kugbiyi authored …".
+2. **Contributors graph** (`/graphs/contributors`) — your name/avatar with commit volume over time.
+3. **Repo code view** with the `blarkerdre/churchconnect-mt` header and, where visible, the latest-commit line showing your name.
+4. Optionally your **GitHub profile page** header (name, username, repo count) as an ownership shot.
+
+### Step 4 — Review and deliver
+- Review each capture, crop to the meaningful region, blur anything personal that isn't needed.
+- Deliver the PNGs in chat as downloadable files.
 
 ## Notes
-- No code changes, no document rebuild (unless you later want these added to the evidence document).
-- If the author-filtered commit list is empty (all commits bot-attributed), the contributors graph plus owner header will be the deliverable, and I'll tell you exactly what GitHub shows rather than stage anything.
+- No code changes; the evidence document is untouched unless you later ask to add these.
+- If GitHub's commit list still renders only the bot identity after the name change, I'll capture exactly what GitHub shows (contributors graph + profile) and tell you — no staging.
