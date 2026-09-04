@@ -7867,15 +7867,6 @@ export type Database = {
         Args: { _registration_id: string }
         Returns: Json
       }
-      delete_email: {
-        Args: { message_id: number; queue_name: string }
-        Returns: boolean
-      }
-      email_queue_dispatch: { Args: never; Returns: undefined }
-      enqueue_email: {
-        Args: { payload: Json; queue_name: string }
-        Returns: number
-      }
       ensure_church_unit: {
         Args: { _name: string; _tenant: string }
         Returns: undefined
@@ -8355,15 +8346,6 @@ export type Database = {
         Returns: boolean
       }
       mfa_satisfied: { Args: never; Returns: boolean }
-      move_to_dlq: {
-        Args: {
-          dlq_name: string
-          message_id: number
-          payload: Json
-          source_queue: string
-        }
-        Returns: number
-      }
       next_invoice_number: {
         Args: { _doc_type: string; _tenant_id: string }
         Returns: string
@@ -8421,14 +8403,6 @@ export type Database = {
         Returns: Json
       }
       purge_old_analytics_page_views: { Args: never; Returns: undefined }
-      read_email_batch: {
-        Args: { batch_size: number; queue_name: string; vt: number }
-        Returns: {
-          message: Json
-          msg_id: number
-          read_ct: number
-        }[]
-      }
       register_walkin_family:
         | {
             Args: { _children: Json; _parent: Json; _tenant_id: string }
