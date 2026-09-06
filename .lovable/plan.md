@@ -8,11 +8,11 @@ Directory records only — no sign-in accounts, no logins, no emails ever sent t
 
 | Church | New people |
 |---|---|
-| Demo Church (TEST) | 1,400 |
-| Winners Chapel International, Croydon | 1,000 |
-| Winners Chapel International, NewPort | 700 |
-| Winners Chapel International, Southampton | 500 |
-| Winners Chapel International, Swansea | 400 |
+| Demo Church (TEST) | 100 |
+| Winners Chapel International, Croydon | 1,400 |
+| Winners Chapel International, NewPort | 1,000 |
+| Winners Chapel International, Southampton | 800 |
+| Winners Chapel International, Swansea | 700 |
 
 Each person gets: first and last name (mixed UK, Nigerian, Ghanaian, Caribbean and Eastern European names), gender, date of birth spread across all ages, UK mobile number, street address with a city matching the church's location, membership status (mostly Active, with a realistic scattering of First Timer, New Convert, Visitor, Inactive), a church unit, baptism and training flags, consent ticked, and a joining date spread over the past three years.
 
