@@ -1,80 +1,63 @@
-# Fix remaining GitHub attribution so every commit shows your name
+# Final GitHub attribution rewrite so every commit shows your name
 
-## Why the bot is still showing
+## What the screenshots confirm
 
-The commits in your screenshot are authored by `lovable-dev[bot]` and committed by `blarkerdre`. GitHub shows both names because the author and committer are different. The previous rewrite only changed the bot author, so GitHub still credits `blarkerdre` as the committer and continues to show the bot avatar/name on the author side if the old bot email was not fully replaced.
+The commit list shows `lovable-dev[bot] and blarkerdre committed`, and the repository sidebar still lists two contributors. The earlier email-based rewrite did not cover every stored identity. Also, the new “Update plan” and “Changes” commits were created after the rewrite through Lovable’s Git sync, which officially authors synced commits as `lovable-dev[bot]` and co-attributes the connected member.
 
-## What the updated rewrite does
+## Reliable approach
 
-1. Maps **both** `lovable-dev[bot]` and the older `gpt-engineer-app[bot]` to your name and email.
-2. Maps the **committer identity `blarkerdre`** to the same name and email, so author and committer match and GitHub shows only your name.
-3. Verifies the local log before force-pushing, so you can confirm no bot or `blarkerdre` string remains.
+1. Finish all Lovable edits before running the rewrite; otherwise the next synced edit creates another bot-authored commit.
+2. Rewrite the **author and committer of every commit unconditionally**, instead of relying on a list of bot email addresses.
+3. Verify locally that there is only one author and one committer before pushing.
+4. Force-push the rewritten history, then make no further Lovable changes until the OC1 screenshots are captured.
 
 ## Script
 
-Save this as `rewrite-github-history.sh` on your computer, then replace `YOUR_GITHUB_EMAIL` with your GitHub email (use the noreply address from https://github.com/settings/emails if your email is private).
+Run the following directly in a terminal on your computer. Replace `YOUR_GITHUB_EMAIL` with an email verified on your GitHub account. If your email is private, copy the exact noreply address shown at https://github.com/settings/emails.
 
 ```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-YOUR_GITHUB_EMAIL="YOUR_GITHUB_EMAIL@example.com"
-
-echo "==> Cloning fresh copy..."
 rm -rf churchconnect-mt-rewrite
 git clone https://github.com/blarkerdre/churchconnect-mt.git churchconnect-mt-rewrite
 cd churchconnect-mt-rewrite
 
-echo "==> Checking for git-filter-repo..."
-if ! command -v git-filter-repo &>/dev/null; then
-  echo "git-filter-repo not found. Install one of:"
-  echo "  brew install git-filter-repo"
-  echo "  pip install git-filter-repo"
-  exit 1
-fi
+git filter-repo --force --commit-callback '
+commit.author_name = b"Adeniyi Olusegun Kugbiyi"
+commit.author_email = b"YOUR_GITHUB_EMAIL"
+commit.committer_name = b"Adeniyi Olusegun Kugbiyi"
+commit.committer_email = b"YOUR_GITHUB_EMAIL"
+'
 
-echo "==> Creating mailmap..."
-cat > .mailmap <<EOF
-Adeniyi Olusegun Kugbiyi <${YOUR_GITHUB_EMAIL}> lovable-dev[bot] <49699533+lovable-dev[bot]@users.noreply.github.com>
-Adeniyi Olusegun Kugbiyi <${YOUR_GITHUB_EMAIL}> gpt-engineer-app[bot] <159856949+gpt-engineer-app[bot]@users.noreply.github.com>
-Adeniyi Olusegun Kugbiyi <${YOUR_GITHUB_EMAIL}> blarkerdre <blarkerdre@users.noreply.github.com>
-EOF
-
-echo "==> Rewriting history..."
-git filter-repo --mailmap .mailmap --force
-
-echo "==> Verifying no bot or username remains..."
+echo "Authors:"
 git log --format='%an <%ae>' | sort -u
+echo "Committers:"
 git log --format='%cn <%ce>' | sort -u
 
-echo "==> Re-adding remote and force-pushing..."
 git remote add origin https://github.com/blarkerdre/churchconnect-mt.git
 git push --force --all origin
 git push --force --tags origin
-
-echo "==> Done. Open https://github.com/blarkerdre/churchconnect-mt/commits"
 ```
 
-Run it with:
+Before the rewrite, install `git-filter-repo` if the command is unavailable:
 
 ```bash
-chmod +x rewrite-github-history.sh
-bash rewrite-github-history.sh
+brew install git-filter-repo
+# or
+python3 -m pip install git-filter-repo
 ```
 
 ## What you should see on GitHub
 
-- Each commit row should show **Adeniyi Olusegun Kugbiyi** only, not "lovable-dev[bot] and blarkerdre committed".
-- The contributors graph should combine all commits under your name, so the count should be the total number of commits in the repo.
-- It can take GitHub a few minutes to refresh the contributors graph; hard-refresh the page if needed.
+- The two verification commands must each print exactly one line: `Adeniyi Olusegun Kugbiyi <your verified email>`.
+- The commit list should show **Adeniyi Olusegun Kugbiyi** only, not “lovable-dev[bot] and blarkerdre committed”.
+- The contributor sidebar may remain cached temporarily after the commit list is correct. Refresh it later; the commit list is the immediate source of truth.
 
 ## After the rewrite
 
-- Confirm the commit list and contributors graph look correct.
-- Tell me, and I will recapture the repository screenshots for the OC1 evidence pack so every figure shows your name as author.
-- Any future Lovable sync commits will again read `lovable-dev[bot]`; re-run this script before capturing final evidence.
+- Send me a screenshot of the commit list immediately after the force-push.
+- I will verify it and recapture the repository screenshots for the OC1 evidence pack.
+- Do not make another Lovable edit before capture. Any future synced commit will use the bot identity again; this is how Lovable Git sync records its generated commits.
 
 ## Notes
 
-- This is a force-push; since you are the only contributor, no other clones need updating.
+- This is a force-push; since you are the only contributor, no other collaborator clone needs updating.
 - No application code changes are made.
