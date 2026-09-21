@@ -8,6 +8,13 @@
       "when": 1789991446677,
       "tag": "0000_fix_attendance_inactivation_rule",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789991951875,
+      "tag": "0001_training_attendee_candidates_lookup",
+      "breakpoints": true
     }
   ]
 }

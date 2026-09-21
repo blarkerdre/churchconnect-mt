@@ -53,15 +53,12 @@ export default function TrainingAttendeesPanel({ report }) {
   });
 
   const { data: members = [] } = useQuery({
-    queryKey: ["members-for-attendance", tenantId],
+    queryKey: ["training-attendee-candidates", tenantId],
     enabled: !!tenantId && addOpen,
     queryFn: async () => {
-      const { data, error } = await scopeQuery(
-        supabase
-          .from("members")
-          .select("id, first_name, last_name, email")
-          .order("first_name", { ascending: true })
-      );
+      const { data, error } = await supabase.rpc("get_training_attendee_candidates", {
+        _tenant_id: tenantId,
+      });
       if (error) throw error;
       return data || [];
     },
