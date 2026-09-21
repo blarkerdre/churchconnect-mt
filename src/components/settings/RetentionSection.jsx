@@ -62,7 +62,7 @@ export default function RetentionSection() {
         {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
         {policies.map((p) => (
           <div key={p.id} className="border rounded-lg p-3 flex flex-wrap items-center gap-3">
-            <div className="flex-1 min-w-[200px]">
+            <div className="min-w-0 flex-1 basis-full sm:basis-auto">
               <Label className="font-medium">{LABELS[p.data_category] || p.data_category}</Label>
               {p.last_run_at && (
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -70,7 +70,7 @@ export default function RetentionSection() {
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
               <Input type="number" min={p.min_days} max={p.max_days}
                 defaultValue={p.retention_days}
                 onBlur={(e) => {

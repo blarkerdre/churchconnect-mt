@@ -97,11 +97,11 @@ export default function ApiKeysSection() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+      <CardHeader className="flex flex-col items-stretch gap-3 space-y-0 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Key className="h-5 w-5" /> API Access
         </CardTitle>
-        <Button size="sm" onClick={() => setShowCreate(true)}>
+        <Button size="sm" onClick={() => setShowCreate(true)} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-1" /> New Key
         </Button>
       </CardHeader>
@@ -162,7 +162,7 @@ export default function ApiKeysSection() {
       </CardContent>
 
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent>
+         <DialogContent className="w-[calc(100vw-1rem)] max-w-lg max-h-[90dvh] overflow-y-auto sm:w-full">
           <DialogHeader>
             <DialogTitle>Create API Key</DialogTitle>
           </DialogHeader>
@@ -184,7 +184,7 @@ export default function ApiKeysSection() {
       </Dialog>
 
       <Dialog open={!!newlyCreatedKey} onOpenChange={(open) => !open && setNewlyCreatedKey(null)}>
-        <DialogContent>
+         <DialogContent className="w-[calc(100vw-1rem)] max-w-lg max-h-[90dvh] overflow-y-auto sm:w-full">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-amber-500" /> Copy your API key now
@@ -197,7 +197,7 @@ export default function ApiKeysSection() {
             <div className="font-mono text-xs break-all bg-muted p-3 rounded border">
               {newlyCreatedKey}
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Button className="flex-1" onClick={() => copyKey(newlyCreatedKey)}>
                 <Copy className="h-4 w-4 mr-2" /> Copy
               </Button>

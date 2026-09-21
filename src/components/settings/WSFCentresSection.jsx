@@ -174,7 +174,7 @@ export default function WSFCentresSection() {
           {isLoading ? (
             <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : centres.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6"><p className="text-sm text-muted-foreground text-center py-6">No Home Cell centres configured</p></p>
+            <p className="text-sm text-muted-foreground text-center py-6">No Home Cell centres configured</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {centres.map(c => (
@@ -214,9 +214,9 @@ export default function WSFCentresSection() {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-md">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-md max-h-[90dvh] overflow-y-auto sm:w-full">
           <DialogHeader><DialogTitle className="font-display">{editing ? "Edit Centre" : "New Centre"}</DialogTitle></DialogHeader>
-          <div className="space-y-4 max-h-[70vh] overflow-y-auto">
+           <div className="space-y-4">
             <div className="space-y-1.5"><Label>Centre Name *</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
             <div className="space-y-1.5">
               <Label>House Provider</Label>
@@ -226,7 +226,7 @@ export default function WSFCentresSection() {
               </Select>
             </div>
             <div className="space-y-1.5"><Label>Address</Label><Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Street address" /></div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5"><Label>City</Label><Input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} placeholder="Cardiff" /></div>
               <div className="space-y-1.5"><Label>Postcode</Label><Input value={form.postcode} onChange={e => setForm(f => ({ ...f, postcode: e.target.value }))} placeholder="CF10 1AB" /></div>
             </div>
@@ -236,7 +236,7 @@ export default function WSFCentresSection() {
               <p className="text-xs text-muted-foreground">Comma-separated postcode prefixes this centre serves</p>
             </div>
             <div className="space-y-1.5"><Label>Location Description</Label><Input value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="e.g. Near Cardiff Bay" /></div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Meeting Day</Label>
                 <Select value={form.meeting_day} onValueChange={v => setForm(f => ({ ...f, meeting_day: v }))}>

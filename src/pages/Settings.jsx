@@ -1605,13 +1605,38 @@ function TestimonyEmailSection() {
 export default function Settings() {
   const { roles } = useAuth();
   const { isTenantOwner, isTenantAdmin } = useTenant();
+  const [activeSection, setActiveSection] = useState("branding");
   const isSuperAdmin = roles.includes("super_admin");
   const canManageTenant = isSuperAdmin || isTenantOwner || isTenantAdmin;
   const canOwnerOnly = isSuperAdmin || isTenantOwner;
   const slideshowEnabled = useTenantFeatureEnabled("/dashboard-slideshow");
+  const settingsSections = [
+    { value: "branding", label: "Branding" },
+    ...(canOwnerOnly ? [{ value: "billing", label: "Billing" }] : []),
+    { value: "notifications", label: "Notifications" },
+    { value: "comms", label: "Communications" },
+    { value: "units", label: "Church Units" },
+    { value: "wsf", label: "Home Cell" },
+    { value: "services", label: "Services" },
+    { value: "events", label: "Events" },
+    { value: "training", label: "Training" },
+    { value: "pastoral", label: "Pastoral Care" },
+    { value: "children", label: "Children" },
+    { value: "followup-templates", label: "Follow-ups" },
+    ...(canManageTenant ? [
+      { value: "features", label: "Features" },
+      { value: "certificates", label: "Certificates" },
+      { value: "links", label: "External Links" },
+    ] : []),
+    ...(canOwnerOnly ? [
+      { value: "consent", label: "Consent & Privacy" },
+      { value: "api", label: "API Access" },
+      { value: "danger", label: "Danger Zone" },
+    ] : []),
+  ];
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 sm:space-y-6 [&_[role=tabpanel]]:min-w-0">
     <ModuleTour tourId="settings-v1" />
       <div>
         <h1 className="text-lg sm:text-xl font-display font-bold text-foreground flex items-center gap-2">
@@ -1620,39 +1645,52 @@ export default function Settings() {
         <p className="text-sm text-muted-foreground mt-1">Manage application configuration and options</p>
       </div>
 
-      <Tabs defaultValue="branding" className="space-y-4">
-        <TabsList className="flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          <TabsTrigger data-tour="settings-branding" value="branding" className="gap-1.5 text-xs"><ImageIcon className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Branding</span></TabsTrigger>
+      <Tabs value={activeSection} onValueChange={setActiveSection} className="min-w-0 space-y-4">
+        <div className="sm:hidden">
+          <Label htmlFor="settings-section" className="mb-1.5 block text-xs font-medium text-muted-foreground">Settings section</Label>
+          <Select value={activeSection} onValueChange={setActiveSection}>
+            <SelectTrigger id="settings-section" className="w-full bg-card">
+              <SelectValue placeholder="Choose a settings section" />
+            </SelectTrigger>
+            <SelectContent>
+              {settingsSections.map((section) => (
+                <SelectItem key={section.value} value={section.value}>{section.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <TabsList className="hidden sm:flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <TabsTrigger data-tour="settings-branding" value="branding" className="gap-1.5 text-xs"><ImageIcon className="h-3.5 w-3.5" /><span>Branding</span></TabsTrigger>
           {canOwnerOnly && (
-            <TabsTrigger value="billing" className="gap-1.5 text-xs"><CreditCard className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Billing</span></TabsTrigger>
+            <TabsTrigger value="billing" className="gap-1.5 text-xs"><CreditCard className="h-3.5 w-3.5" /><span>Billing</span></TabsTrigger>
           )}
-          <TabsTrigger data-tour="settings-restart-tours" value="notifications" className="gap-1.5 text-xs"><Bell className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Notifications</span></TabsTrigger>
-          <TabsTrigger value="comms" className="gap-1.5 text-xs"><Mail className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Comms</span></TabsTrigger>
-          <TabsTrigger value="units" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Units</span></TabsTrigger>
-          <TabsTrigger value="wsf" className="gap-1.5 text-xs"><Globe className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Home Cell</span></TabsTrigger>
-          <TabsTrigger value="services" className="gap-1.5 text-xs"><Church className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Services</span></TabsTrigger>
-          <TabsTrigger value="events" className="gap-1.5 text-xs"><CalendarDays className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Events</span></TabsTrigger>
-          <TabsTrigger value="training" className="gap-1.5 text-xs"><TrendingUp className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Training</span></TabsTrigger>
-          <TabsTrigger value="pastoral" className="gap-1.5 text-xs"><Heart className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Pastoral</span></TabsTrigger>
-          <TabsTrigger value="children" className="gap-1.5 text-xs"><Baby className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Children</span></TabsTrigger>
-          <TabsTrigger value="followup-templates" className="gap-1.5 text-xs"><Send className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Follow-ups</span></TabsTrigger>
+          <TabsTrigger data-tour="settings-restart-tours" value="notifications" className="gap-1.5 text-xs"><Bell className="h-3.5 w-3.5" /><span>Notifications</span></TabsTrigger>
+          <TabsTrigger value="comms" className="gap-1.5 text-xs"><Mail className="h-3.5 w-3.5" /><span>Comms</span></TabsTrigger>
+          <TabsTrigger value="units" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /><span>Units</span></TabsTrigger>
+          <TabsTrigger value="wsf" className="gap-1.5 text-xs"><Globe className="h-3.5 w-3.5" /><span>Home Cell</span></TabsTrigger>
+          <TabsTrigger value="services" className="gap-1.5 text-xs"><Church className="h-3.5 w-3.5" /><span>Services</span></TabsTrigger>
+          <TabsTrigger value="events" className="gap-1.5 text-xs"><CalendarDays className="h-3.5 w-3.5" /><span>Events</span></TabsTrigger>
+          <TabsTrigger value="training" className="gap-1.5 text-xs"><TrendingUp className="h-3.5 w-3.5" /><span>Training</span></TabsTrigger>
+          <TabsTrigger value="pastoral" className="gap-1.5 text-xs"><Heart className="h-3.5 w-3.5" /><span>Pastoral</span></TabsTrigger>
+          <TabsTrigger value="children" className="gap-1.5 text-xs"><Baby className="h-3.5 w-3.5" /><span>Children</span></TabsTrigger>
+          <TabsTrigger value="followup-templates" className="gap-1.5 text-xs"><Send className="h-3.5 w-3.5" /><span>Follow-ups</span></TabsTrigger>
           {canManageTenant && (
-            <TabsTrigger data-tour="settings-modules" value="features" className="gap-1.5 text-xs"><SlidersHorizontal className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Features</span></TabsTrigger>
+            <TabsTrigger data-tour="settings-modules" value="features" className="gap-1.5 text-xs"><SlidersHorizontal className="h-3.5 w-3.5" /><span>Features</span></TabsTrigger>
           )}
           {canManageTenant && (
-            <TabsTrigger value="certificates" className="gap-1.5 text-xs"><Award className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Certs</span></TabsTrigger>
+            <TabsTrigger value="certificates" className="gap-1.5 text-xs"><Award className="h-3.5 w-3.5" /><span>Certs</span></TabsTrigger>
           )}
           {canManageTenant && (
-            <TabsTrigger value="links" className="gap-1.5 text-xs"><Link2 className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Links</span></TabsTrigger>
+            <TabsTrigger value="links" className="gap-1.5 text-xs"><Link2 className="h-3.5 w-3.5" /><span>Links</span></TabsTrigger>
           )}
           {canOwnerOnly && (
-            <TabsTrigger value="consent" className="gap-1.5 text-xs"><ShieldAlert className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Consent</span></TabsTrigger>
+            <TabsTrigger value="consent" className="gap-1.5 text-xs"><ShieldAlert className="h-3.5 w-3.5" /><span>Consent</span></TabsTrigger>
           )}
           {canOwnerOnly && (
-            <TabsTrigger value="api" className="gap-1.5 text-xs"><Key className="h-3.5 w-3.5" /><span className="hidden sm:inline"> API</span></TabsTrigger>
+            <TabsTrigger value="api" className="gap-1.5 text-xs"><Key className="h-3.5 w-3.5" /><span>API</span></TabsTrigger>
           )}
           {canOwnerOnly && (
-            <TabsTrigger data-tour="settings-danger" value="danger" className="gap-1.5 text-xs text-destructive"><ShieldAlert className="h-3.5 w-3.5" /><span className="hidden sm:inline"> Danger</span></TabsTrigger>
+            <TabsTrigger data-tour="settings-danger" value="danger" className="gap-1.5 text-xs text-destructive"><ShieldAlert className="h-3.5 w-3.5" /><span>Danger</span></TabsTrigger>
           )}
 
 

@@ -446,7 +446,7 @@ export default function CertificateTemplateSettings() {
       </CardContent>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-md max-h-[90dvh] overflow-y-auto sm:w-full">
           <TenantDialogHeader>{editing ? "Edit Template" : "Add Certificate Template"}</TenantDialogHeader>
           <div className="space-y-4 mt-2">
             <div className="space-y-1.5">
@@ -454,7 +454,7 @@ export default function CertificateTemplateSettings() {
               {editing ? (
                 <Input value={form.training_type} disabled />
               ) : useCustomType ? (
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <Input
                     value={form.training_type}
                     onChange={(e) => set("training_type", e.target.value)}
@@ -523,7 +523,7 @@ export default function CertificateTemplateSettings() {
                 )}
               </div>
             )}
-            <div className="grid grid-cols-2 gap-3">
+             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Signatory Name</Label>
                 <Input value={form.signatory_name} onChange={(e) => set("signatory_name", e.target.value)} placeholder="e.g. Pastor Name" />
@@ -592,7 +592,7 @@ export default function CertificateTemplateSettings() {
               <div className="space-y-2">
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Text Positions (Y offset in pixels)</Label>
                 <p className="text-xs text-muted-foreground">Adjust where text appears on the certificate (0 = top, 595 = bottom)</p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-1">
                     <Label className="text-xs">Name Y</Label>
                     <Input type="number" value={form.text_positions?.name_y || 280} onChange={(e) => setPos("name_y", e.target.value)} />
@@ -642,8 +642,8 @@ export default function CertificateTemplateSettings() {
                 rows={2}
               />
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setPreviewOpen(true)} className="gap-1.5">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button variant="outline" onClick={() => setPreviewOpen(true)} className="w-full gap-1.5 sm:w-auto">
                 <Eye className="h-4 w-4" /> Preview
               </Button>
               <Button onClick={handleSave} disabled={saveMutation.isPending} className="flex-1">
@@ -656,7 +656,7 @@ export default function CertificateTemplateSettings() {
       </Dialog>
       {/* Preview Dialog */}
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-3xl">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-3xl max-h-[90dvh] overflow-y-auto sm:w-full">
           <TenantDialogHeader>Certificate Preview</TenantDialogHeader>
           <div className="mt-2 rounded-lg overflow-hidden border bg-muted/30">
             <div

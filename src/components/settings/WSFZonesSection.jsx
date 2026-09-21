@@ -115,7 +115,7 @@ export default function WSFZonesSection() {
           {isLoading ? (
             <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : zones.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6"><p className="text-sm text-muted-foreground text-center py-6">No Home Cell zones configured</p></p>
+            <p className="text-sm text-muted-foreground text-center py-6">No Home Cell zones configured</p>
           ) : (
             <div className="space-y-2">
               {zones.map(z => (
@@ -148,7 +148,7 @@ export default function WSFZonesSection() {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-sm">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-sm max-h-[90dvh] overflow-y-auto sm:w-full">
           <DialogHeader><DialogTitle className="font-display">{editing ? "Edit Zone" : "New Zone"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">
