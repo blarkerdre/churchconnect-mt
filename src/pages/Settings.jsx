@@ -1606,6 +1606,7 @@ export default function Settings() {
   const { roles } = useAuth();
   const { isTenantOwner, isTenantAdmin } = useTenant();
   const [activeSection, setActiveSection] = useState("branding");
+  const settingsTabsRef = useRef(null);
   const isSuperAdmin = roles.includes("super_admin");
   const canManageTenant = isSuperAdmin || isTenantOwner || isTenantAdmin;
   const canOwnerOnly = isSuperAdmin || isTenantOwner;
@@ -1635,6 +1636,11 @@ export default function Settings() {
     ] : []),
   ];
 
+  useEffect(() => {
+    const activeTab = settingsTabsRef.current?.querySelector('[role="tab"][data-state="active"]');
+    activeTab?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  }, [activeSection]);
+
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 space-y-4 sm:space-y-6 [&_[role=tabpanel]]:min-w-0">
     <ModuleTour tourId="settings-v1" />
@@ -1659,7 +1665,10 @@ export default function Settings() {
             </SelectContent>
           </Select>
         </div>
-        <TabsList className="hidden sm:flex flex-nowrap h-auto gap-1 overflow-x-auto w-full justify-start [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <TabsList
+          ref={settingsTabsRef}
+          className="hidden sm:flex h-auto w-full max-w-full flex-nowrap justify-start gap-1 overflow-x-auto overflow-y-hidden pb-2 [scrollbar-color:hsl(var(--border))_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent [&_[role=tab]]:shrink-0 [&_[role=tab]]:whitespace-nowrap"
+        >
           <TabsTrigger data-tour="settings-branding" value="branding" className="gap-1.5 text-xs"><ImageIcon className="h-3.5 w-3.5" /><span>Branding</span></TabsTrigger>
           {canOwnerOnly && (
             <TabsTrigger value="billing" className="gap-1.5 text-xs"><CreditCard className="h-3.5 w-3.5" /><span>Billing</span></TabsTrigger>
