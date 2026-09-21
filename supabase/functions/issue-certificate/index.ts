@@ -544,9 +544,10 @@ Deno.serve(async (req) => {
     // Build SVG certificate
     let svgCert: string;
 
+    const deanDataUri = deanSignatureUrl ? await inlineStorageImage(deanSignatureUrl) : "";
+
     if (isBibleSchool) {
       // Bible School layout matching the Word of Faith Bible Institute certificate
-      const deanDataUri = deanSignatureUrl ? await inlineStorageImage(deanSignatureUrl) : "";
       const crestDataUri = crestImageUrl ? await inlineStorageImage(crestImageUrl) : "";
       const nameHex = /^#[0-9a-fA-F]{6}$/.test(nameColor) ? nameColor : "#5B2E91";
       const titleColor = accentColor && /^#[0-9a-fA-F]{6}$/.test(accentColor) ? accentColor : "#B22222";
@@ -606,6 +607,7 @@ Deno.serve(async (req) => {
   <text x="421" y="${dateY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="13" fill="${textColor}" opacity="0.75">Completed on ${formattedDate}</text>
   <!-- Certificate number -->
   <text x="421" y="${certNumY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="10" fill="${textColor}" opacity="0.6">Certificate No: ${certificateNumber}</text>
+  ${deanDataUri ? `<image href="${deanDataUri}" x="341" y="${sigY - 75}" width="160" height="50" preserveAspectRatio="xMidYMax meet"/>` : ""}
   ${signatoryName ? `
   <line x1="301" y1="${sigY - 20}" x2="541" y2="${sigY - 20}" stroke="${textColor}" stroke-opacity="0.4" stroke-width="1"/>
   <text x="421" y="${sigY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="13" fill="${textColor}">${escapeXml(signatoryName)}</text>
@@ -644,6 +646,7 @@ Deno.serve(async (req) => {
   <!-- Certificate number -->
   <text x="421" y="405" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="10" fill="#aaa">Certificate No: ${certificateNumber}</text>
   <!-- Signatory -->
+  ${deanDataUri ? `<image href="${deanDataUri}" x="341" y="405" width="160" height="70" preserveAspectRatio="xMidYMax meet"/>` : ""}
   ${signatoryName ? `
   <line x1="301" y1="480" x2="541" y2="480" stroke="#ccc" stroke-width="1"/>
   <text x="421" y="500" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="13" fill="${bgColor}">${escapeXml(signatoryName)}</text>
