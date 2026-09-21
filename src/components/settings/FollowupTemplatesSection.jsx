@@ -132,14 +132,14 @@ export default function FollowupTemplatesSection() {
             Use <code className="bg-muted px-1 rounded">{"{name}"}</code> and <code className="bg-muted px-1 rounded">{"{church}"}</code> as placeholders.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
           {templates.length === 0 && (
-            <Button size="sm" variant="outline" onClick={() => seedMutation.mutate()} disabled={seedMutation.isPending}>
+            <Button size="sm" variant="outline" onClick={() => seedMutation.mutate()} disabled={seedMutation.isPending} className="w-full sm:w-auto">
               {seedMutation.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : null}
               Load Defaults
             </Button>
           )}
-          <Button size="sm" onClick={openNew}><Plus className="h-3.5 w-3.5 mr-1" /> Add</Button>
+          <Button size="sm" onClick={openNew} className="w-full sm:w-auto"><Plus className="h-3.5 w-3.5 mr-1" /> Add</Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -151,7 +151,7 @@ export default function FollowupTemplatesSection() {
               <h3 className="text-sm font-semibold text-foreground mb-2">{type}</h3>
               <div className="space-y-2">
                 {group.map(t => (
-                  <div key={t.id} className="flex items-start gap-3 bg-muted/50 rounded-lg p-3">
+                  <div key={t.id} className="flex flex-col items-stretch gap-3 bg-muted/50 rounded-lg p-3 sm:flex-row sm:items-start">
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {t.channel === "email" ? <Mail className="h-3.5 w-3.5 text-muted-foreground" /> : <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />}
@@ -162,7 +162,7 @@ export default function FollowupTemplatesSection() {
                       {t.subject && <p className="text-xs font-medium text-foreground">Subject: {t.subject}</p>}
                       <p className="text-xs text-muted-foreground line-clamp-2">{t.message_template}</p>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center justify-end gap-1.5 shrink-0">
                       <Switch
                         checked={t.is_active}
                         onCheckedChange={(v) => toggleMutation.mutate({ id: t.id, is_active: v })}
@@ -188,13 +188,13 @@ export default function FollowupTemplatesSection() {
 
       {/* Edit/Create Dialog */}
       <Dialog open={editDialog} onOpenChange={setEditDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-md max-h-[90dvh] overflow-y-auto sm:w-full">
           <DialogHeader>
             <DialogTitle>{editItem?.id ? "Edit Template" : "New Template"}</DialogTitle>
           </DialogHeader>
           {editItem && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label className="text-sm">Follow-up Type</Label>
                   <Select value={editItem.followup_type} onValueChange={v => setEditItem(p => ({ ...p, followup_type: v }))}>

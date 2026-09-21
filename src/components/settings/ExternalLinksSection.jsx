@@ -111,7 +111,7 @@ export default function ExternalLinksSection() {
             {links.map((link, idx) => {
               const IconComp = getIconComponent(link.icon);
               return (
-                <div key={idx} className="flex items-center justify-between p-2.5 sm:p-3 bg-muted/50 rounded-lg">
+                <div key={idx} className="flex flex-col items-stretch gap-2 p-2.5 sm:flex-row sm:items-center sm:justify-between sm:p-3 bg-muted/50 rounded-lg">
                   <div className="flex items-center gap-3 min-w-0">
                     <IconComp className="h-4 w-4 text-primary shrink-0" />
                     <div className="min-w-0">
@@ -119,7 +119,7 @@ export default function ExternalLinksSection() {
                       <p className="text-xs text-muted-foreground truncate">{link.url}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-0.5 shrink-0">
+                  <div className="flex items-center justify-end gap-0.5 shrink-0">
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => move(idx, -1)} disabled={idx === 0}>
                       <ArrowUp className="h-3 w-3" />
                     </Button>
@@ -141,7 +141,7 @@ export default function ExternalLinksSection() {
       </CardContent>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-sm">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-sm max-h-[90dvh] overflow-y-auto sm:w-full">
           <DialogHeader>
             <DialogTitle>{editingIdx !== null ? "Edit Link" : "Add External Link"}</DialogTitle>
           </DialogHeader>
