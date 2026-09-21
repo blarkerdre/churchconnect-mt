@@ -174,7 +174,7 @@ export default function WSFCentresSection() {
           {isLoading ? (
             <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : centres.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6"><p className="text-sm text-muted-foreground text-center py-6">No Home Cell centres configured</p></p>
+            <p className="text-sm text-muted-foreground text-center py-6">No Home Cell centres configured</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {centres.map(c => (
