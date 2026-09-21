@@ -493,15 +493,17 @@ export default function CertificateTemplateSettings() {
               <Label>Church Name</Label>
               <Input value={form.church_name} onChange={(e) => set("church_name", e.target.value)} />
             </div>
-            <div className="space-y-1.5">
-              <Label>Centre Name (Statement of Result)</Label>
-              <Input
-                value={form.centre_name}
-                onChange={(e) => set("centre_name", e.target.value)}
-                placeholder="e.g. Cardiff Learning Centre"
-              />
-              <p className="text-xs text-muted-foreground">Shown under the church header on the Statement of Result. Leave blank to hide.</p>
-            </div>
+            {isBibleSchoolTemplate && (
+              <div className="space-y-1.5">
+                <Label>Bible School Centre Name (Statement of Result)</Label>
+                <Input
+                  value={form.centre_name}
+                  onChange={(e) => set("centre_name", e.target.value)}
+                  placeholder="e.g. Cardiff Learning Centre"
+                />
+                <p className="text-xs text-muted-foreground">Shown under the church header on the Statement of Result. Leave blank to hide.</p>
+              </div>
+            )}
             {isBibleSchoolTemplate && (
               <div className="space-y-1.5">
                 <Label>Bible School Logo</Label>
