@@ -8107,6 +8107,15 @@ export type Database = {
           visitors: number
         }[]
       }
+      get_training_attendee_candidates: {
+        Args: { _tenant_id: string }
+        Returns: {
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+        }[]
+      }
       get_trivia_leaderboard: {
         Args: {
           _audience?: string
