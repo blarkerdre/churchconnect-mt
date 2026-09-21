@@ -59,6 +59,11 @@ export default function CertificateTemplateSettings() {
     return [...merged];
   }, [courses, settingsTypes]);
 
+  const isBibleSchoolTemplate = useMemo(() => {
+    const selectedType = form.training_type.trim().toLowerCase();
+    return Boolean(selectedType) && courses.some((course) => course.name?.trim().toLowerCase() === selectedType);
+  }, [courses, form.training_type]);
+
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["certificate-templates", tenantId],
     queryFn: async () => {
@@ -158,7 +163,7 @@ export default function CertificateTemplateSettings() {
       const { data: pub } = supabase.storage.from("tenant-branding").getPublicUrl(path);
       if (!pub?.publicUrl) throw new Error("Could not resolve the uploaded logo URL");
       set("wofbi_logo_url", pub.publicUrl);
-      toast({ title: "WoFBI logo uploaded", description: "Remember to press Save to apply it." });
+      toast({ title: "Bible School logo uploaded", description: "Remember to press Save to apply it." });
     } catch (err) {
       toast({ title: "Upload failed", description: err.message, variant: "destructive" });
     } finally {
@@ -497,23 +502,25 @@ export default function CertificateTemplateSettings() {
               />
               <p className="text-xs text-muted-foreground">Shown under the church header on the Statement of Result. Leave blank to hide.</p>
             </div>
-            <div className="space-y-1.5">
-              <Label>WoFBI Logo (Statement of Result)</Label>
-              <p className="text-xs text-muted-foreground">Optional. Replaces the default church logo on the Statement of Result. PNG/JPG, under 2MB.</p>
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="flex items-center gap-2 px-3 py-2 border rounded-md cursor-pointer hover:bg-muted/50 text-sm">
-                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                  Upload Logo
-                  <input type="file" accept="image/*" onChange={handleWofbiLogoUpload} className="hidden" disabled={uploading} />
-                </label>
+            {isBibleSchoolTemplate && (
+              <div className="space-y-1.5">
+                <Label>Bible School Logo</Label>
+                <p className="text-xs text-muted-foreground">Optional. Replaces the default church logo on the Statement of Result. PNG/JPG, under 2MB.</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="flex items-center gap-2 px-3 py-2 border rounded-md cursor-pointer hover:bg-muted/50 text-sm">
+                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                    Upload Logo
+                    <input type="file" accept="image/*" onChange={handleWofbiLogoUpload} className="hidden" disabled={uploading} />
+                  </label>
+                  {form.wofbi_logo_url && (
+                    <Button variant="ghost" size="sm" onClick={() => set("wofbi_logo_url", "")}>Remove</Button>
+                  )}
+                </div>
                 {form.wofbi_logo_url && (
-                  <Button variant="ghost" size="sm" onClick={() => set("wofbi_logo_url", "")}>Remove</Button>
+                  <img src={wofbiLogoPreview} alt="Bible School logo" className="mt-2 h-16 object-contain rounded border bg-white p-1" />
                 )}
               </div>
-              {form.wofbi_logo_url && (
-                <img src={wofbiLogoPreview} alt="WoFBI logo" className="mt-2 h-16 object-contain rounded border bg-white p-1" />
-              )}
-            </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Signatory Name</Label>
