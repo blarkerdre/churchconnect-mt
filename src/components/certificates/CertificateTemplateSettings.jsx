@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Award, Plus, Pencil, Trash2, Upload, Image, Eye, Sparkles } from "lucide-react";
+import { Loader2, Award, Plus, Pencil, Trash2, Upload, Image, Eye, Sparkles, PenLine } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -23,6 +23,7 @@ const emptyTemplate = {
   church_name: "Winners Chapel International Cardiff",
   centre_name: "",
   wofbi_logo_url: "",
+  dean_signature_url: "",
   signatory_name: "",
   signatory_title: "",
   background_color: "#1a2d4d",
@@ -117,6 +118,7 @@ export default function CertificateTemplateSettings() {
       church_name: t.church_name,
       centre_name: t.centre_name || "",
       wofbi_logo_url: t.wofbi_logo_url || "",
+      dean_signature_url: t.dean_signature_url || "",
       signatory_name: t.signatory_name,
       signatory_title: t.signatory_title,
       background_color: t.background_color,
@@ -198,6 +200,41 @@ export default function CertificateTemplateSettings() {
     }
   };
 
+  const handleSignatureUpload = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!/^image\/(png|jpeg|webp)$/i.test(file.type)) {
+      toast({ title: "Please upload a PNG, JPG or WEBP image", variant: "destructive" });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "Signature image must be under 2MB", variant: "destructive" });
+      return;
+    }
+    if (!tenantId) {
+      toast({ title: "Church not loaded yet — try again", variant: "destructive" });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      await assertStorageAvailable(tenantId, file.size);
+      const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+      const path = `${tenantId}/certificate-signatures/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage
+        .from("church-documents")
+        .upload(path, file, { contentType: file.type, upsert: true });
+      if (error) throw error;
+      set("dean_signature_url", path);
+      toast({ title: "Signature uploaded", description: "Remember to press Save to apply it." });
+    } catch (err) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleUseSample = async () => {
     if (!tenantId) {
       toast({ title: "Tenant not loaded yet — try again", variant: "destructive" });
@@ -223,6 +260,7 @@ export default function CertificateTemplateSettings() {
 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [signaturePreviewUrl, setSignaturePreviewUrl] = useState(null);
   React.useEffect(() => {
     if (!form.background_image_url) { setPreviewUrl(null); return; }
     supabase.storage
@@ -230,6 +268,13 @@ export default function CertificateTemplateSettings() {
       .createSignedUrl(form.background_image_url, 300)
       .then(({ data }) => setPreviewUrl(data?.signedUrl || null));
   }, [form.background_image_url]);
+  React.useEffect(() => {
+    if (!form.dean_signature_url) { setSignaturePreviewUrl(null); return; }
+    supabase.storage
+      .from("church-documents")
+      .createSignedUrl(form.dean_signature_url, 300)
+      .then(({ data }) => setSignaturePreviewUrl(data?.signedUrl || null));
+  }, [form.dean_signature_url]);
 
   const wofbiLogoPreview = useResolvedBrandingUrl(form.wofbi_logo_url);
 
@@ -243,6 +288,7 @@ export default function CertificateTemplateSettings() {
       church_name: form.church_name,
       centre_name: (form.centre_name || "").trim() || null,
       wofbi_logo_url: form.wofbi_logo_url || null,
+      dean_signature_url: form.dean_signature_url || null,
       signatory_name: form.signatory_name,
       signatory_title: form.signatory_title,
       background_color: form.background_color,
@@ -269,6 +315,9 @@ export default function CertificateTemplateSettings() {
     const churchName = form.church_name || "Winners Chapel International Cardiff";
     const sigName = form.signatory_name || "";
     const sigTitle = form.signatory_title || "";
+    const signatureImage = signaturePreviewUrl
+      ? `<image href="${escapeXml(signaturePreviewUrl)}" x="341" y="${(form.text_positions?.signatory_y || 500) - 75}" width="160" height="50" preserveAspectRatio="xMidYMax meet"/>`
+      : "";
     const bgColor = safeColor(form.background_color, "#1a2d4d");
     const accentColor = safeColor(form.accent_color, "#c5a028");
     const textColor = safeColor(form.text_color, "#1a2d4d");
@@ -288,6 +337,7 @@ export default function CertificateTemplateSettings() {
   <text x="421" y="${trainingY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="18" fill="${textColor}">${escapeXml(trainingType)}</text>
   <text x="421" y="${dateY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="13" fill="${textColor}" opacity="0.75">Completed on ${formattedDate}</text>
   <text x="421" y="${certNumY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="10" fill="${textColor}" opacity="0.6">Certificate No: ${certNumber}</text>
+  ${signatureImage}
   ${sigName ? `
   <line x1="301" y1="${sigY - 20}" x2="541" y2="${sigY - 20}" stroke="${textColor}" stroke-opacity="0.4" stroke-width="1"/>
   <text x="421" y="${sigY}" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="13" fill="${textColor}">${escapeXml(sigName)}</text>
@@ -310,6 +360,7 @@ export default function CertificateTemplateSettings() {
   <text x="421" y="340" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="18" fill="${bgColor}">${escapeXml(trainingType)}</text>
   <text x="421" y="380" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="13" fill="#666">Completed on ${formattedDate}</text>
   <text x="421" y="405" text-anchor="middle" font-family="Inter, sans-serif" font-weight="400" font-size="10" fill="#aaa">Certificate No: ${certNumber}</text>
+  ${signatureImage}
   ${sigName ? `
   <line x1="301" y1="480" x2="541" y2="480" stroke="#ccc" stroke-width="1"/>
   <text x="421" y="500" text-anchor="middle" font-family="Inter, sans-serif" font-weight="600" font-size="13" fill="${bgColor}">${escapeXml(sigName)}</text>
@@ -361,6 +412,9 @@ export default function CertificateTemplateSettings() {
                     <span className="text-sm font-medium text-foreground truncate block">{t.training_type}</span>
                     {t.signatory_name && (
                       <p className="text-xs text-muted-foreground">Signed by {t.signatory_name}</p>
+                    )}
+                    {t.dean_signature_url && (
+                      <p className="text-xs text-primary flex items-center gap-1"><PenLine className="h-3 w-3" /> Signature image</p>
                     )}
                     {t.background_image_url && (
                       <p className="text-xs text-primary">Custom background image</p>
@@ -469,6 +523,26 @@ export default function CertificateTemplateSettings() {
                 <Label>Signatory Title</Label>
                 <Input value={form.signatory_title} onChange={(e) => set("signatory_title", e.target.value)} placeholder="e.g. Senior Pastor" />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Signature Image</Label>
+              <p className="text-xs text-muted-foreground">Optional. Upload a cropped signature with a transparent background for the best result. PNG, JPG or WEBP, under 2MB.</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="flex items-center gap-2 px-3 py-2 border rounded-md cursor-pointer hover:bg-muted/50 text-sm">
+                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  {form.dean_signature_url ? "Replace Signature" : "Upload Signature"}
+                  <input type="file" accept="image/png,image/jpeg,image/webp" onChange={handleSignatureUpload} className="hidden" disabled={uploading} />
+                </label>
+                {form.dean_signature_url && (
+                  <Button type="button" variant="ghost" size="sm" onClick={() => set("dean_signature_url", "")} disabled={uploading}>Remove</Button>
+                )}
+              </div>
+              {signaturePreviewUrl && (
+                <div className="mt-2 flex h-24 items-center justify-center rounded-md border bg-background p-2">
+                  <img src={signaturePreviewUrl} alt="Uploaded signature" className="max-h-full max-w-full object-contain" />
+                </div>
+              )}
             </div>
 
             {/* Background Image Upload */}
