@@ -301,9 +301,14 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
   const signatureUrl = template?.dean_signature_url || "";
 
   const handlePrint = async () => {
+    let resolvedSig = signatureUrl;
+    if (resolvedSig && !/^(https?:|data:|blob:)/i.test(resolvedSig)) {
+      const { data } = await supabase.storage.from("church-documents").createSignedUrl(resolvedSig, 300);
+      resolvedSig = data?.signedUrl || "";
+    }
     const [logoImg, signatureImg] = await Promise.all([
       toImageDataUrl(logoUrl),
-      toImageDataUrl(signatureUrl),
+      toImageDataUrl(resolvedSig),
     ]);
     if (logoUrl && !logoImg) {
       toast.warning("Logo could not be loaded — printing without it.");
