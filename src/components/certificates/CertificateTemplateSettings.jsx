@@ -17,6 +17,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import sampleBgUrl from "@/assets/certificate-sample-bg.jpg";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import { useResolvedBrandingUrl } from "@/lib/branding-url";
+import { matchesTrainingType } from "@/lib/certificate-template-lookup";
 
 const emptyTemplate = {
   training_type: "",
@@ -60,9 +61,13 @@ export default function CertificateTemplateSettings() {
   }, [courses, settingsTypes]);
 
   const isBibleSchoolTemplate = useMemo(() => {
-    const selectedType = form.training_type.trim().toLowerCase();
-    return Boolean(selectedType) && courses.some((course) => course.name?.trim().toLowerCase() === selectedType);
-  }, [courses, form.training_type]);
+    const selectedType = form.training_type.trim();
+    if (!selectedType) return false;
+    if (form.wofbi_logo_url || form.centre_name) return true;
+    if (/bible school|wofbi|\b(bcc|bfc|lcc|ldc)\b/i.test(selectedType)) return true;
+    return courses.some((course) => matchesTrainingType(selectedType, course));
+  }, [courses, form.training_type, form.wofbi_logo_url, form.centre_name]);
+
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["certificate-templates", tenantId],

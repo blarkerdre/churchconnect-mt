@@ -51,6 +51,16 @@ const PRIVATE_BUCKETS = ["church-documents"];
 /** Turn a stale public URL for a private bucket into a working signed URL. */
 export async function signIfPrivate(admin: any, url?: string | null): Promise<string> {
   if (!url || typeof url !== "string") return "";
+  // Bare storage object path (e.g. uploaded signatures) in the private bucket.
+  if (!/^(https?:|data:|blob:)/i.test(url)) {
+    try {
+      const { data } = await admin.storage.from("church-documents").createSignedUrl(url.replace(/^\/+/, ""), 60 * 60);
+      if (data?.signedUrl) return data.signedUrl;
+    } catch {
+      // fall through
+    }
+    return "";
+  }
   for (const bucket of PRIVATE_BUCKETS) {
     const fragment = `/object/public/${bucket}/`;
     const idx = url.indexOf(fragment);
