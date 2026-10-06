@@ -104,9 +104,8 @@ export default function StudentsReportTab() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("exam_subjects")
-        .select("id, course_id, is_active")
-        .eq("tenant_id", tenantId)
-        .eq("is_active", true);
+        .select("id, course_id, session_id, is_active")
+        .eq("tenant_id", tenantId);
       if (error) throw error;
       return data || [];
     },
@@ -134,24 +133,20 @@ export default function StudentsReportTab() {
     return m;
   }, [courses]);
 
-  const subjectsByCourse = useMemo(() => {
+  // course_id|session_id ('none' for unassigned) -> subject ids
+  const subjectsByCourseSession = useMemo(() => {
     const m = new Map();
     subjects.forEach((s) => {
-      if (!m.has(s.course_id)) m.set(s.course_id, []);
-      m.get(s.course_id).push(s.id);
+      const k = `${s.course_id}|${s.session_id || "none"}`;
+      if (!m.has(k)) m.set(k, []);
+      m.get(k).push(s.id);
     });
     return m;
   }, [subjects]);
 
-  const subjectCourse = useMemo(() => {
-    const m = new Map();
-    subjects.forEach((s) => m.set(s.id, s.course_id));
-    return m;
-  }, [subjects]);
-
-  // Best attempt per member+subject, grouped by member+course
-  const resultByKey = useMemo(() => {
-    const best = new Map(); // memberId|subjectId -> {score,total}
+  // Best attempt per member+subject
+  const bestByMemberSubject = useMemo(() => {
+    const best = new Map();
     attempts.forEach((a) => {
       if (!a.subject_id || !a.member_id) return;
       const k = `${a.member_id}|${a.subject_id}`;
@@ -160,20 +155,19 @@ export default function StudentsReportTab() {
       const prevPct = prev ? (prev.total_points > 0 ? prev.score / prev.total_points : 0) : -1;
       if (!prev || pct > prevPct) best.set(k, { score: a.score || 0, total_points: a.total_points || 0 });
     });
-    const out = new Map(); // memberId|courseId -> { taken, score, total }
-    best.forEach((v, k) => {
-      const [memberId, subjectId] = k.split("|");
-      const courseId = subjectCourse.get(subjectId);
-      if (!courseId) return;
-      const ck = `${memberId}|${courseId}`;
-      const agg = out.get(ck) || { taken: 0, score: 0, total: 0 };
-      agg.taken += 1;
-      agg.score += v.score;
-      agg.total += v.total_points;
-      out.set(ck, agg);
+    return best;
+  }, [attempts]);
+
+  const resultFor = (memberId, subjectIds) => {
+    let taken = 0, score = 0, total = 0;
+    subjectIds.forEach((sid) => {
+      const v = bestByMemberSubject.get(`${memberId}|${sid}`);
+      if (!v) return;
+      taken += 1; score += v.score; total += v.total_points;
     });
-    return out;
-  }, [attempts, subjectCourse]);
+    return taken > 0 ? { taken, score, total } : null;
+  };
+
 
   const rows = useMemo(() => {
     const byKey = new Map();
@@ -191,6 +185,7 @@ export default function StudentsReportTab() {
         course_id: a.course_id || null,
         course_name: a.course?.name || "—",
         edition_name: a.edition?.name || null,
+        session_id: a.edition?.id || null,
         first_name: a.member?.first_name || a.first_name || "",
         last_name: a.member?.last_name || a.last_name || "",
         email: a.member?.email || a.email || "",
@@ -210,6 +205,7 @@ export default function StudentsReportTab() {
         course_id: r.course_id || null,
         course_name: r.course?.name || byKey.get(key)?.course_name || "—",
         edition_name: r.edition?.name || byKey.get(key)?.edition_name || null,
+        session_id: r.edition?.id || byKey.get(key)?.session_id || null,
         first_name: r.members?.first_name || byKey.get(key)?.first_name || "",
         last_name: r.members?.last_name || byKey.get(key)?.last_name || "",
         email: r.members?.email || byKey.get(key)?.email || "",
@@ -227,8 +223,11 @@ export default function StudentsReportTab() {
 
     return Array.from(byKey.values()).map((row) => {
       const course = row.course_id ? courseById.get(row.course_id) : null;
-      const totalSubjects = (subjectsByCourse.get(row.course_id) || []).length;
-      const res = row.member_id && row.course_id ? resultByKey.get(`${row.member_id}|${row.course_id}`) : null;
+      let subjectIds = row.course_id ? subjectsByCourseSession.get(`${row.course_id}|${row.session_id || "none"}`) : null;
+      if ((!subjectIds || subjectIds.length === 0) && row.course_id) subjectIds = subjectsByCourseSession.get(`${row.course_id}|none`);
+      subjectIds = subjectIds || [];
+      const totalSubjects = subjectIds.length;
+      const res = row.member_id && row.course_id ? resultFor(row.member_id, subjectIds) : null;
       const pct = res && res.total > 0 ? (res.score / res.total) * 100 : 0;
       const passMark = course?.pass_mark_percentage ?? 50;
       const passed = !!res && res.total > 0 && pct >= passMark && totalSubjects > 0 && res.taken >= totalSubjects;
@@ -253,7 +252,7 @@ export default function StudentsReportTab() {
         activity_at: row.registered_at || row.applied_at,
       };
     }).sort((a, b) => new Date(b.activity_at || 0) - new Date(a.activity_at || 0));
-  }, [applications, registrations, courseById, subjectsByCourse, resultByKey]);
+  }, [applications, registrations, courseById, subjectsByCourseSession, bestByMemberSubject]);
 
   const fromTs = dateFrom ? new Date(`${dateFrom}T00:00:00`).getTime() : null;
   const toTs = dateTo ? new Date(`${dateTo}T23:59:59.999`).getTime() : null;
