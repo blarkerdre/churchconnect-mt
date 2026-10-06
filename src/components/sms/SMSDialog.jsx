@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, MessageSquare, Send, CheckCircle, XCircle, Clock, CalendarIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { sendSmsBatched } from "@/lib/send-sms-batched";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/use-toast";
 import { normalizePhone } from "@/lib/phone-utils";
