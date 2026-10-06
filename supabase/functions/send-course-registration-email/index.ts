@@ -90,6 +90,13 @@ Deno.serve(async (req) => {
     // Authorization: allow service-role server-to-server calls, OR an authenticated
     // tenant admin. Admin-only for this flow (no self-send).
     const isServiceRole = authHeader === `Bearer ${serviceRoleKey}`;
+    if (!isServiceRole && !registrationRow) {
+      // Admin callers must reference a registration so the recipient comes from the database.
+      return new Response(JSON.stringify({ error: "registration_id is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     if (!isServiceRole) {
       const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
       const anonClient = createClient(Deno.env.get("SUPABASE_URL")!, anonKey, {
