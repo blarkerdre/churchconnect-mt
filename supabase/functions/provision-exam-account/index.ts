@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
       .eq("user_id", callerUserId)
       .maybeSingle();
     const isAdminRole = isSuperAdmin || (membership && ["owner", "admin"].includes(membership.role));
-    console.log("[provision-exam-account] loaded", { tenant_id: app.tenant_id, course_id: app.course_id, member_id: app.member_id, status: app.status, email: app.email, role: membership?.role, isSuperAdmin });
+    console.log("[provision-exam-account] loaded", { tenant_id: app.tenant_id, course_id: app.course_id, member_id: app.member_id, status: app.status, role: membership?.role, isSuperAdmin });
     if (!isAdminRole) return json({ error: "Forbidden" }, 403);
 
     if (app.status !== "approved") {
@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
     }
     console.log("[provision-exam-account] listUsers result", { existingUserId: userId, pagesScanned: page });
     if (!userId) {
-      console.log("[provision-exam-account] creating auth user", { emailLower });
+      console.log("[provision-exam-account] creating auth user");
       const { data: newUser, error: createErr } = await admin.auth.admin.createUser({
         email: emailLower,
         email_confirm: true,
@@ -255,7 +255,7 @@ Deno.serve(async (req) => {
     const nextPath = slug ? `/t/${slug}/exam-management` : "/exam-management";
     const redirectTo = `${origin}/auth/exam-callback?next=${encodeURIComponent(nextPath)}`;
 
-    console.log("[provision-exam-account] generating magic link", { emailLower, redirectTo });
+    console.log("[provision-exam-account] generating magic link", { redirectTo });
     const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
       type: "magiclink",
       email: emailLower,
@@ -276,7 +276,7 @@ Deno.serve(async (req) => {
     let emailSent = true;
     let emailError: string | null = null;
     try {
-      console.log("[provision-exam-account] sending via sendLoggedTemplateEmail", { emailLower, template: "bible-school-exam-ready", tenant_id: app.tenant_id });
+      console.log("[provision-exam-account] sending via sendLoggedTemplateEmail", { template: "bible-school-exam-ready", tenant_id: app.tenant_id });
       const result = await sendLoggedTemplateEmail({
         supabase: admin,
         templateName: "bible-school-exam-ready",
@@ -294,7 +294,7 @@ Deno.serve(async (req) => {
       if (!result.sent) {
         emailSent = false;
         emailError = "Recipient has unsubscribed or bounced";
-        console.warn("[provision-exam-account] bible-school-exam-ready email suppressed", { emailLower });
+        console.warn("[provision-exam-account] bible-school-exam-ready email suppressed");
       } else {
         console.log("[provision-exam-account] sendLoggedTemplateEmail ok");
         if (app.course_id && memberId) {

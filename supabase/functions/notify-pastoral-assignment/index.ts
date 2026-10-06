@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
           messageId,
           fromName: churchShortName,
         });
-        console.log("Pastoral care assignment email sent to", recipientEmail);
+        console.log("Pastoral care assignment email sent");
       } catch (sendError) {
         console.error("Failed to send pastoral care email:", sendError);
       }
@@ -268,7 +268,7 @@ Deno.serve(async (req) => {
             }
 
             if (response.ok) {
-              console.log("Pastoral care assignment SMS sent to", cleaned);
+              console.log("Pastoral care assignment SMS sent");
             } else {
               console.error("SMS send failed:", data);
             }

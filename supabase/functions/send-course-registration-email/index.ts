@@ -212,7 +212,7 @@ Deno.serve(async (req) => {
         if (stampErr) console.error("Failed to stamp registration_email_sent_at:", stampErr);
       }
 
-      console.log("Course registration email sent", { email: normalizedEmail, messageId, course_name });
+      console.log("Course registration email sent", { messageId, course_name });
 
       return new Response(JSON.stringify({ success: true, message_id: messageId }), {
         status: 200,
