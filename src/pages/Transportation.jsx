@@ -1,3 +1,4 @@
+import { csvSafeCell } from "@/lib/csv-safe";
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -469,7 +470,7 @@ export default function Transportation() {
       b.driver_phone || "",
       b.notes || "",
     ]);
-    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csv = [headers, ...rows].map(r => r.map(csvSafeCell).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);

@@ -1,3 +1,4 @@
+import { csvSafeCell } from "@/lib/csv-safe";
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -245,9 +246,9 @@ export default function Followups() {
       f.completed_date || "",
       formatDateTime(f.created_at, ""),
       formatDateTime(f.updated_at, ""),
-      (f.notes || f.description || "").replace(/,/g, " "),
+      f.notes || f.description || "",
     ]);
-    const csv = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(",")).join("\n");
+    const csv = [headers, ...rows].map(r => r.map(csvSafeCell).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

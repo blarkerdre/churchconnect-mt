@@ -1,3 +1,4 @@
+import { csvSafeCell } from "@/lib/csv-safe";
 import { toImageDataUrl } from "@/lib/logo-data-url";
 
 /**
@@ -26,7 +27,7 @@ export function escHtml(str) {
 }
 
 function csvCell(v) {
-  return `"${String(v ?? "").replace(/"/g, '""')}"`;
+  return csvSafeCell(v);
 }
 
 export function buildRosterCsv(roster) {

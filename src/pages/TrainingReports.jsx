@@ -1,3 +1,4 @@
+import { csvSafeCell } from "@/lib/csv-safe";
 import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -353,9 +354,9 @@ export default function TrainingReports() {
       r.water_baptism,
       recorderName(r),
       formatDateTime(r.created_at, ""),
-      (r.notes || "").replace(/"/g, '""'),
+      r.notes || "",
     ]);
-    const csv = [headers.join(","), ...rows.map(r => r.map(c => `"${c}"`).join(","))].join("\n");
+    const csv = [headers.join(","), ...rows.map(r => r.map(csvSafeCell).join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
