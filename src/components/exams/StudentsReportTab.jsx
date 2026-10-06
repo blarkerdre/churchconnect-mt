@@ -185,6 +185,7 @@ export default function StudentsReportTab() {
         course_id: a.course_id || null,
         course_name: a.course?.name || "—",
         edition_name: a.edition?.name || null,
+        session_id: a.edition?.id || null,
         first_name: a.member?.first_name || a.first_name || "",
         last_name: a.member?.last_name || a.last_name || "",
         email: a.member?.email || a.email || "",
@@ -204,6 +205,7 @@ export default function StudentsReportTab() {
         course_id: r.course_id || null,
         course_name: r.course?.name || byKey.get(key)?.course_name || "—",
         edition_name: r.edition?.name || byKey.get(key)?.edition_name || null,
+        session_id: r.edition?.id || byKey.get(key)?.session_id || null,
         first_name: r.members?.first_name || byKey.get(key)?.first_name || "",
         last_name: r.members?.last_name || byKey.get(key)?.last_name || "",
         email: r.members?.email || byKey.get(key)?.email || "",
@@ -221,8 +223,11 @@ export default function StudentsReportTab() {
 
     return Array.from(byKey.values()).map((row) => {
       const course = row.course_id ? courseById.get(row.course_id) : null;
-      const totalSubjects = (subjectsByCourse.get(row.course_id) || []).length;
-      const res = row.member_id && row.course_id ? resultByKey.get(`${row.member_id}|${row.course_id}`) : null;
+      let subjectIds = row.course_id ? subjectsByCourseSession.get(`${row.course_id}|${row.session_id || "none"}`) : null;
+      if ((!subjectIds || subjectIds.length === 0) && row.course_id) subjectIds = subjectsByCourseSession.get(`${row.course_id}|none`);
+      subjectIds = subjectIds || [];
+      const totalSubjects = subjectIds.length;
+      const res = row.member_id && row.course_id ? resultFor(row.member_id, subjectIds) : null;
       const pct = res && res.total > 0 ? (res.score / res.total) * 100 : 0;
       const passMark = course?.pass_mark_percentage ?? 50;
       const passed = !!res && res.total > 0 && pct >= passMark && totalSubjects > 0 && res.taken >= totalSubjects;
@@ -247,7 +252,7 @@ export default function StudentsReportTab() {
         activity_at: row.registered_at || row.applied_at,
       };
     }).sort((a, b) => new Date(b.activity_at || 0) - new Date(a.activity_at || 0));
-  }, [applications, registrations, courseById, subjectsByCourse, resultByKey]);
+  }, [applications, registrations, courseById, subjectsByCourseSession, bestByMemberSubject]);
 
   const fromTs = dateFrom ? new Date(`${dateFrom}T00:00:00`).getTime() : null;
   const toTs = dateTo ? new Date(`${dateTo}T23:59:59.999`).getTime() : null;
