@@ -1,3 +1,4 @@
+import { isAuthorizedScheduler } from "../_shared/scheduler-auth.ts";
 // Sends birthday greetings to members across in-app, email, SMS, and WhatsApp.
 // Triggered both by hourly pg_cron (no body) and manually from the UI
 // (body: { tenant_id?, member_id?, channels? }).
@@ -92,16 +93,16 @@ Deno.serve(async (req) => {
   const bearer = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
   let authorized = bearer === serviceKey;
 
+  if (!authorized) {
+    // Scheduler job token, or a signature-verified service_role JWT.
+    authorized = await isAuthorizedScheduler(req, svc);
+  }
   if (!authorized && bearer) {
     try {
-      const parts = bearer.split(".");
-      if (parts.length === 3) {
-        const payload = JSON.parse(
-          atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")),
-        );
-        if (payload?.role === "service_role") authorized = true;
-      }
-    } catch (_e) { /* not a JWT */ }
+      const verifier = createClient(supabaseUrl, anonKey);
+      const { data: vc } = await verifier.auth.getClaims(bearer);
+      if (vc?.claims?.role === "service_role") authorized = true;
+    } catch (_e) { /* not a valid JWT */ }
   }
 
   if (!authorized && bearer) {

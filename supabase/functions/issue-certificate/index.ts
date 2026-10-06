@@ -108,17 +108,15 @@ Deno.serve(async (req) => {
 
     // Detect server-to-server invocation with the service role key.
     // Service-role JWTs have role=service_role and no user sub; skip user checks.
-    let isServiceRole = false;
-    try {
-      const parts = rawToken.split(".");
-      if (parts.length === 3) {
-        const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-        const pad = b64.length % 4 === 0 ? b64 : b64 + "=".repeat(4 - (b64.length % 4));
-        const payload = JSON.parse(atob(pad));
-        if (payload?.role === "service_role") isServiceRole = true;
-      }
-    } catch (_) {
-      // ignore — treat as regular user token below
+    // Server-to-server calls must present the actual service key; decoded
+    // (unverified) JWT payloads are never trusted.
+    let isServiceRole = rawToken === supabaseServiceKey;
+    if (!isServiceRole) {
+      try {
+        const verifier = createClient(supabaseUrl, anonKey);
+        const { data: vc } = await verifier.auth.getClaims(rawToken);
+        if (vc?.claims?.role === "service_role") isServiceRole = true;
+      } catch (_) { /* treat as user token */ }
     }
 
     // Use service role for DB operations
