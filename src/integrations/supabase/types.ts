@@ -8521,6 +8521,7 @@ export type Database = {
         Args: { _enrolment_id: string; _pin: string }
         Returns: Json
       }
+      tenant_is_suspended: { Args: { _tenant_id: string }; Returns: boolean }
       traffic_live_days: {
         Args: { _from: string; _to: string }
         Returns: {
