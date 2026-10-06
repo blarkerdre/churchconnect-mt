@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import DOMPurify from "dompurify";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -239,7 +240,7 @@ export default function SLASection() {
             <div
               className="prose prose-sm dark:prose-invert max-w-none"
               // Preview only — content authored by super-admins, merged with local tokens.
-              dangerouslySetInnerHTML={{ __html: mergedBody }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(mergedBody || "") }}
             />
           </ScrollArea>
           <DialogFooter>

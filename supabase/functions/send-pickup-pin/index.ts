@@ -79,13 +79,24 @@ Deno.serve(async (req) => {
       .in("id", dedupedIds);
     if (recErr) throw recErr;
 
+    // Only send codes to adults on record as a guardian of a child in this church.
+    const [{ data: g1 }, { data: g2 }] = await Promise.all([
+      admin.from("child_guardians").select("member_id").eq("tenant_id", tenant_id).in("member_id", dedupedIds),
+      admin.from("children").select("primary_guardian_member_id").eq("tenant_id", tenant_id).in("primary_guardian_member_id", dedupedIds),
+    ]);
+    const guardianIds = new Set<string>([
+      ...(g1 || []).map((r: any) => r.member_id),
+      ...(g2 || []).map((r: any) => r.primary_guardian_member_id),
+    ]);
+    const allowedRecipients = (recipients || []).filter((r) => guardianIds.has(r.id));
+
     const childNames = (child_first_names || []).join(", ").slice(0, 120) || "your child";
 
     let notified = 0;
     const errors: Array<{ member_id: string; channel: string; error: string }> = [];
 
     // In-app notifications (one row per user_id) — the only channel used.
-    const notifRows = (recipients || [])
+    const notifRows = allowedRecipients
       .filter((r) => r.user_id)
       .map((r) => ({
         user_id: r.user_id,
@@ -105,7 +116,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ notified, recipients: recipients?.length || 0, errors }),
+      JSON.stringify({ notified, recipients: allowedRecipients.length, errors }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {

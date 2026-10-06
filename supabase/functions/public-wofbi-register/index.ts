@@ -279,9 +279,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (existingApp) {
-      const msg = existingApp.status === "approved"
-        ? "You are already enrolled in this course."
-        : "You have already applied for this course. We'll be in touch once your application is reviewed.";
+      const msg = "We couldn't submit this application. If you have already applied, the church will be in touch.";
       return new Response(JSON.stringify({ error: msg }), {
         status: 409,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
