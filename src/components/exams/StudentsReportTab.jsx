@@ -168,31 +168,6 @@ export default function StudentsReportTab() {
     return taken > 0 ? { taken, score, total } : null;
   };
 
-  // Best attempt per member+subject, grouped by member+course
-  const resultByKey = useMemo(() => {
-    const best = new Map(); // memberId|subjectId -> {score,total}
-    attempts.forEach((a) => {
-      if (!a.subject_id || !a.member_id) return;
-      const k = `${a.member_id}|${a.subject_id}`;
-      const pct = a.total_points > 0 ? a.score / a.total_points : 0;
-      const prev = best.get(k);
-      const prevPct = prev ? (prev.total_points > 0 ? prev.score / prev.total_points : 0) : -1;
-      if (!prev || pct > prevPct) best.set(k, { score: a.score || 0, total_points: a.total_points || 0 });
-    });
-    const out = new Map(); // memberId|courseId -> { taken, score, total }
-    best.forEach((v, k) => {
-      const [memberId, subjectId] = k.split("|");
-      const courseId = subjectCourse.get(subjectId);
-      if (!courseId) return;
-      const ck = `${memberId}|${courseId}`;
-      const agg = out.get(ck) || { taken: 0, score: 0, total: 0 };
-      agg.taken += 1;
-      agg.score += v.score;
-      agg.total += v.total_points;
-      out.set(ck, agg);
-    });
-    return out;
-  }, [attempts, subjectCourse]);
 
   const rows = useMemo(() => {
     const byKey = new Map();
