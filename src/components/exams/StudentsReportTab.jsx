@@ -104,9 +104,8 @@ export default function StudentsReportTab() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("exam_subjects")
-        .select("id, course_id, is_active")
-        .eq("tenant_id", tenantId)
-        .eq("is_active", true);
+        .select("id, course_id, session_id, is_active")
+        .eq("tenant_id", tenantId);
       if (error) throw error;
       return data || [];
     },
@@ -134,20 +133,40 @@ export default function StudentsReportTab() {
     return m;
   }, [courses]);
 
-  const subjectsByCourse = useMemo(() => {
+  // course_id|session_id ('none' for unassigned) -> subject ids
+  const subjectsByCourseSession = useMemo(() => {
     const m = new Map();
     subjects.forEach((s) => {
-      if (!m.has(s.course_id)) m.set(s.course_id, []);
-      m.get(s.course_id).push(s.id);
+      const k = `${s.course_id}|${s.session_id || "none"}`;
+      if (!m.has(k)) m.set(k, []);
+      m.get(k).push(s.id);
     });
     return m;
   }, [subjects]);
 
-  const subjectCourse = useMemo(() => {
-    const m = new Map();
-    subjects.forEach((s) => m.set(s.id, s.course_id));
-    return m;
-  }, [subjects]);
+  // Best attempt per member+subject
+  const bestByMemberSubject = useMemo(() => {
+    const best = new Map();
+    attempts.forEach((a) => {
+      if (!a.subject_id || !a.member_id) return;
+      const k = `${a.member_id}|${a.subject_id}`;
+      const pct = a.total_points > 0 ? a.score / a.total_points : 0;
+      const prev = best.get(k);
+      const prevPct = prev ? (prev.total_points > 0 ? prev.score / prev.total_points : 0) : -1;
+      if (!prev || pct > prevPct) best.set(k, { score: a.score || 0, total_points: a.total_points || 0 });
+    });
+    return best;
+  }, [attempts]);
+
+  const resultFor = (memberId, subjectIds) => {
+    let taken = 0, score = 0, total = 0;
+    subjectIds.forEach((sid) => {
+      const v = bestByMemberSubject.get(`${memberId}|${sid}`);
+      if (!v) return;
+      taken += 1; score += v.score; total += v.total_points;
+    });
+    return taken > 0 ? { taken, score, total } : null;
+  };
 
   // Best attempt per member+subject, grouped by member+course
   const resultByKey = useMemo(() => {
