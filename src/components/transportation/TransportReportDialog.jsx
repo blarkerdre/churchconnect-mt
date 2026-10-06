@@ -1,3 +1,4 @@
+import { csvSafeCell } from "@/lib/csv-safe";
 import React, { useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
@@ -95,7 +96,7 @@ export default function TransportReportDialog({ open, onOpenChange, bookings, as
       sections.push("");
       sections.push(title);
       sections.push("Label,Count,%");
-      group.forEach(([k, v]) => sections.push(`"${k}",${v},${pct(v, stats.total)}%`));
+      group.forEach(([k, v]) => sections.push(`"${String(csvSafeCell(k)).replace(/"/g, '""')}",${v},${pct(v, stats.total)}%`));
     };
     addGroup("By status", stats.byStatus);
     addGroup("By journey type", stats.byJourney);
