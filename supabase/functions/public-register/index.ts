@@ -480,10 +480,7 @@ Deno.serve(async (req) => {
       email.trim().toLowerCase() === authenticatedUser.email.trim().toLowerCase();
 
     if (authenticatedUser?.userId && !isSelfRegistration) {
-      console.warn("public-register: skipping user_id stamp — form email does not match auth user", {
-        authEmail: authenticatedUser.email,
-        formEmail: email,
-      });
+      console.warn("public-register: skipping user_id stamp — form email does not match auth user");
     }
 
     if (isSelfRegistration) {
