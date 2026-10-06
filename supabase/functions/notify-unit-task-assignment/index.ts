@@ -41,6 +41,7 @@ Deno.serve(async (req) => {
       });
     }
 
+    let callerId: string | null = null;
     if (!isServiceRole) {
       const anon = createClient(supabaseUrl, anonKey, {
         global: { headers: { Authorization: authHeader } },
