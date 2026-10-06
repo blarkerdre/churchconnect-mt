@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { sendSmsBatched } from "@/lib/send-sms-batched";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useToast } from "@/components/ui/use-toast";
@@ -245,7 +246,7 @@ function IndividualSend({ tenantId, churchName, senderName }) {
       {(channel === "email" || channel === "in_app") && (
         <Input placeholder={channel === "email" ? "Subject" : "Title"} value={subject} onChange={e => setSubject(e.target.value)} maxLength={200} />
       )}
-      <Textarea rows={5} placeholder="Message..." value={message} onChange={e => setMessage(e.target.value)} maxLength={4000} />
+      <Textarea rows={5} placeholder="Message..." value={message} onChange={e => setMessage(e.target.value)} maxLength={channel === "sms" || channel === "whatsapp" ? 1600 : 4000} />
 
       <Button onClick={handleSend} disabled={sending || !recipient || channelDisabled(channel)} className="w-full">
         {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
@@ -347,24 +348,16 @@ function BulkNonMembers({ tenantId, churchName, senderName }) {
           } catch { failed++; }
         }
       } else {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData?.session?.access_token;
-        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-sms`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            recipients: phoneValid.map(r => ({ phone: r.phone, member_id: null })),
-            message: message.trim(),
-            sms_type: "bulk_nonmember",
-            reference_id: null,
-            channel,
-            tenant_id: tenantId,
-          }),
+        const data = await sendSmsBatched({
+          recipients: phoneValid.map(r => ({ phone: r.phone, member_id: null })),
+          message: message.trim(),
+          sms_type: "bulk_nonmember",
+          reference_id: null,
+          channel,
+          tenant_id: tenantId,
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Send failed");
-        sent = data.sent || 0;
-        failed = data.failed || 0;
+        sent = data.sent;
+        failed = data.failed;
       }
       await logAudit("direct_message_sent", "contacts", null, { channel, mode: "bulk_nonmember", source, sent, failed }, tenantId);
       toast({ title: "Send complete", description: `${sent} sent${failed ? `, ${failed} failed` : ""}.` });
@@ -417,7 +410,7 @@ function BulkNonMembers({ tenantId, churchName, senderName }) {
       {channel === "email" && (
         <Input placeholder="Subject" value={subject} onChange={e => setSubject(e.target.value)} maxLength={200} />
       )}
-      <Textarea rows={5} placeholder="Message..." value={message} onChange={e => setMessage(e.target.value)} maxLength={4000} />
+      <Textarea rows={5} placeholder="Message..." value={message} onChange={e => setMessage(e.target.value)} maxLength={channel === "sms" || channel === "whatsapp" ? 1600 : 4000} />
 
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">Recipients ({channel}):</span>

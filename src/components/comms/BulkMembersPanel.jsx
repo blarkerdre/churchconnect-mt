@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { sendSmsBatched } from "@/lib/send-sms-batched";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
@@ -99,24 +100,16 @@ export default function BulkMembersPanel({ churchName, senderName }) {
           } catch { failed++; }
         }
       } else if (channel === "sms" || channel === "whatsapp") {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData?.session?.access_token;
-        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-sms`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            recipients: phoneValid.map(r => ({ phone: r.phone, member_id: r.id })),
-            message: message.trim(),
-            sms_type: "bulk_member",
-            reference_id: null,
-            channel,
-            tenant_id: tenantId,
-          }),
+        const data = await sendSmsBatched({
+          recipients: phoneValid.map(r => ({ phone: r.phone, member_id: r.id })),
+          message: message.trim(),
+          sms_type: "bulk_member",
+          reference_id: null,
+          channel,
+          tenant_id: tenantId,
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Send failed");
-        sent = data.sent || 0;
-        failed = data.failed || 0;
+        sent = data.sent;
+        failed = data.failed;
       } else if (channel === "in_app") {
         const rows = inAppRecipients.map(r => ({
           user_id: r.user_id,
@@ -163,7 +156,7 @@ export default function BulkMembersPanel({ churchName, senderName }) {
       {(channel === "email" || channel === "in_app") && (
         <Input placeholder={channel === "email" ? "Subject" : "Title"} value={subject} onChange={e => setSubject(e.target.value)} maxLength={200} />
       )}
-      <Textarea rows={5} placeholder="Message..." value={message} onChange={e => setMessage(e.target.value)} maxLength={4000} />
+      <Textarea rows={5} placeholder="Message..." value={message} onChange={e => setMessage(e.target.value)} maxLength={channel === "sms" || channel === "whatsapp" ? 1600 : 4000} />
 
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">Recipients ({channel}):</span>

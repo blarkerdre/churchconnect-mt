@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Mail, MessageSquare, Send, Bell, MessageCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { sendSmsBatched } from "@/lib/send-sms-batched";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks/useAuth";
 import { normalizePhone } from "@/lib/phone-utils";
@@ -138,27 +139,13 @@ export default function MessageFilteredMembersDialog({
         phone: m._normPhone,
         member_id: m.id,
       }));
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-sms`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            recipients,
-            message: message.replace(/\{first_name\}/g, "there"),
-            sms_type: "bulk",
-            channel: smsChannel,
-            tenant_id: tenantId,
-          }),
-        }
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to send message");
+      const data = await sendSmsBatched({
+        recipients,
+        message: message.replace(/\{first_name\}/g, "there"),
+        sms_type: "bulk",
+        channel: smsChannel,
+        tenant_id: tenantId,
+      });
       toast({
         title: smsChannel === "whatsapp" ? "WhatsApp sent" : "SMS sent",
         description: `${data.sent} sent, ${data.failed} failed of ${data.total}.`,

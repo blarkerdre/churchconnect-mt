@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, MessageSquare, Send, CheckCircle, XCircle, Clock, CalendarIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { sendSmsBatched } from "@/lib/send-sms-batched";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/components/ui/use-toast";
 import { normalizePhone } from "@/lib/phone-utils";
@@ -193,30 +194,14 @@ export default function SMSDialog({
         member_id: r.member_id || r.id,
       }));
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-sms`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            recipients,
-            message: message.trim(),
-            sms_type: smsType,
-            reference_id: referenceId,
-            channel,
-            tenant_id: tenantId,
-          }),
-        }
-      );
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to send message");
+      const data = await sendSmsBatched({
+        recipients,
+        message: message.trim(),
+        sms_type: smsType,
+        reference_id: referenceId,
+        channel,
+        tenant_id: tenantId,
+      });
 
       setResult(data);
       toast({
