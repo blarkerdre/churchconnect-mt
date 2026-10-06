@@ -15,6 +15,13 @@
       "when": 1789991951875,
       "tag": "0001_training_attendee_candidates_lookup",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791245204517,
+      "tag": "0002_clone_syllabus_copies_answer_keys",
+      "breakpoints": true
     }
   ]
 }
