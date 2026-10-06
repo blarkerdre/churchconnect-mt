@@ -484,7 +484,7 @@ async function sendResultEmail_fn(
       fromName: senderName,
     });
 
-    console.log("Result email sent", { email: member.email, subjectName: result.subjectName });
+    console.log("Result email sent", { subjectName: result.subjectName });
   } catch (e) {
     console.error("Result email failed:", e);
   }

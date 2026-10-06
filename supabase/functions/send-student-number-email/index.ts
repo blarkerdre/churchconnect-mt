@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
       if (!result.sent) {
         emailSent = false;
         emailError = "Recipient has unsubscribed or bounced";
-        console.warn("bible-school-student-number email suppressed", { emailLower });
+        console.warn("bible-school-student-number email suppressed");
       }
     } catch (e) {
       emailSent = false;

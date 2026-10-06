@@ -433,7 +433,7 @@ Deno.serve(async (req) => {
             tenantId: tenant_id,
             messageId,
           });
-          console.log("Transport email sent for", recipientEmail);
+          console.log("Transport email sent");
         } catch (e) {
           console.error("Failed to send transport email:", e);
         }

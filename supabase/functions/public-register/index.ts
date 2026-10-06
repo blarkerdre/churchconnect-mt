@@ -72,7 +72,7 @@ function triggerWelcomeEmail(email: string, firstName: string | null, lastName: 
         const body = await res.text().catch(() => "no body");
         console.error(`Welcome email trigger failed: ${res.status} ${res.statusText}`, body);
       } else {
-        console.log("Welcome email triggered successfully for", email);
+        console.log("Welcome email triggered successfully");
       }
     })
     .catch((err) => console.error("Welcome email trigger network error:", err));

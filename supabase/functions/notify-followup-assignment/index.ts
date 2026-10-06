@@ -222,7 +222,7 @@ Deno.serve(async (req) => {
           messageId,
           fromName: churchShortName,
         });
-        console.log("Follow-up assignment email sent to", recipientEmail);
+        console.log("Follow-up assignment email sent");
       } catch (sendError) {
         console.error("Failed to send follow-up email:", sendError);
       }

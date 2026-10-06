@@ -231,7 +231,7 @@ Deno.serve(async (req) => {
         fromName: tenantSenderName,
       })
     } catch (sendErr) {
-      console.error('Failed to send email', { to: member.email, error: sendErr })
+      console.error('Failed to send email', { error: sendErr })
       continue
     }
 

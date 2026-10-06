@@ -209,7 +209,7 @@ serve(async (req) => {
                 },
               });
             } catch (sendErr) {
-              console.error("[stripe-webhook] Failed to send receipt email to", email, sendErr);
+              console.error("[stripe-webhook] Failed to send receipt email", sendErr);
             }
           }
           logStep("Payment receipt emails sent", { tenantId });
