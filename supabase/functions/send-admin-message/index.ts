@@ -94,6 +94,17 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Recipient must be someone already on record for this church.
+  {
+    const [m, f, c] = await Promise.all([
+      admin.from('members').select('id').eq('tenant_id', tenantId).ilike('email', recipientEmail).limit(1),
+      admin.from('first_timers').select('id').eq('tenant_id', tenantId).ilike('email', recipientEmail).limit(1),
+      admin.from('contacts').select('id').eq('tenant_id', tenantId).ilike('email', recipientEmail).limit(1),
+    ])
+    const known = (m.data?.length || 0) + (f.data?.length || 0) + (c.data?.length || 0) > 0
+    if (!known) return json({ error: 'Recipient is not on record for this church' }, 403)
+  }
+
   try {
     const result = await sendLoggedTemplateEmail({
       supabase: admin,

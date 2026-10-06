@@ -34,10 +34,24 @@ const IMPORT_ORDER = [
   "wsf_attendance_reports",
   "wsf_attendance",
   "unit_leader_assignments",
-  "audit_log",
-  "profiles",
-  "user_roles",
 ];
+// audit_log, profiles and user_roles are never importable: they hold
+// tamper-evident history and global identity/privilege data.
+
+// Columns that must never come from an import file.
+const BLOCKED_COLUMNS = new Set(["tenant_id", "user_id", "role", "is_super_admin"]);
+const COLUMN_RE = /^[a-z_][a-z0-9_]{0,62}$/;
+
+function sanitizeRow(row: unknown, tenantId: string): Record<string, unknown> | null {
+  if (!row || typeof row !== "object" || Array.isArray(row)) return null;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(row as Record<string, unknown>)) {
+    if (!COLUMN_RE.test(k) || BLOCKED_COLUMNS.has(k)) continue;
+    out[k] = v;
+  }
+  out.tenant_id = tenantId; // always the target tenant
+  return out;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -111,13 +125,12 @@ Deno.serve(async (req) => {
     // Import data in FK-safe order
     for (const table of IMPORT_ORDER) {
       const rows = data[table];
-      if (!rows || rows.length === 0) continue;
+      if (!Array.isArray(rows) || rows.length === 0) continue;
 
-      // Ensure tenant_id is set on each row
-      const rowsWithTenant = rows.map((row: Record<string, unknown>) => ({
-        ...row,
-        tenant_id: row.tenant_id || tenant_id,
-      }));
+      const rowsWithTenant = rows
+        .map((row: unknown) => sanitizeRow(row, tenant_id))
+        .filter(Boolean) as Record<string, unknown>[];
+      if (rowsWithTenant.length === 0) continue;
 
       try {
         // Insert in batches of 500 using upsert to handle duplicates gracefully
