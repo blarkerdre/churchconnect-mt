@@ -144,6 +144,18 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Bound message content and fan-out for every caller.
+    if (typeof message !== "string" || !message.trim() || message.length > 1600) {
+      return new Response(JSON.stringify({ error: "Message must be 1-1600 characters" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!Array.isArray(recipients) || recipients.length === 0 || recipients.length > 500) {
+      return new Response(JSON.stringify({ error: "Between 1 and 500 recipients are allowed per request" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const msgChannel = channel === "whatsapp" ? "whatsapp" : "sms";
 
     // Resolve per-tenant settings and provider
