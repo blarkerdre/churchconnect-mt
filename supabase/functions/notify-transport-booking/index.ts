@@ -72,9 +72,18 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Only ever notify users who belong to the referenced tenant.
+    const filterTenantUsers = async (ids: unknown[], tid: string): Promise<string[]> => {
+      const clean = [...new Set(ids.filter((x): x is string => typeof x === "string" && /^[0-9a-f-]{36}$/i.test(x)))].slice(0, 100);
+      if (!clean.length || !tid) return [];
+      const { data } = await supabase.from("tenant_memberships").select("user_id").eq("tenant_id", tid).in("user_id", clean);
+      const ok = new Set((data || []).map((r: any) => r.user_id));
+      return clean.filter((id) => ok.has(id));
+    };
+
     // Short-circuit: driver_route notification (in-app only)
     if (body.notification_type === "driver_route") {
-      const driverUserId: string | undefined = body.driver_user_id;
+      const driverUserId: string | undefined = (await filterTenantUsers([body.driver_user_id], body.tenant_id))[0];
       const stops: Array<Record<string, unknown>> = Array.isArray(body.stops) ? body.stops : [];
       const tenantIdIn: string = body.tenant_id;
       const dateFrom: string = body.date_from || "";
@@ -118,7 +127,7 @@ Deno.serve(async (req) => {
     // Short-circuit: driver_availability notification (in-app + email; no SMS)
     if (body.notification_type === "driver_availability") {
       const tenantIdIn: string = body.tenant_id;
-      const leaderIds: string[] = Array.isArray(body.leader_user_ids) ? body.leader_user_ids : [];
+      const leaderIds: string[] = await filterTenantUsers(Array.isArray(body.leader_user_ids) ? body.leader_user_ids : [], body.tenant_id);
       if (!tenantIdIn || leaderIds.length === 0) {
         return new Response(JSON.stringify({ error: "Missing tenant_id or leader_user_ids" }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -253,6 +262,9 @@ Deno.serve(async (req) => {
       }
     }
 
+    const allowedIds = await filterTenantUsers(userIds, tenant_id);
+    userIds.length = 0;
+    userIds.push(...allowedIds);
     if (userIds.length === 0) {
       return new Response(JSON.stringify({ message: "No recipients" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
