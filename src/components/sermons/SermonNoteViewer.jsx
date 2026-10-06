@@ -1,4 +1,5 @@
 import React from "react";
+import DOMPurify from "dompurify";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -50,7 +51,7 @@ export default function SermonNoteViewer({ note, folderName, churchName, logoUrl
       <div className="flex-1 overflow-y-auto p-4 sm:p-8">
         <article
           className="prose dark:prose-invert max-w-none mx-auto sm:prose-lg"
-          dangerouslySetInnerHTML={{ __html: note.content || "" }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(note.content || "") }}
         />
       </div>
     </div>
