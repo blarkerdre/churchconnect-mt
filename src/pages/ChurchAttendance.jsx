@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { csvSafeCell } from "@/lib/csv-safe";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -269,7 +270,7 @@ export default function ChurchAttendance() {
       r.converts || 0, r.first_timers || 0, r.testimonies || 0, r.cars || 0,
       r.total_attendance, recorderName(r.recorded_by), formatDateTime(r.created_at), r.notes || ""
     ]);
-    const csv = [headers.join(","), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n");
+    const csv = [headers.join(","), ...rows.map(r => r.map(c => csvSafeCell(c)).join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);

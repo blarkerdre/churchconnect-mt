@@ -248,8 +248,19 @@ export default function Layout({ children }) {
 
   // Payment gate: suspended tenants are blocked, but only tenant owners/admins
   // see the billing screen — regular members continue to use the app.
-  if (subscriptionStatus === "suspended" && !isSuperAdmin && (isTenantAdmin || isTenantOwner)) {
-    return <PaymentRequiredScreen />;
+  if (subscriptionStatus === "suspended" && !isSuperAdmin) {
+    if (isTenantAdmin || isTenantOwner) return <PaymentRequiredScreen />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-6">
+        <div className="max-w-md text-center space-y-3">
+          <h1 className="text-xl font-display font-bold text-foreground">Access temporarily paused</h1>
+          <p className="text-sm text-muted-foreground">
+            This church's account is currently suspended. Please contact your church administrator.
+          </p>
+          <Button variant="outline" onClick={signOut}>Sign Out</Button>
+        </div>
+      </div>
+    );
   }
 
   return (

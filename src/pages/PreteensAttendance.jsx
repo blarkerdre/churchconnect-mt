@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { csvSafeCell } from "@/lib/csv-safe";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -358,7 +359,7 @@ function ReportDialog({ open, onOpenChange, session }) {
   const downloadCsv = () => {
     const lines = [];
     if (session?.notes) {
-      lines.push(["Session note", JSON.stringify(session.notes)].join(","));
+      lines.push(["Session note", csvSafeCell(session.notes)].join(","));
       lines.push("");
     }
     const header = ["Name", "Checked in", "Late", "Checked out", "Duration (min)", "Source", "Signed in by", "Signed out by"];
@@ -366,14 +367,14 @@ function ReportDialog({ open, onOpenChange, session }) {
     rows.forEach((r) => {
       const name = `${r.preteens?.first_name || ""} ${r.preteens?.last_name || ""}`.trim();
       lines.push([
-        JSON.stringify(name),
+        csvSafeCell(name),
         r.checked_in_at ? format(new Date(r.checked_in_at), "yyyy-MM-dd HH:mm") : "",
         r.status === "late" ? "Yes" : "No",
         r.checked_out_at ? format(new Date(r.checked_out_at), "yyyy-MM-dd HH:mm") : "",
         r.duration_minutes ?? "",
         r.source || "",
-        JSON.stringify(workerName(r, r.checked_in_by)),
-        JSON.stringify(r.checked_out_at ? workerName(r, r.checked_out_by) : ""),
+        csvSafeCell(workerName(r, r.checked_in_by)),
+        csvSafeCell(r.checked_out_at ? workerName(r, r.checked_out_by) : ""),
       ].join(","));
     });
     const blob = new Blob([lines.join("\n")], { type: "text/csv" });
@@ -541,7 +542,7 @@ function CumulativeReportDialog({ open, onOpenChange }) {
       lines = [header.join(",")];
       summary.forEach((s) => {
         lines.push([
-          JSON.stringify(s.name),
+          csvSafeCell(s.name),
           s.sessions,
           s.onTime,
           s.late,
@@ -556,17 +557,17 @@ function CumulativeReportDialog({ open, onOpenChange }) {
         const name = `${r.preteens?.first_name || ""} ${r.preteens?.last_name || ""}`.trim();
         lines.push([
           r.session?.session_date || "",
-          JSON.stringify(r.session?.title || ""),
+          csvSafeCell(r.session?.title || ""),
           r.session?.session_type || "",
-          JSON.stringify(name),
+          csvSafeCell(name),
           r.checked_in_at ? format(new Date(r.checked_in_at), "yyyy-MM-dd HH:mm") : "",
           r.checked_out_at ? format(new Date(r.checked_out_at), "yyyy-MM-dd HH:mm") : "",
           r.duration_minutes ?? "",
           r.status || "",
           r.source || "",
-          JSON.stringify(workerName(r, r.checked_in_by)),
-          JSON.stringify(r.checked_out_at ? workerName(r, r.checked_out_by) : ""),
-          JSON.stringify(r.session?.notes || ""),
+          csvSafeCell(workerName(r, r.checked_in_by)),
+          csvSafeCell(r.checked_out_at ? workerName(r, r.checked_out_by) : ""),
+          csvSafeCell(r.session?.notes || ""),
         ].join(","));
       });
     }
@@ -782,7 +783,7 @@ function RegisteredPreteensDialog({ open, onOpenChange }) {
       t.guardian?.email || "",
     ]);
 
-    const csv = [header, ...rows].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csv = [header, ...rows].map((r) => r.map((c) => csvSafeCell(c)).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

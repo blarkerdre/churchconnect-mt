@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { csvSafeCell } from "@/lib/csv-safe";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -1045,10 +1046,7 @@ function Stat({ label, value }) {
 }
 
 function downloadCsv(rows, filename) {
-  const escape = (v) => {
-    const s = String(v ?? "");
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
+  const escape = (v) => csvSafeCell(v);
   const csv = rows.map((r) => (r || []).map(escape).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);

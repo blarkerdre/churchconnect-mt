@@ -1,4 +1,5 @@
 import React, { useState, useMemo, lazy, Suspense } from "react";
+import { csvSafeCell } from "@/lib/csv-safe";
 import { useSearchParams } from "react-router-dom";
 import { useTeensUnitRole } from "@/hooks/useTeensUnitRole";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -1104,7 +1105,7 @@ function ReportPanel({ tenantId, isAdmin = false }) {
   }, [filteredRows]);
 
   const downloadCSV = () => {
-    const q = (v) => `"${String(v ?? "").replace(/"/g,'""')}"`;
+    const q = (v) => csvSafeCell(v);
     const headers = ["service_date","child","age_group","dropoff_at","dropoff_worker","brought_by","pickup_at","pickup_method","pickup_worker_or_leader","collected_by","delegated_to","status","override_reason"];
     const lines = [headers.join(",")];
     for (const r of filteredRows) {

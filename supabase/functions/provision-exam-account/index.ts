@@ -248,14 +248,19 @@ Deno.serve(async (req) => {
     }
 
     // 4. Generate magic link
-    const origin =
-      req.headers.get("origin") ||
-      Deno.env.get("SITE_URL") ||
-      "https://app.churchmanagementsuite.org";
+    const ALLOWED_ORIGINS = [
+      "https://app.churchmanagementsuite.org",
+      "https://churchconnect-mt.lovable.app",
+      "https://id-preview--1edfff3c-782e-429b-b0ad-97087fdfd80e.lovable.app",
+    ];
+    const reqOrigin = req.headers.get("origin") || "";
+    const origin = ALLOWED_ORIGINS.includes(reqOrigin)
+      ? reqOrigin
+      : "https://app.churchmanagementsuite.org";
     const nextPath = slug ? `/t/${slug}/exam-management` : "/exam-management";
     const redirectTo = `${origin}/auth/exam-callback?next=${encodeURIComponent(nextPath)}`;
 
-    console.log("[provision-exam-account] generating magic link", { redirectTo });
+    
     const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
       type: "magiclink",
       email: emailLower,

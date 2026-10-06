@@ -270,6 +270,7 @@ Deno.serve(async (req) => {
         .from("training_completions")
         .select("*")
         .eq("id", completion_id)
+        .eq("tenant_id", tenant_id)
         .maybeSingle();
       existing = data;
     } else {
