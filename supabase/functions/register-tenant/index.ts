@@ -264,7 +264,7 @@ Deno.serve(async (req) => {
                 },
               });
             } catch (e) {
-              console.error("Failed to notify super admin:", profile.email, e);
+              console.error("Failed to notify super admin:", e);
             }
           }
         }

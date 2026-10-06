@@ -179,7 +179,8 @@ Deno.serve(async (req) => {
     }
     const recipientPhone = member.phone || null;
 
-    const declineReason = (reason ?? jr.decline_reason ?? "").toString().trim();
+    // Use only the reason saved on the request, never free text from the caller.
+    const declineReason = (jr.decline_reason ?? "").toString().trim().slice(0, 500);
     const approved = decision === "approved";
     const verb = approved ? "approved" : "declined";
     const subject = approved

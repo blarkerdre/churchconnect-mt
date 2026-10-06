@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
           messageId,
           fromName: churchShortName,
         });
-        console.log("WSF leader email sent to", recipientEmail);
+        console.log("WSF leader email sent");
       } catch (sendError) {
         console.error("Failed to send WSF leader email:", sendError);
       }

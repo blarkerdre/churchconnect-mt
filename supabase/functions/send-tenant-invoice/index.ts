@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
         tenantId: invoice.tenant_id,
       })
       if (!result.sent && result.reason === 'recipient_suppressed') {
-        console.warn('tenant-invoice email suppressed', { recipient })
+        console.warn('tenant-invoice email suppressed')
       }
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err)

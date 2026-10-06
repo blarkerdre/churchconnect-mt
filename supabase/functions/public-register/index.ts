@@ -72,7 +72,7 @@ function triggerWelcomeEmail(email: string, firstName: string | null, lastName: 
         const body = await res.text().catch(() => "no body");
         console.error(`Welcome email trigger failed: ${res.status} ${res.statusText}`, body);
       } else {
-        console.log("Welcome email triggered successfully for", email);
+        console.log("Welcome email triggered successfully");
       }
     })
     .catch((err) => console.error("Welcome email trigger network error:", err));
@@ -480,10 +480,7 @@ Deno.serve(async (req) => {
       email.trim().toLowerCase() === authenticatedUser.email.trim().toLowerCase();
 
     if (authenticatedUser?.userId && !isSelfRegistration) {
-      console.warn("public-register: skipping user_id stamp — form email does not match auth user", {
-        authEmail: authenticatedUser.email,
-        formEmail: email,
-      });
+      console.warn("public-register: skipping user_id stamp — form email does not match auth user");
     }
 
     if (isSelfRegistration) {

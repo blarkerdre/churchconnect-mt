@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
           messageId,
           fromName: churchShortName,
         });
-        console.log("Unit leader email sent to", recipientEmail);
+        console.log("Unit leader email sent");
       } catch (sendError) {
         console.error("Failed to send unit leader email:", sendError);
       }

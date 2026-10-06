@@ -242,7 +242,9 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (existingMember) {
-        memberId = existingMember.id;
+        // Only link an existing member record when the caller is signed in.
+        // Anonymous submissions stay unlinked; an admin links them on review.
+        memberId = authUserId ? existingMember.id : null;
       } else {
         const { data: newMember, error: insertError } = await supabase
           .from("members")
