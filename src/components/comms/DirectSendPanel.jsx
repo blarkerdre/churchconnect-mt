@@ -347,24 +347,16 @@ function BulkNonMembers({ tenantId, churchName, senderName }) {
           } catch { failed++; }
         }
       } else {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData?.session?.access_token;
-        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-sms`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            recipients: phoneValid.map(r => ({ phone: r.phone, member_id: null })),
-            message: message.trim(),
-            sms_type: "bulk_nonmember",
-            reference_id: null,
-            channel,
-            tenant_id: tenantId,
-          }),
+        const data = await sendSmsBatched({
+          recipients: phoneValid.map(r => ({ phone: r.phone, member_id: null })),
+          message: message.trim(),
+          sms_type: "bulk_nonmember",
+          reference_id: null,
+          channel,
+          tenant_id: tenantId,
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Send failed");
-        sent = data.sent || 0;
-        failed = data.failed || 0;
+        sent = data.sent;
+        failed = data.failed;
       }
       await logAudit("direct_message_sent", "contacts", null, { channel, mode: "bulk_nonmember", source, sent, failed }, tenantId);
       toast({ title: "Send complete", description: `${sent} sent${failed ? `, ${failed} failed` : ""}.` });

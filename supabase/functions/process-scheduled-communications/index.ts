@@ -113,23 +113,25 @@ Deno.serve(async (req) => {
           .filter((m: { phone: string | null }) => m.phone && m.phone.trim())
           .map((m: { id: string; phone: string }) => ({ phone: m.phone, member_id: m.id }))
 
-        const res = await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${serviceKey}`,
-          },
-          body: JSON.stringify({
-            recipients,
-            message: item.message,
-            sms_type: 'scheduled',
-            channel: item.channel,
-            tenant_id: item.tenant_id,
-          }),
-        })
-
-        const result = await res.json()
-        if (!res.ok) throw new Error(result.error || 'SMS send failed')
+        // send-sms accepts at most 500 recipients per request
+        for (let i = 0; i < recipients.length; i += 500) {
+          const res = await fetch(`${supabaseUrl}/functions/v1/send-sms`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${serviceKey}`,
+            },
+            body: JSON.stringify({
+              recipients: recipients.slice(i, i + 500),
+              message: item.message,
+              sms_type: 'scheduled',
+              channel: item.channel,
+              tenant_id: item.tenant_id,
+            }),
+          })
+          const result = await res.json()
+          if (!res.ok) throw new Error(result.error || 'SMS send failed')
+        }
 
         await client
           .from('scheduled_communications')
