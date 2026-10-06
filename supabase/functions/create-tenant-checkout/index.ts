@@ -85,7 +85,13 @@ serve(async (req) => {
     }
 
     // Create checkout session with recurring subscription
-    const origin = req.headers.get("origin") || "https://churchconnect-mt.lovable.app";
+    const ALLOWED_ORIGINS = [
+      "https://churchconnect-mt.lovable.app",
+      "https://app.churchmanagementsuite.org",
+      "https://id-preview--1edfff3c-782e-429b-b0ad-97087fdfd80e.lovable.app",
+    ];
+    const reqOrigin = req.headers.get("origin") || "";
+    const origin = ALLOWED_ORIGINS.includes(reqOrigin) ? reqOrigin : "https://app.churchmanagementsuite.org";
 
     const lineItems: any[] = [
       {
