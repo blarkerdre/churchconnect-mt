@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { csvSafeCell } from "@/lib/csv-safe";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -244,7 +245,7 @@ export default function WSFAttendanceTab({ centres }) {
   });
 
   const downloadReport = () => {
-    const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const esc = (v) => csvSafeCell(v);
     const rows = [
       ["Date","Centre","Venue","Male","Female","Adults","Children","Total","First Timers","Testimonies","Notes","Reported by","Recorded on"].join(","),
       ...filteredReports.map(r => {

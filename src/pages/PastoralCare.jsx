@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { csvSafeCell } from "@/lib/csv-safe";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -195,7 +196,7 @@ export default function PastoralCare() {
       r.created_at ? new Date(r.created_at).toLocaleDateString("en-GB") : "",
       r.resolution_notes || "",
     ]);
-    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csv = [headers, ...rows].map(r => r.map(c => csvSafeCell(c)).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
