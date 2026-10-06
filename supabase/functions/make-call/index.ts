@@ -1,3 +1,4 @@
+import { loadTenantPhoneSet, isTenantPhone } from "../_shared/tenant-phones.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { validateOutboundUrl, validateMethod } from "../_shared/url-validator.ts";
 
@@ -106,6 +107,15 @@ Deno.serve(async (req) => {
     if (!/^\+[1-9]\d{6,14}$/.test(phone)) {
       return new Response(JSON.stringify({ error: "Invalid phone number format" }), {
         status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Only call numbers already recorded for this church.
+    const allowedPhones = await loadTenantPhoneSet(serviceClient, tenant_id);
+    if (!isTenantPhone(allowedPhones, phone)) {
+      return new Response(JSON.stringify({ error: "This number is not on record for your church" }), {
+        status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
