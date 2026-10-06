@@ -599,8 +599,8 @@ Deno.serve(async (req) => {
 
 
       if (existingByEmail) {
-        // Update existing record instead of creating duplicate
-        await supabase.from("members").update(memberPayload).eq("id", existingByEmail.id);
+        // Never overwrite an existing record from an unauthenticated submission;
+        // treat it as a duplicate and keep the stored details unchanged.
         resultMemberId = existingByEmail.id;
         resultMode = "updated";
         if (email) triggerWelcomeEmail(email, firstName, lastName, tenantId);

@@ -1,3 +1,4 @@
+import { loadTenantPhoneSet, isTenantPhone } from "../_shared/tenant-phones.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkSmsQuota, QuotaExceededError } from "../_shared/sms-quota.ts";
 import { writeAudit } from "../_shared/audit.ts";
@@ -248,8 +249,12 @@ Deno.serve(async (req) => {
     // Build the webhook URL for delivery status callbacks
     const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
 
+    const allowedPhones = await loadTenantPhoneSet(serviceClient, tenant_id);
+
     for (const recipient of recipients) {
-      const normalized = normalizeE164(recipient.phone?.trim() || "");
+      let normalized = normalizeE164(recipient.phone?.trim() || "");
+      // Only message numbers already recorded for this church.
+      if (normalized && !isTenantPhone(allowedPhones, normalized)) normalized = null;
       if (!normalized) {
         failed++;
         logs.push({

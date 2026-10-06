@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
         ...(tenant_id ? { tenant_id } : {}),
       });
 
-      console.log("Welcome email sent directly", { email: normalizedEmail, messageId });
+      console.log("Welcome email sent directly", { messageId });
 
       return new Response(JSON.stringify({ success: true, message_id: messageId }), {
         status: 200,

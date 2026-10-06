@@ -70,7 +70,10 @@ Deno.serve(async (req) => {
     const billTo = invoice.bill_to || {}
     const tenantSettings = (invoice.tenant?.settings && typeof invoice.tenant.settings === 'object') ? invoice.tenant.settings : {}
     const tenantContactEmail = tenantSettings.contact_email || tenantSettings.billing_email || ''
-    const recipient = recipient_email || billTo.email || tenantContactEmail
+    // Only deliver to the invoice's billing contact or the church's contact address.
+    const allowedRecipients = [billTo.email, tenantContactEmail].filter(Boolean).map((e: string) => String(e).trim().toLowerCase())
+    const requested = typeof recipient_email === 'string' ? recipient_email.trim().toLowerCase() : ''
+    const recipient = requested && allowedRecipients.includes(requested) ? requested : (billTo.email || tenantContactEmail)
     if (!recipient) {
       return new Response(JSON.stringify({ error: 'No recipient email available' }), {
         status: 400,

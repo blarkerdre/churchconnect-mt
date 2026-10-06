@@ -41,6 +41,7 @@ Deno.serve(async (req) => {
       });
     }
 
+    let callerId: string | null = null;
     if (!isServiceRole) {
       const anon = createClient(supabaseUrl, anonKey, {
         global: { headers: { Authorization: authHeader } },
@@ -51,18 +52,23 @@ Deno.serve(async (req) => {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const { data: isSuper } = await supabase.rpc("has_role", { _user_id: user.id, _role: "super_admin" });
-      const { data: isAdminFlag } = await supabase.rpc("is_admin", { _user_id: user.id, _tenant_id: tenant_id });
-      const { data: isLeader } = await supabase.rpc("has_role", { _user_id: user.id, _role: "unit_leader" });
-      if (!isSuper && !isAdminFlag && !isLeader) {
+      callerId = user.id;
+    }
+
+    const { data: task, error: taskErr } = await supabase
+      .from("unit_tasks").select("*").eq("id", task_id).single();
+    if (callerId && task) {
+      // Authorize against the task's own tenant, never a caller-supplied one.
+      const { data: isSuper } = await supabase.rpc("has_role", { _user_id: callerId, _role: "super_admin" });
+      const { data: isAdminFlag } = await supabase.rpc("is_admin", { _user_id: callerId, _tenant_id: task.tenant_id });
+      const { data: isLeader } = await supabase.rpc("has_role", { _user_id: callerId, _role: "unit_leader" });
+      const { data: inTenant } = await supabase.rpc("user_belongs_to_tenant", { _user_id: callerId, _tenant_id: task.tenant_id });
+      if (!isSuper && !isAdminFlag && !(isLeader && inTenant)) {
         return new Response(JSON.stringify({ error: "Forbidden" }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
     }
-
-    const { data: task, error: taskErr } = await supabase
-      .from("unit_tasks").select("*").eq("id", task_id).single();
     if (taskErr || !task) {
       return new Response(JSON.stringify({ error: "Task not found" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },

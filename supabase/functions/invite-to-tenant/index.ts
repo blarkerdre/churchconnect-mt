@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
       });
 
       if (!result.sent && result.reason === "recipient_suppressed") {
-        console.warn("Invitation email suppressed", { recipient: opts.recipient });
+        console.warn("Invitation email suppressed", {});
         return "Invitation created, but this address has unsubscribed or bounced, so no email was sent.";
       }
       return undefined;
@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     }
 
     const { tenant_id, email, role: rawRole = "member" } = await req.json();
-    console.log("invite-to-tenant called", { caller: caller.id, tenant_id, email, role: rawRole });
+    console.log("invite-to-tenant called", { caller: caller.id, tenant_id, role: rawRole });
 
     if (!tenant_id || !email) {
       return new Response(JSON.stringify({ error: "tenant_id and email required" }), {
@@ -170,7 +170,7 @@ Deno.serve(async (req) => {
         const siteUrl = "https://app.churchmanagementsuite.org";
         const loginUrl = `${siteUrl}/t/${tenantInfo.slug}/auth`;
 
-        console.log("Sending auto-add notification email", { email: normalizedEmail, tenant: churchName });
+        console.log("Sending auto-add notification email", { tenant: churchName });
 
         email_warning = await sendInviteEmail(supabase, supabaseUrl, internalEmailKey, {
           recipient: normalizedEmail,
@@ -264,7 +264,7 @@ Deno.serve(async (req) => {
       const siteUrl = "https://app.churchmanagementsuite.org";
       const signupUrl = `${siteUrl}/accept-invite?token=${invitation.token}`;
 
-      console.log("Sending invitation email", { email: normalizedEmail, signupUrl, tenant: tenant.name });
+      console.log("Sending invitation email", { tenant: tenant.name });
 
       email_warning = await sendInviteEmail(supabase, supabaseUrl, internalEmailKey, {
         recipient: normalizedEmail,

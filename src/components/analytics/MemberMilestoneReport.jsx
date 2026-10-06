@@ -1,3 +1,4 @@
+import { csvSafeCell } from "@/lib/csv-safe";
 import React, { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -164,7 +165,7 @@ export default function MemberMilestoneReport() {
     );
 
   // Shared CSV helpers
-  const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const esc = csvSafeCell;
   const formatVal = (v) => {
     if (v === null || v === undefined) return "";
     if (typeof v === "boolean") return v ? "Yes" : "No";
