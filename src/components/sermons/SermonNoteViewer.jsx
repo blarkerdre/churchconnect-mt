@@ -15,7 +15,7 @@ export default function SermonNoteViewer({ note, folderName, churchName, logoUrl
         category: note.category,
         folderName,
         serviceDate: note.service_date ? format(new Date(note.service_date), "PPP") : "",
-        content: note.content,
+        content: DOMPurify.sanitize(note.content || ""),
       },
       { logoUrl, churchName },
     );
