@@ -22,6 +22,13 @@
       "when": 1791245204517,
       "tag": "0002_clone_syllabus_copies_answer_keys",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791246109393,
+      "tag": "0003_tighten_public_read_policies",
+      "breakpoints": true
     }
   ]
 }
