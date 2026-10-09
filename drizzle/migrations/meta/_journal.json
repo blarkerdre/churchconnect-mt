@@ -36,6 +36,13 @@
       "when": 1791247685951,
       "tag": "0004_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791544093049,
+      "tag": "0005_owners_can_assign_admin",
+      "breakpoints": true
     }
   ]
 }
