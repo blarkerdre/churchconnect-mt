@@ -58,9 +58,10 @@ const roleLabels = {
 };
 
 export default function UserManagement() {
-  const { isAdmin, roles, user } = useAuth();
+  const { isAdmin, roles, user, isTenantOwner } = useAuth();
   const confirmDelete = useConfirmDelete();
   const isSuperAdmin = roles.includes("super_admin");
+  const canGrantAdmin = isSuperAdmin || isTenantOwner;
   const queryClient = useQueryClient();
   const { tenantId, scopeQuery, withTenant } = useTenantQuery();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -393,12 +394,12 @@ export default function UserManagement() {
                   const userRoles = getUserRoles(p.user_id);
                   const isCurrentUser = p.user_id === user?.id;
                   const hasAdminRole = userRoles.some(r => ["admin", "super_admin"].includes(r));
-                  const canChange = isCurrentUser ? false : (isSuperAdmin || (!hasAdminRole && isAdmin));
-                  const isDisabled = disabledUsers[p.user_id] === true;
                   const targetIsSuperAdmin = userRoles.includes("super_admin");
+                  const canChange = isCurrentUser ? false : (isSuperAdmin || (isTenantOwner && !targetIsSuperAdmin) || (!hasAdminRole && isAdmin));
+                  const isDisabled = disabledUsers[p.user_id] === true;
                   const hasMfa = mfaUsers[p.user_id] === true;
 
-                  const availableRoles = ROLES;
+                  const availableRoles = canGrantAdmin ? ROLES : ROLES.filter(r => r !== "admin");
 
                   return (
                     <tr key={p.id} className={`border-b border-border hover:bg-muted/30 transition-colors ${isDisabled ? "opacity-60" : ""}`}>
