@@ -356,7 +356,7 @@ export default function UserManagement() {
           <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Role" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Roles</SelectItem>
-            {ROLES.map(r => <SelectItem key={r} value={r}>{roleLabels[r] || r.replace("_", " ")}</SelectItem>)}
+            {ROLES.filter(r => canGrantAdmin || r !== "admin").map(r => <SelectItem key={r} value={r}>{roleLabels[r] || r.replace("_", " ")}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -590,7 +590,7 @@ export default function UserManagement() {
               <Select value={addForm.role} onValueChange={v => setAddForm(f => ({ ...f, role: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {ROLES.map(r => (
+                  {ROLES.filter(r => canGrantAdmin || r !== "admin").map(r => (
                     <SelectItem key={r} value={r}>{roleLabels[r] || r.replace("_", " ")}</SelectItem>
                   ))}
                 </SelectContent>
