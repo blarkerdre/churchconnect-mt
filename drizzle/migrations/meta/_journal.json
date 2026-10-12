@@ -50,6 +50,13 @@
       "when": 1791727996624,
       "tag": "0006_resolve_active_edition_for_applications",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791802103855,
+      "tag": "0007_remove_generated_demo_members",
+      "breakpoints": true
     }
   ]
 }
