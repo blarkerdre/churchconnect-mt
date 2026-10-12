@@ -224,10 +224,10 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-full max-w-6xl max-h-[92vh] overflow-y-auto p-4 sm:p-6">
+      <DialogContent className="w-[calc(100vw-1.5rem)] max-w-6xl min-w-0 max-h-[90dvh] overflow-y-auto overflow-x-hidden p-4 sm:p-6 [&>div]:min-w-0">
         <TenantDialogHeader>Generate Follow-up Report</TenantDialogHeader>
 
-        <div className="space-y-5 sm:space-y-6 py-3 sm:py-4">
+        <div className="min-w-0 w-full space-y-5 sm:space-y-6 py-3 sm:py-4 [&_input]:min-w-0 [&_input]:max-w-full [&_[role=combobox]]:min-w-0 [&_[role=combobox]>span]:truncate">
           {/* Filters */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 min-w-0">
             <div className="space-y-1.5 min-w-0">
@@ -326,7 +326,7 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
           </div>
 
           {/* Summary */}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-2 sm:gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 [&>div]:min-w-0 [&_p]:break-words">
             <Card className="border-0 shadow-sm"><CardContent className="p-2 sm:p-3 text-center"><p className="text-lg sm:text-xl font-bold">{stats.total}</p><p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">Follow-ups</p></CardContent></Card>
             <Card className="border-0 shadow-sm"><CardContent className="p-2 sm:p-3 text-center"><p className="text-lg sm:text-xl font-bold text-accent">{stats.byStatus.Pending}</p><p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">Pending</p></CardContent></Card>
             <Card className="border-0 shadow-sm"><CardContent className="p-2 sm:p-3 text-center"><p className="text-lg sm:text-xl font-bold text-primary">{stats.byStatus["In Progress"]}</p><p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">In Progress</p></CardContent></Card>
@@ -336,8 +336,8 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
           </div>
 
           {/* Preview */}
-          <div className="border border-border rounded-xl overflow-hidden">
-            <div className="max-h-[40vh] overflow-auto">
+          <div className="min-w-0 w-full max-w-full border border-border rounded-xl overflow-hidden">
+            <div className="min-w-0 w-full max-w-full max-h-[40dvh] overflow-auto" role="region" aria-label="Follow-up report preview" tabIndex={0}>
               {refLoading && reportType !== "followups" ? (
                 <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
               ) : flatRows.length === 0 ? (
@@ -362,7 +362,7 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
                             {toCells(it).map((c, j) => (
                               <td
                                 key={j}
-                                className={`px-3 py-1.5 align-top ${j === headers.length - 1 ? "max-w-[260px]" : "whitespace-nowrap"}`}
+                                 className={`px-3 py-1.5 align-top ${j === headers.length - 1 ? "min-w-[180px] max-w-[260px] break-words [overflow-wrap:anywhere]" : [0, 4, 5].includes(j) ? "min-w-[120px] max-w-[200px] break-words [overflow-wrap:anywhere]" : "whitespace-nowrap"}`}
                               >
                                 {c || "-"}
                               </td>
@@ -378,7 +378,7 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
           </div>
         </div>
 
-        <DialogFooter className="gap-2 flex-col sm:flex-row">
+        <DialogFooter className="min-w-0 gap-2 flex-col sm:flex-row sm:flex-wrap">
           <Button variant="outline" className="w-full sm:w-auto" onClick={() => onOpenChange(false)}>Close</Button>
           <Button variant="outline" className="w-full sm:w-auto" onClick={downloadCSV} disabled={!flatRows.length}>
             <Download className="h-4 w-4 mr-2" /> Download CSV
