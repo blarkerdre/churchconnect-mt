@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
         const { error } = await supabase.from(table).delete().eq("tenant_id", tenant_id);
         if (error) {
           console.error(`archive-tenant: failed to delete from ${table}:`, error.message);
-          // Continue — some tables may not have tenant_id or may be empty
+          // Continue - some tables may not have tenant_id or may be empty
         }
       }
 

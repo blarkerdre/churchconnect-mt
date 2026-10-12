@@ -35,7 +35,7 @@ export default function InvalidRecipientsPreview({ invalidRecipients }) {
               const name = r.first_name
                 ? `${r.first_name} ${r.last_name || ""}`.trim()
                 : r.name || "Unknown";
-              const rawPhone = r.rawPhone || r.phone || "—";
+              const rawPhone = r.rawPhone || r.phone || "-";
               return (
                 <div
                   key={r.id || r.member_id || i}

@@ -42,7 +42,7 @@ export async function processImageForUpload(file) {
     bitmap = await createImageBitmap(file);
   } catch {
     throw new FriendlyError(
-      "This photo format isn't supported on this device — please choose a JPG or PNG."
+      "This photo format isn't supported on this device - please choose a JPG or PNG."
     );
   }
 

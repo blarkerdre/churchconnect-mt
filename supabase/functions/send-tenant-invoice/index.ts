@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
       .eq('role', 'super_admin')
       .maybeSingle()
     if (!roleRow) {
-      return new Response(JSON.stringify({ error: 'Forbidden — super_admin only' }), {
+      return new Response(JSON.stringify({ error: 'Forbidden - super_admin only' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })

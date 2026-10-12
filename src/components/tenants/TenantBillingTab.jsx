@@ -328,7 +328,7 @@ export default function TenantBillingTab({ tenant }) {
                   <TableRow key={p.id}>
                     <TableCell className="text-xs">{p.payment_date}</TableCell>
                     <TableCell className="text-xs font-medium">{p.currency} {Number(p.amount).toFixed(2)}</TableCell>
-                    <TableCell className="text-xs">{p.payment_method || "—"}</TableCell>
+                    <TableCell className="text-xs">{p.payment_method || "-"}</TableCell>
                     <TableCell>
                       <Badge variant={p.status === "completed" ? "default" : "secondary"} className="text-[10px] capitalize">{p.status}</Badge>
                     </TableCell>

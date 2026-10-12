@@ -126,7 +126,7 @@ export default function AbsenceAlerts({ sessions, records }) {
           {filtered.length === 0 ? (
             <div className="text-center py-10 text-muted-foreground">
               <UserX className="h-8 w-8 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">No absence alerts — great attendance!</p>
+              <p className="text-sm">No absence alerts - great attendance!</p>
             </div>
           ) : (
             <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1">

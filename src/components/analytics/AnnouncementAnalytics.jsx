@@ -185,7 +185,7 @@ export default function AnnouncementAnalytics() {
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Most liked</p>
                 <p className="text-sm font-display font-bold text-foreground truncate">
-                  {stats.mostLiked?.title || "—"}
+                  {stats.mostLiked?.title || "-"}
                 </p>
                 <p className="text-xs text-muted-foreground">{stats.mostLiked?.likeCount || 0} likes</p>
               </div>

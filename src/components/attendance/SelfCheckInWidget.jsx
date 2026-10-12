@@ -87,7 +87,7 @@ export default function SelfCheckInWidget() {
       if (s.session_type === "Home Cell Meeting") {
         return unit && myCentreLower && unit.toLowerCase() === myCentreLower;
       }
-      // General sessions (no unit/centre scoping) — visible to all tenant members
+      // General sessions (no unit/centre scoping) - visible to all tenant members
       return !unit;
     });
   }, [sessions, myUnitsLower, myCentreLower]);

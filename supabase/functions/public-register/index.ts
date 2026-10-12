@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Simple in-memory rate limiter (per isolate — resets on cold start, but still effective)
+// Simple in-memory rate limiter (per isolate - resets on cold start, but still effective)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 5;
 const RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
@@ -301,7 +301,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Reject registrations that cannot be scoped to a real tenant — never silently default.
+    // Reject registrations that cannot be scoped to a real tenant - never silently default.
     if (!resolvedTenantId) {
       return new Response(
         JSON.stringify({ error: "Missing tenant context. This registration link is invalid." }),
@@ -323,7 +323,7 @@ Deno.serve(async (req) => {
 
     // body already parsed above
 
-    // Honeypot check — if filled, silently succeed (bot trap)
+    // Honeypot check - if filled, silently succeed (bot trap)
     if (body.website) {
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -480,7 +480,7 @@ Deno.serve(async (req) => {
       email.trim().toLowerCase() === authenticatedUser.email.trim().toLowerCase();
 
     if (authenticatedUser?.userId && !isSelfRegistration) {
-      console.warn("public-register: skipping user_id stamp — form email does not match auth user");
+      console.warn("public-register: skipping user_id stamp - form email does not match auth user");
     }
 
     if (isSelfRegistration) {
@@ -544,7 +544,7 @@ Deno.serve(async (req) => {
           const { data: verifiedUser, error: verifyErr } = await supabase.auth.admin.getUserById(authenticatedUser.userId);
           if (verifyErr || !verifiedUser?.user) {
             console.error("Auth user verification failed during claim:", verifyErr?.message);
-            // Skip claim — just insert as new member without user_id
+            // Skip claim - just insert as new member without user_id
             break;
           }
 

@@ -150,7 +150,7 @@ function useStatementData({ enabled, member, course, subjects }) {
 }
 
 /**
- * Inline preview of the Statement of Result — no Dialog wrapper, no action
+ * Inline preview of the Statement of Result - no Dialog wrapper, no action
  * buttons. Reused by `StatementOfResult` and `SendResultsDialog`.
  */
 export function StatementPreview({ member, course, subjects, memberSubjects, enabled = true }) {
@@ -173,7 +173,7 @@ export function StatementPreview({ member, course, subjects, memberSubjects, ena
   const rows = (subjects || []).map((s) => {
     const sub = (memberSubjects || {})[s.id];
     const pct = sub && sub.total_points > 0 ? (sub.score / sub.total_points) * 100 : 0;
-    const letter = sub ? getLetterGrade(pct, letterBands).letter : "—";
+    const letter = sub ? getLetterGrade(pct, letterBands).letter : "-";
     return { name: s.name, score: sub?.score ?? 0, total: sub?.total_points ?? 0, pct, letter, taken: !!sub };
   });
 
@@ -214,7 +214,7 @@ export function StatementPreview({ member, course, subjects, memberSubjects, ena
           <span className="font-bold">NAME: </span>
           <span className="text-base font-serif text-primary">{member.name}</span>
         </div>
-        <div className="font-bold underline text-xs">{studentNumber || "—"}</div>
+        <div className="font-bold underline text-xs">{studentNumber || "-"}</div>
       </div>
 
       <div className="border rounded overflow-hidden">
@@ -228,7 +228,7 @@ export function StatementPreview({ member, course, subjects, memberSubjects, ena
             className="grid grid-cols-[1fr_auto] px-3 py-1.5 text-sm border-t border-border/50"
           >
             <div className="uppercase">{r.name}</div>
-            <div className="text-right font-bold tabular-nums">{r.taken ? r.letter : "—"}</div>
+            <div className="text-right font-bold tabular-nums">{r.taken ? r.letter : "-"}</div>
           </div>
         ))}
         <div className="grid grid-cols-[1fr_auto] bg-primary/10 px-3 py-2 text-sm font-bold border-t">
@@ -275,7 +275,7 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
   const rows = (subjects || []).map((s) => {
     const sub = (memberSubjects || {})[s.id];
     const pct = sub && sub.total_points > 0 ? (sub.score / sub.total_points) * 100 : 0;
-    const letter = sub ? getLetterGrade(pct, letterBands).letter : "—";
+    const letter = sub ? getLetterGrade(pct, letterBands).letter : "-";
     return { name: s.name, score: sub?.score ?? 0, total: sub?.total_points ?? 0, pct, letter, taken: !!sub };
   });
   const totalScore = rows.reduce((s, r) => s + r.score, 0);
@@ -311,14 +311,14 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
       toImageDataUrl(resolvedSig),
     ]);
     if (logoUrl && !logoImg) {
-      toast.warning("Logo could not be loaded — printing without it.");
+      toast.warning("Logo could not be loaded - printing without it.");
     }
     const subjectRows = rows
       .map(
         (r) => `
         <tr>
           <td>${escHtml(r.name.toUpperCase())}</td>
-          <td class="grade">${r.taken ? escHtml(r.letter) : "—"}</td>
+          <td class="grade">${r.taken ? escHtml(r.letter) : "-"}</td>
         </tr>`
       )
       .join("");
@@ -343,7 +343,7 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
       ? `<img src="${signatureImg.dataUrl}" alt="Signature" style="${aspectStyle(signatureImg, 60, 220)}object-fit:contain;" />`
       : `<div style="border-bottom:1px solid #333;width:180px;height:40px;"></div>`;
 
-    const html = `<!DOCTYPE html><html><head><title>Statement of Result — ${escHtml(member.name)}</title>
+    const html = `<!DOCTYPE html><html><head><title>Statement of Result - ${escHtml(member.name)}</title>
       <style>
         @page { size: A4; margin: 14mm 18mm; }
         html, body { margin:0; padding:0; }
@@ -443,7 +443,7 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
 
     const win = window.open("", "_blank", "width=900,height=1100");
     if (!win) {
-      toast.error("Pop-up blocked — allow pop-ups to print.");
+      toast.error("Pop-up blocked - allow pop-ups to print.");
       return;
     }
     win.document.write(html);

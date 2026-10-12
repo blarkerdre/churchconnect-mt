@@ -51,7 +51,7 @@ export default function ApiKeysSection() {
       setShowCreate(false);
       setLabel("");
       setNewlyCreatedKey(data.api_key);
-      toast({ title: "API key created", description: "Copy your key now — it will not be shown again." });
+      toast({ title: "API key created", description: "Copy your key now - it will not be shown again." });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -133,7 +133,7 @@ export default function ApiKeysSection() {
                   <TableRow key={k.id}>
                     <TableCell className="font-medium">{k.label}</TableCell>
                     <TableCell className="font-mono text-xs">
-                      {k.key_prefix ? `${k.key_prefix}••••••••` : "—"}
+                      {k.key_prefix ? `${k.key_prefix}••••••••` : "-"}
                     </TableCell>
                     <TableCell>
                       <Badge variant={k.is_active ? "default" : "secondary"}>
@@ -192,7 +192,7 @@ export default function ApiKeysSection() {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              This is the only time the full key will be shown. Store it securely — we keep only a hash on our servers.
+              This is the only time the full key will be shown. Store it securely - we keep only a hash on our servers.
             </p>
             <div className="font-mono text-xs break-all bg-muted p-3 rounded border">
               {newlyCreatedKey}

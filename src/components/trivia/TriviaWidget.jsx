@@ -54,7 +54,7 @@ export default function TriviaWidget() {
             )}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {data.played ? "You've played today — come back tomorrow to keep your streak." : "Five quick questions to keep your streak going."}
+            {data.played ? "You've played today - come back tomorrow to keep your streak." : "Five quick questions to keep your streak going."}
           </p>
         </div>
         <Button asChild size="sm" variant={data.played ? "outline" : "default"} className="w-full sm:w-auto">

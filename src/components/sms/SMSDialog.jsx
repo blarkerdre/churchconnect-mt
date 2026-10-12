@@ -178,7 +178,7 @@ export default function SMSDialog({
         }
       }
     } catch (err) {
-      // Non-blocking — edge function will also enforce
+      // Non-blocking - edge function will also enforce
       console.warn("Quota pre-check failed:", err);
     }
 

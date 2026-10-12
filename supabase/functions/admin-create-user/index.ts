@@ -197,7 +197,7 @@ Deno.serve(async (req) => {
       }
       memberId = memberRow?.id;
     } else if (userId) {
-      // No member_data provided — try to auto-link existing unlinked member by email
+      // No member_data provided - try to auto-link existing unlinked member by email
       const { data: linkedMemberId } = await supabase.rpc("auto_link_member_by_email", {
         _user_id: userId,
         _email: normalizedEmail,

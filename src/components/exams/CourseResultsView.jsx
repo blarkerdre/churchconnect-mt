@@ -198,7 +198,7 @@ export default function CourseResultsView({ course }) {
     grade: getGradeClassification(m.totalPoints > 0 ? (m.totalScore / m.totalPoints) * 100 : 0, classifications),
   }));
 
-  // Overall position (1st, 2nd, 3rd ...) — only students who completed every subject
+  // Overall position (1st, 2nd, 3rd ...) - only students who completed every subject
   const positionByMember = buildRankMap(
     members,
     (m) => m.id,
@@ -210,16 +210,16 @@ export default function CourseResultsView({ course }) {
   const totalPassed = members.filter(m => m.passed && m.subjectsTaken === subjects.length).length;
 
   const buildPrintRows = () => ({
-    title: `${course.name} — Course Results`,
+    title: `${course.name} - Course Results`,
     headers: ["Position", "Member", ...subjects.map(s => s.name), "Total", "%", "Status"],
     rows: [...members]
       .sort((a, b) => (positionByMember.get(a.id) ?? 9999) - (positionByMember.get(b.id) ?? 9999))
       .map(m => [
-        positionByMember.get(m.id) ? ordinal(positionByMember.get(m.id)) : "—",
+        positionByMember.get(m.id) ? ordinal(positionByMember.get(m.id)) : "-",
         m.name,
         ...subjects.map(s => {
           const sub = m.subjects[s.id];
-          return sub ? `${sub.score}/${sub.total_points}` : "—";
+          return sub ? `${sub.score}/${sub.total_points}` : "-";
         }),
         `${m.totalScore}/${m.totalPoints}`,
         `${Math.round(m.percentage)}%`,
@@ -236,7 +236,7 @@ export default function CourseResultsView({ course }) {
         m.name,
         ...subjects.map(s => {
           const sub = m.subjects[s.id];
-          return sub ? `${sub.score}/${sub.total_points}` : "—";
+          return sub ? `${sub.score}/${sub.total_points}` : "-";
         }),
         m.totalScore,
         m.totalPoints,
@@ -394,7 +394,7 @@ export default function CourseResultsView({ course }) {
       const skipped = memberIds.length - existing.length;
       toast({
         title: fail === 0 ? "Certificates sent" : "Certificates partially sent",
-        description: `${ok} sent${fail ? `, ${fail} failed` : ""}${skipped ? ` (${skipped} skipped — not issued yet)` : ""}`,
+        description: `${ok} sent${fail ? `, ${fail} failed` : ""}${skipped ? ` (${skipped} skipped - not issued yet)` : ""}`,
         variant: fail && !ok ? "destructive" : undefined,
       });
       clearSelection();
@@ -442,7 +442,7 @@ export default function CourseResultsView({ course }) {
       const skipped = memberIds.length - eligible.length;
       toast({
         title: fail === 0 ? "Certificates sent" : "Certificates partially sent",
-        description: `${ok} emailed${fail ? `, ${fail} failed` : ""}${skipped ? ` (${skipped} skipped — not passed)` : ""}`,
+        description: `${ok} emailed${fail ? `, ${fail} failed` : ""}${skipped ? ` (${skipped} skipped - not passed)` : ""}`,
         variant: fail && !ok ? "destructive" : undefined,
       });
       clearSelection();
@@ -537,7 +537,7 @@ export default function CourseResultsView({ course }) {
           title: "No certificates to download",
           description: forCourse.length
             ? `${forCourse.length} student(s) have a certificate record but no stored file.`
-            : "No certificates issued yet — use Preview & Send to issue them first.",
+            : "No certificates issued yet - use Preview & Send to issue them first.",
           variant: "destructive",
         });
         return;
@@ -559,7 +559,7 @@ export default function CourseResultsView({ course }) {
 
       toast({
         title: mode === "zip" ? "Certificates ZIP downloaded" : "Certificates PDF downloaded",
-        description: `${downloaded} certificate(s)${missing ? ` — ${missing} skipped (no certificate issued)` : ""}.`,
+        description: `${downloaded} certificate(s)${missing ? ` - ${missing} skipped (no certificate issued)` : ""}.`,
       });
     } catch (e) {
       toast({ title: "Bulk download failed", description: e.message, variant: "destructive" });
@@ -579,7 +579,7 @@ export default function CourseResultsView({ course }) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <CardTitle className="text-base font-display flex items-center gap-2">
-            <Trophy className="h-4 w-4 text-primary" /> {course.name} — Course Results
+            <Trophy className="h-4 w-4 text-primary" /> {course.name} - Course Results
           </CardTitle>
           <div className="flex gap-2">
             {members.length > 0 && (
@@ -749,7 +749,7 @@ export default function CourseResultsView({ course }) {
                         const subGrade = sub ? getGradeClassification(subPct, subClassifications) : null;
                         return (
                           <TableCell key={s.id} className="text-center text-xs">
-                            {sub ? `${sub.score}/${sub.total_points}` : "—"}
+                            {sub ? `${sub.score}/${sub.total_points}` : "-"}
                           </TableCell>
                         );
                       })}
@@ -878,7 +878,7 @@ export default function CourseResultsView({ course }) {
       onOpenChange={(v) => { if (!v) setMsgTargets(null); }}
       members={msgTargets || []}
       source="bible_school_results"
-      audienceLabel={`Results — ${course.name}`}
+      audienceLabel={`Results - ${course.name}`}
       filterContext={{ course: course.name }}
     />
     </>

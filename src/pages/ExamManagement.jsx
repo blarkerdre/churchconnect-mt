@@ -142,7 +142,7 @@ function ExamManagementInner() {
   }, [tenantId]);
 
   // Auto-select first course (only if the current selection isn't in the
-  // active tenant's course list — prevents cross-tenant leakage).
+  // active tenant's course list - prevents cross-tenant leakage).
   React.useEffect(() => {
     if (examTitles.length === 0) return;
     const stillValid = selectedCourse && examTitles.some((t) => t.id === selectedCourse.id);
@@ -186,7 +186,7 @@ function ExamManagementInner() {
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  // Questions — scoped to selected subject. Uses admin RPC so the
+  // Questions - scoped to selected subject. Uses admin RPC so the
   // correct_answer column (revoked from authenticated SELECT for security)
   // is returned for admin authoring/review only.
   const { data: questions = [], isLoading } = useQuery({
@@ -335,7 +335,7 @@ function ExamManagementInner() {
         <div className="space-y-6">
           <div>
             <h1 className="text-xl font-display font-bold text-foreground flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-primary" /> Bible School — Quality Control
+              <BookOpen className="h-5 w-5 text-primary" /> Bible School - Quality Control
             </h1>
             <p className="text-sm text-muted-foreground mt-1">Record and review lecturer QC checks.</p>
           </div>
@@ -475,7 +475,7 @@ function ExamManagementInner() {
             <CourseResultsView course={selectedCourse} />
           ) : (
             <>
-              {/* Subject Manager — questions live inside each expanded subject */}
+              {/* Subject Manager - questions live inside each expanded subject */}
               <SubjectManager
                 course={selectedCourse}
                 onSelectSubject={(s) => setSelectedSubject(s)}
@@ -485,7 +485,7 @@ function ExamManagementInner() {
                 renderSubjectPanel={(s) => (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <h3 className="text-sm font-semibold text-foreground">Questions — {s.name}</h3>
+                      <h3 className="text-sm font-semibold text-foreground">Questions - {s.name}</h3>
                       <div className="flex gap-2">
                         {questions.length > 0 && (
                           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setPreviewSubject(s)}>
@@ -1053,7 +1053,7 @@ function CourseRegistrationsView({ course }) {
     onSuccess: ({ student_number, emailError }) => {
       qc.invalidateQueries({ queryKey: ["course-registrations", tenantId, course.id] });
       toast({
-        title: emailError ? "Approved — email failed" : "Approved & student number emailed",
+        title: emailError ? "Approved - email failed" : "Approved & student number emailed",
         description: student_number
           ? `Student No. ${student_number}${emailError ? ` · ${emailError}` : ""}`
           : (emailError || undefined),
@@ -1276,7 +1276,7 @@ function CourseRegistrationsView({ course }) {
       <CardHeader className="pb-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base font-display flex items-center gap-2">
-            <Users className="h-4 w-4 text-primary" /> Registrations — {course.name}
+            <Users className="h-4 w-4 text-primary" /> Registrations - {course.name}
             <Badge variant="secondary" className="ml-2">{filteredRegistrations.length}</Badge>
           </CardTitle>
           <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
@@ -1481,9 +1481,9 @@ function CourseRegistrationsView({ course }) {
                               </TableCell>
                             )}
                             <TableCell className="font-medium">{r.members?.first_name} {r.members?.last_name}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{r.members?.email || "—"}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{r.members?.phone || "—"}</TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{r.edition?.name || "—"}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{r.members?.email || "-"}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{r.members?.phone || "-"}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{r.edition?.name || "-"}</TableCell>
                             <TableCell>
                               {(() => {
                                 const o = originOf(r);
@@ -1506,7 +1506,7 @@ function CourseRegistrationsView({ course }) {
                             </TableCell>
                             <TableCell>
                               {!eligible ? (
-                                <span className="text-xs text-muted-foreground">—</span>
+                                <span className="text-xs text-muted-foreground">-</span>
                               ) : isSending ? (
                                 <Badge variant="outline" className="gap-1 text-xs">
                                   <Loader2 className="h-3 w-3 animate-spin" /> Sending…
@@ -1543,7 +1543,7 @@ function CourseRegistrationsView({ course }) {
                               ) : (
                                 <div className="flex items-center gap-1.5">
                                   <span className={r.student_number ? "font-mono text-xs" : "text-muted-foreground italic text-xs"}>
-                                    {r.student_number || "—"}
+                                    {r.student_number || "-"}
                                   </span>
                                   {canManageNumbers && (
                                     <Button size="icon" variant="ghost" className="h-6 w-6"
@@ -1657,7 +1657,7 @@ function CourseRegistrationsView({ course }) {
           "All exam attempts, answers and results for this course will be permanently deleted.",
           "The issued certificate / training completion for this course will be deleted.",
           "Their lecturer ratings for this course will be deleted.",
-          "Their Bible School application record will be kept — delete it from the Applications tab if needed.",
+          "Their Bible School application record will be kept - delete it from the Applications tab if needed.",
         ]}
         isPending={deleteMutation.isPending}
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget)}
@@ -1668,7 +1668,7 @@ function CourseRegistrationsView({ course }) {
         onOpenChange={(v) => { if (!v) setMsgTargets(null); }}
         members={msgTargets || []}
         source="bible_school_registrations"
-        audienceLabel={`Registrants — ${course.name}`}
+        audienceLabel={`Registrants - ${course.name}`}
         filterContext={{ course: course.name, status: statusFilter, source: sourceFilter }}
       />
     </Card>
@@ -1844,7 +1844,7 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
     },
   });
 
-  // Subjects this student has already rated — used to hint what's still outstanding
+  // Subjects this student has already rated - used to hint what's still outstanding
   const { data: myRatedSubjectIds = [] } = useQuery({
     queryKey: ["my-pending-ratings", memberId, tenantId],
     enabled: !!memberId && !!tenantId,

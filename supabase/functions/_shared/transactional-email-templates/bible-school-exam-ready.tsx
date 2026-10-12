@@ -45,7 +45,7 @@ const BibleSchoolExamReadyEmail = ({ firstName, courseName, magicLink, tenantNam
         )}
         <Text style={text}>
           Click the button below to securely sign in and start your exam.
-          No password is needed — this link signs you in automatically.
+          No password is needed - this link signs you in automatically.
         </Text>
         <Section style={{ textAlign: 'center', margin: '32px 0' }}>
           <Button href={magicLink} style={button}>
@@ -69,7 +69,7 @@ export const template = {
   component: BibleSchoolExamReadyEmail,
   subject: (data: Record<string, any>) =>
     `Your ${data?.courseName || 'Bible School'} exam is ready`,
-  displayName: 'Bible School — exam ready',
+  displayName: 'Bible School - exam ready',
   previewData: {
     firstName: 'Jane',
     courseName: 'Bible Foundation Course',

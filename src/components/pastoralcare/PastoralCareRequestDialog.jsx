@@ -288,7 +288,7 @@ export default function PastoralCareRequestDialog({ open, onOpenChange, currentU
                       <Label htmlFor="route_hc" className="text-sm">
                         Home Cell Leader
                         {routeOptions?.homeCellName && <span className="text-muted-foreground"> ({routeOptions.homeCellName})</span>}
-                        {!routeOptions?.homeCellLeaderId && <span className="text-muted-foreground"> — none on record</span>}
+                        {!routeOptions?.homeCellLeaderId && <span className="text-muted-foreground"> - none on record</span>}
                       </Label>
                     </div>
                     <div className="flex items-center gap-2">
@@ -300,7 +300,7 @@ export default function PastoralCareRequestDialog({ open, onOpenChange, currentU
                       <Label htmlFor="route_ul" className="text-sm">
                         Unit Leader
                         {routeOptions?.resolvedUnits?.length ? <span className="text-muted-foreground"> ({routeOptions.resolvedUnits.join(", ")})</span> : null}
-                        {!routeOptions?.unitLeaderIds?.length && <span className="text-muted-foreground"> — none on record</span>}
+                        {!routeOptions?.unitLeaderIds?.length && <span className="text-muted-foreground"> - none on record</span>}
                       </Label>
                     </div>
                   </div>

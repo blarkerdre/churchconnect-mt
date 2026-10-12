@@ -3,7 +3,7 @@ import { lazy } from "react";
 /**
  * React.lazy with resilience against stale chunk hashes after a new deploy.
  * Retries the dynamic import once (cache-busted); if it still fails, clears
- * caches/service workers and hard-reloads the page — but at most once per
+ * caches/service workers and hard-reloads the page - but at most once per
  * cooldown window, so a permanently broken chunk cannot trap the user in an
  * endless reload loop. When the cooldown is active, the error is rethrown so
  * an error boundary can show a recovery UI.
@@ -50,13 +50,13 @@ export function lazyRetry(factory) {
     try {
       return await factory();
     } catch (err) {
-      // One quiet retry — covers transient network/CDN blips.
+      // One quiet retry - covers transient network/CDN blips.
       try {
         return await factory();
       } catch (err2) {
         const reloading = await hardReload();
         if (!reloading) {
-          // Reloaded recently already — surface the error so an error boundary
+          // Reloaded recently already - surface the error so an error boundary
           // renders instead of hanging on the Suspense fallback.
           throw err2;
         }

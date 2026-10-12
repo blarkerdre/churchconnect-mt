@@ -60,11 +60,11 @@ export default function Privacy() {
         <CardHeader><CardTitle>What we collect & why</CardTitle></CardHeader>
         <CardContent className="text-sm space-y-2">
           <ul className="list-disc pl-5 space-y-1">
-            <li><strong>Identity & contact</strong> — name, email, phone, address. To identify you and communicate.</li>
-            <li><strong>Church-life data</strong> — attendance, follow-ups, ministry involvement, training progress. For pastoral care and reporting.</li>
-            <li><strong>Special-category data</strong> — religious affiliation (implied by membership), pastoral prayer notes, health considerations you volunteer for pastoral support. Processed only with your consent or for legitimate church activities under Article 9(2)(d).</li>
-            <li><strong>Children's data</strong> — if you are a guardian, we hold basic details of your children for check-in and safeguarding. Parental consent is required.</li>
-            <li><strong>Technical data</strong> — sign-in logs, IP address hashes for abuse prevention.</li>
+            <li><strong>Identity & contact</strong> - name, email, phone, address. To identify you and communicate.</li>
+            <li><strong>Church-life data</strong> - attendance, follow-ups, ministry involvement, training progress. For pastoral care and reporting.</li>
+            <li><strong>Special-category data</strong> - religious affiliation (implied by membership), pastoral prayer notes, health considerations you volunteer for pastoral support. Processed only with your consent or for legitimate church activities under Article 9(2)(d).</li>
+            <li><strong>Children's data</strong> - if you are a guardian, we hold basic details of your children for check-in and safeguarding. Parental consent is required.</li>
+            <li><strong>Technical data</strong> - sign-in logs, IP address hashes for abuse prevention.</li>
           </ul>
         </CardContent>
       </Card>
@@ -74,10 +74,10 @@ export default function Privacy() {
         <CardContent className="text-sm space-y-1">
           <p>We rely on:</p>
           <ul className="list-disc pl-5 space-y-1">
-            <li><strong>Consent</strong> (Art. 6(1)(a)) — marketing, photos, third-party sharing.</li>
-            <li><strong>Legitimate interests</strong> (Art. 6(1)(f)) — pastoral care of members, attendance records.</li>
-            <li><strong>Legal obligation</strong> (Art. 6(1)(c)) — safeguarding of children, statutory reports.</li>
-            <li><strong>Article 9(2)(d)</strong> — legitimate activities of a not-for-profit religious body, limited to members and regular contacts.</li>
+            <li><strong>Consent</strong> (Art. 6(1)(a)) - marketing, photos, third-party sharing.</li>
+            <li><strong>Legitimate interests</strong> (Art. 6(1)(f)) - pastoral care of members, attendance records.</li>
+            <li><strong>Legal obligation</strong> (Art. 6(1)(c)) - safeguarding of children, statutory reports.</li>
+            <li><strong>Article 9(2)(d)</strong> - legitimate activities of a not-for-profit religious body, limited to members and regular contacts.</li>
           </ul>
         </CardContent>
       </Card>
@@ -89,7 +89,7 @@ export default function Privacy() {
           <ul className="list-disc pl-5 space-y-1">
             {policies.map((p) => (
               <li key={p.data_category}>
-                <strong>{p.data_category.replace(/_/g, " ")}</strong> — {Math.round(p.retention_days / 30)} months
+                <strong>{p.data_category.replace(/_/g, " ")}</strong> - {Math.round(p.retention_days / 30)} months
                 {p.description && ` (${p.description.toLowerCase()})`}
               </li>
             ))}

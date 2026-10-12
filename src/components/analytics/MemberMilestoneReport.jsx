@@ -243,7 +243,7 @@ export default function MemberMilestoneReport() {
     );
   };
 
-  // Download Centre Members — respects current filters but ignores milestone selection
+  // Download Centre Members - respects current filters but ignores milestone selection
   // so it returns the full roster of the centre (or grouped roster if "All centres").
   const exportCentreMembers = () => {
     const fromMs = fromDate ? startOfDay(fromDate).getTime() : null;
@@ -291,7 +291,7 @@ export default function MemberMilestoneReport() {
     groups.push({ name: "Unassigned", list: unassigned });
 
     const lines = [];
-    lines.push(`Home Cell Centre Members — generated ${format(new Date(), "yyyy-MM-dd HH:mm")}`);
+    lines.push(`Home Cell Centre Members - generated ${format(new Date(), "yyyy-MM-dd HH:mm")}`);
     lines.push("");
     let firstSection = true;
     groups.forEach((g) => {
@@ -309,7 +309,7 @@ export default function MemberMilestoneReport() {
     );
   };
 
-  // Shared base filter (Status + Joined date) used by roster actions —
+  // Shared base filter (Status + Joined date) used by roster actions -
   // intentionally ignores milestone & unit/centre filters so the caller picks the slice.
   const applyBaseFilters = (list) => {
     const fromMs = fromDate ? startOfDay(fromDate).getTime() : null;
@@ -344,7 +344,7 @@ export default function MemberMilestoneReport() {
     );
   }, [members, centreFilter, statusFilter, fromDate, toDate]);
 
-  // Download Unit Members — single unit or grouped by unit when "All Units".
+  // Download Unit Members - single unit or grouped by unit when "All Units".
   const exportUnitMembers = () => {
     const base = applyBaseFilters(members);
     if (unitFilter !== "all") {
@@ -369,7 +369,7 @@ export default function MemberMilestoneReport() {
     groups.push({ name: "Unassigned", list: unassigned });
 
     const lines = [];
-    lines.push(`Unit Members — generated ${format(new Date(), "yyyy-MM-dd HH:mm")}`);
+    lines.push(`Unit Members - generated ${format(new Date(), "yyyy-MM-dd HH:mm")}`);
     lines.push("");
     let firstSection = true;
     groups.forEach((g) => {
@@ -406,9 +406,9 @@ export default function MemberMilestoneReport() {
     rows: filtered.map((m) => [
       `${m.first_name} ${m.last_name}`,
       m.membership_status || "",
-      m.church_unit || "—",
-      centreNameById[m.wsf_centre_id] || (m.wsf_centre_id ? "—" : "Unassigned"),
-      m.phone || "—",
+      m.church_unit || "-",
+      centreNameById[m.wsf_centre_id] || (m.wsf_centre_id ? "-" : "Unassigned"),
+      m.phone || "-",
       labelsFor(m).join(", "),
     ]),
   });
@@ -580,7 +580,7 @@ export default function MemberMilestoneReport() {
           </div>
         </div>
 
-        {/* Roster actions — act on full unit/centre roster, independent of milestone selection */}
+        {/* Roster actions - act on full unit/centre roster, independent of milestone selection */}
         <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
           <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Roster actions</p>
           <div className="flex flex-wrap gap-2">
@@ -652,12 +652,12 @@ export default function MemberMilestoneReport() {
                   <TableRow key={m.id}>
                     <TableCell className="text-xs font-medium">{m.first_name} {m.last_name}</TableCell>
                     <TableCell className="hidden sm:table-cell text-xs">{m.membership_status}</TableCell>
-                    <TableCell className="hidden md:table-cell text-xs">{m.church_unit || "—"}</TableCell>
+                    <TableCell className="hidden md:table-cell text-xs">{m.church_unit || "-"}</TableCell>
                     <TableCell className="hidden lg:table-cell text-xs">
-                      {centreNameById[m.wsf_centre_id] || (m.wsf_centre_id ? "—" : <span className="text-muted-foreground">Unassigned</span>)}
+                      {centreNameById[m.wsf_centre_id] || (m.wsf_centre_id ? "-" : <span className="text-muted-foreground">Unassigned</span>)}
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-[11px] text-muted-foreground">
-                      {m.email || m.phone || "—"}
+                      {m.email || m.phone || "-"}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">

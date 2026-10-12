@@ -61,7 +61,7 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Church units — explicit tenant_id guard for safety per multi-tenancy memory
+  // Church units - explicit tenant_id guard for safety per multi-tenancy memory
   const { data: units = [], isLoading: unitsLoading, error: unitsError } = useQuery({
     queryKey: ["church-units-signpost", tenantId, isAdmin],
     enabled: open && !!tenantId,
@@ -95,7 +95,7 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
     unitsErrorToastRef.current = key;
   }, [open, unitsError]);
 
-  // Unit leaders for the selected unit — explicit tenant_id guard
+  // Unit leaders for the selected unit - explicit tenant_id guard
   const { data: unitLeaders = [] } = useQuery({
     queryKey: ["unit-leaders", tenantId, unitName],
     enabled: open && !!tenantId && !!unitName && type === "unit_leader",
@@ -115,7 +115,7 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
     },
   });
 
-  // Home cell centres — explicit tenant_id guard
+  // Home cell centres - explicit tenant_id guard
   const { data: centres = [] } = useQuery({
     queryKey: ["wsf-centres-active", tenantId],
     enabled: open && !!tenantId && type === "home_cell_leader",
@@ -162,7 +162,7 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
     });
   }, [type, centres, member]);
 
-  // Resolve the leader for the currently-selected centre — explicit tenant guard on members
+  // Resolve the leader for the currently-selected centre - explicit tenant guard on members
   const { data: centreLeader } = useQuery({
     queryKey: ["centre-leader", selectedCentre?.leader_id, tenantId],
     enabled: type === "home_cell_leader" && !!selectedCentre?.leader_id && !!tenantId,
@@ -184,7 +184,7 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
     },
   });
 
-  // Toast guards (fire once per relevant change) — gated by type to avoid loops
+  // Toast guards (fire once per relevant change) - gated by type to avoid loops
   const noUnitLeadersToastRef = useRef(null);
   useEffect(() => {
     if (!open || type !== "unit_leader" || !unitName) return;
@@ -311,7 +311,7 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
       console.error("[SignPost] submit failed", err);
       toast({
         title: "Could not sign-post",
-        description: err?.message || err?.hint || err?.code || "Unknown error — check console.",
+        description: err?.message || err?.hint || err?.code || "Unknown error - check console.",
         variant: "destructive",
       });
     } finally {
@@ -495,7 +495,7 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
                     <SelectContent className="z-[80]" position="popper" sideOffset={4}>
                       {centres.map(c => (
                         <SelectItem key={c.id} value={c.id}>
-                          {c.name} {c.location ? `— ${c.location}` : c.city ? `— ${c.city}` : ""}
+                          {c.name} {c.location ? `- ${c.location}` : c.city ? `- ${c.city}` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -572,7 +572,7 @@ export default function SignPostDialog({ open, onOpenChange, followup, member, o
         </DialogErrorBoundary>
         </div>
 
-        {/* Sticky footer — always visible */}
+        {/* Sticky footer - always visible */}
         <div className="shrink-0 border-t border-border bg-background px-6 py-3 flex justify-end gap-2">
           <Button variant="ghost" onClick={() => handleOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={saving || !tenantId}>

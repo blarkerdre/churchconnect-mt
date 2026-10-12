@@ -92,8 +92,8 @@ export default function WoFBIFeedbackDialog({ open, onOpenChange, course, member
         action: "wofbi_feedback_submitted",
         entityType: "wofbi_feedback_responses",
         entityId: inserted?.id || registrationId,
-        title: `Feedback received — ${course?.name || "Bible School"}`,
-        message: "Thank you — your course feedback has been recorded.",
+        title: `Feedback received - ${course?.name || "Bible School"}`,
+        message: "Thank you - your course feedback has been recorded.",
         details: { course: course?.name || null, target_name: course?.name || null },
       });
     },
@@ -112,7 +112,7 @@ export default function WoFBIFeedbackDialog({ open, onOpenChange, course, member
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{form?.title || "Bible School — Feedback Form"}</DialogTitle>
+          <DialogTitle>{form?.title || "Bible School - Feedback Form"}</DialogTitle>
           {form?.intro_text && <p className="text-sm text-muted-foreground">{form.intro_text}</p>}
           {course?.name && <p className="text-xs text-muted-foreground">Course: {course.name}</p>}
         </DialogHeader>

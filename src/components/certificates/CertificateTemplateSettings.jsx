@@ -158,7 +158,7 @@ export default function CertificateTemplateSettings() {
     try {
       await assertStorageAvailable(tenantId, file.size);
       const ext = (file.name.split(".").pop() || "png").toLowerCase();
-      // Must live in a PUBLIC bucket — the logo is rendered in printed
+      // Must live in a PUBLIC bucket - the logo is rendered in printed
       // statements and fetched by the Word export.
       const path = `${tenantId}/wofbi-logo/${Date.now()}.${ext}`;
       const { error } = await supabase.storage
@@ -188,7 +188,7 @@ export default function CertificateTemplateSettings() {
       return;
     }
     if (!tenantId) {
-      toast({ title: "Tenant not loaded yet — try again", variant: "destructive" });
+      toast({ title: "Tenant not loaded yet - try again", variant: "destructive" });
       return;
     }
 
@@ -223,7 +223,7 @@ export default function CertificateTemplateSettings() {
       return;
     }
     if (!tenantId) {
-      toast({ title: "Church not loaded yet — try again", variant: "destructive" });
+      toast({ title: "Church not loaded yet - try again", variant: "destructive" });
       return;
     }
 
@@ -247,7 +247,7 @@ export default function CertificateTemplateSettings() {
 
   const handleUseSample = async () => {
     if (!tenantId) {
-      toast({ title: "Tenant not loaded yet — try again", variant: "destructive" });
+      toast({ title: "Tenant not loaded yet - try again", variant: "destructive" });
       return;
     }
     setUploading(true);

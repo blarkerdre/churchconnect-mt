@@ -97,7 +97,7 @@ export default function LifeEventApprovalDialog({ open, onOpenChange, request, i
       });
       await logAudit("life_event.approve_stage1", "life_event_requests", request.id, { note: stage1Note }, tenantId);
     },
-    onSuccess: () => { toast({ title: "Approved — sent to Altar Ministry" }); refetch(); onOpenChange(false); },
+    onSuccess: () => { toast({ title: "Approved - sent to Altar Ministry" }); refetch(); onOpenChange(false); },
     onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
@@ -190,7 +190,7 @@ export default function LifeEventApprovalDialog({ open, onOpenChange, request, i
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <TenantDialogHeader>
           <Sparkles className="h-4 w-4 text-primary" />
-          Life Event — {SUBTYPE_LABEL[request.subtype]}
+          Life Event - {SUBTYPE_LABEL[request.subtype]}
         </TenantDialogHeader>
 
         <div className="space-y-3 text-sm">
@@ -270,8 +270,8 @@ export default function LifeEventApprovalDialog({ open, onOpenChange, request, i
             <div className="rounded-lg bg-muted/40 p-3">
               <p className="font-medium mb-1">Currently assigned</p>
               <p className="text-muted-foreground">
-                Owner: {altarPeople.find(p => p.user_id === request.assigned_owner_id)?.name || "—"}<br />
-                Pastors: {altarPeople.filter(p => request.assigned_pastor_ids.includes(p.user_id)).map(p => p.name).join(", ") || "—"}
+                Owner: {altarPeople.find(p => p.user_id === request.assigned_owner_id)?.name || "-"}<br />
+                Pastors: {altarPeople.filter(p => request.assigned_pastor_ids.includes(p.user_id)).map(p => p.name).join(", ") || "-"}
               </p>
             </div>
           )}

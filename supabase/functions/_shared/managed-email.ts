@@ -1,7 +1,7 @@
 // Shared managed-email senders.
 //
 // Emails send synchronously through Lovable's managed email API. Delivery,
-// retries, suppression, and unsubscribe handling are owned by Lovable — this
+// retries, suppression, and unsubscribe handling are owned by Lovable - this
 // module only sends and mirrors the outcome into the app's `email_send_log`
 // table (notification/history only, never send-gating).
 import { EmailAPIError, sendLovableEmail } from 'npm:@lovable.dev/email-js@0.1.0'

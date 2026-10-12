@@ -267,7 +267,7 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <TenantDialogHeader>
               <Award className="h-5 w-5 text-primary" />
-              Issue Certificate — {member?.first_name} {member?.last_name}
+              Issue Certificate - {member?.first_name} {member?.last_name}
             </TenantDialogHeader>
 
           <div className="space-y-5 py-2">
@@ -469,10 +469,10 @@ function CertificatePreviewDialog({ open, onOpenChange, data, onConfirm, confirm
             <span>·</span>
             <span>{meta.trainingType}</span>
             <span>·</span>
-            <span>{meta.completionDate ? format(new Date(meta.completionDate), "dd MMM yyyy") : "—"}</span>
+            <span>{meta.completionDate ? format(new Date(meta.completionDate), "dd MMM yyyy") : "-"}</span>
             <span>·</span>
             {isNew ? (
-              <Badge variant="secondary" className="text-[10px]">PREVIEW — number assigned on issue</Badge>
+              <Badge variant="secondary" className="text-[10px]">PREVIEW - number assigned on issue</Badge>
             ) : (
               <Badge variant="outline" className="text-[10px]">{meta.certificateNumber}</Badge>
             )}

@@ -409,7 +409,7 @@ export default function UserManagement() {
                             {(p.full_name || p.email || "?")[0].toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <p className="font-medium text-foreground truncate">{p.full_name || "—"}</p>
+                            <p className="font-medium text-foreground truncate">{p.full_name || "-"}</p>
                             <p className="text-xs text-muted-foreground truncate md:hidden">{p.email || ""}</p>
                             <div className="flex flex-wrap gap-1 mt-0.5">
                               {isDisabled && (
@@ -439,7 +439,7 @@ export default function UserManagement() {
                           </div>
                         </div>
                       </td>
-                      <td className="p-3 sm:p-4 text-muted-foreground hidden md:table-cell">{p.email || "—"}</td>
+                      <td className="p-3 sm:p-4 text-muted-foreground hidden md:table-cell">{p.email || "-"}</td>
                       <td className="p-4">
                         <div className="flex flex-wrap gap-1">
                           {userRoles.length === 0 ? (
@@ -466,7 +466,7 @@ export default function UserManagement() {
                             <WSFLeaderAssignments userId={p.user_id} />
                           )}
                           {!userRoles.includes("unit_leader") && !userRoles.includes("wsf_leader") && (
-                            <span className="text-xs text-muted-foreground">—</span>
+                            <span className="text-xs text-muted-foreground">-</span>
                           )}
                         </div>
                       </td>
@@ -644,7 +644,7 @@ export default function UserManagement() {
             ? ["The user will regain access and be able to sign in immediately."]
             : [
                 "The user will be immediately signed out and unable to log in.",
-                "Their data and role assignments are retained — they can be re-enabled later.",
+                "Their data and role assignments are retained - they can be re-enabled later.",
               ]
         }
         isPending={toggleUserMutation.isPending}

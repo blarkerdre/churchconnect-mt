@@ -16,7 +16,7 @@ export default function WoFBIPersistentQRDialog({ open, onOpenChange }) {
     ? `${window.location.origin}/t/${tenantSlug}/wofbi/checkin`
     : "";
   const churchName = currentTenant?.name || "Church";
-  const label = `${churchName} — Bible School Attendance`;
+  const label = `${churchName} - Bible School Attendance`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(url);

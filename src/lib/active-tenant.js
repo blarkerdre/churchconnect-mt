@@ -52,7 +52,7 @@ export function storeTenantId(userId, tenantId) {
   try {
     localStorage.setItem(KEY_PREFIX + userId, tenantId);
   } catch {
-    /* storage unavailable — switching still works for this session */
+    /* storage unavailable - switching still works for this session */
   }
 }
 

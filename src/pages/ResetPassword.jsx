@@ -31,7 +31,7 @@ export default function ResetPassword() {
 
       // Best-effort: work out the church to land in. A recovery session may not
       // be fully verified yet (2FA accounts), in which case this read returns
-      // nothing — fall back to the slug in the URL, then to a success screen.
+      // nothing - fall back to the slug in the URL, then to a success screen.
       let redirectTo = tenantSlug ? `/t/${tenantSlug}` : null;
       if (user?.id) {
         try {
@@ -45,7 +45,7 @@ export default function ResetPassword() {
             redirectTo = `/t/${membership.tenants.slug}`;
           }
         } catch {
-          // ignore — handled by the fallback below
+          // ignore - handled by the fallback below
         }
       }
 
@@ -76,7 +76,7 @@ export default function ResetPassword() {
               <div className="space-y-4 text-center">
                 <CheckCircle2 className="h-10 w-10 text-primary mx-auto" />
                 <p className="text-sm text-muted-foreground">
-                  Password updated — sign in with your new password.
+                  Password updated - sign in with your new password.
                 </p>
                 <Button asChild className="w-full">
                   <Link to={signInPath}>Go to sign in</Link>

@@ -186,7 +186,7 @@ export async function renderStatementOnDoc(doc: any, input: BuildStatementPdfInp
   const rows = subjects.map((s) => {
     const sub = memberSubjects[s.id];
     const pct = sub && sub.total_points > 0 ? (sub.score / sub.total_points) * 100 : 0;
-    const letter = sub ? getLetterGrade(pct, letterBands).letter : "—";
+    const letter = sub ? getLetterGrade(pct, letterBands).letter : "-";
     return {
       name: s.name,
       score: sub?.score ?? 0,
@@ -387,7 +387,7 @@ export async function renderStatementOnDoc(doc: any, input: BuildStatementPdfInp
       doc.text(line, marginX + 3, rowY + rowH - rowH * 0.3 + li * (rowH * 0.7));
     });
     doc.setFont("helvetica", "bold");
-    doc.text(r.taken ? r.letter : "—", marginX + contentWidth - 3, rowY + rowH - rowH * 0.3, {
+    doc.text(r.taken ? r.letter : "-", marginX + contentWidth - 3, rowY + rowH - rowH * 0.3, {
       align: "right",
     });
     rowY += thisRowH;
@@ -428,7 +428,7 @@ export async function renderStatementOnDoc(doc: any, input: BuildStatementPdfInp
     rowY += sp(base.notesRowH);
   }
 
-  // Signature block — anchored near the bottom, but never overlapping the notes
+  // Signature block - anchored near the bottom, but never overlapping the notes
   const sigBlockH = sp(base.sigH) + sp(base.sigNameH) + sp(base.sigTitleH);
   let sigTop = Math.max(rowY + sp(6), pageHeight - marginBottom - sigBlockH);
   if (sigTop + sigBlockH > pageHeight - marginBottom) {

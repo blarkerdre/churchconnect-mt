@@ -68,7 +68,7 @@ export function useApproveJoinRequest() {
       qc.invalidateQueries({ queryKey: ["pending-join-request-count"] });
       qc.invalidateQueries({ queryKey: ["members"] });
       qc.invalidateQueries({ queryKey: ["dashboard-members"] });
-      // Notify member (email + SMS) — fire and forget
+      // Notify member (email + SMS) - fire and forget
       supabase.functions
         .invoke("notify-join-decision", {
           body: { request_id: requestId, decision: "approved" },
@@ -94,7 +94,7 @@ export function useDeclineJoinRequest() {
       toast({ title: "Request declined" });
       qc.invalidateQueries({ queryKey: ["pending-join-requests"] });
       qc.invalidateQueries({ queryKey: ["pending-join-request-count"] });
-      // Notify member (email + SMS) — fire and forget
+      // Notify member (email + SMS) - fire and forget
       supabase.functions
         .invoke("notify-join-decision", {
           body: { request_id: requestId, decision: "declined", reason: reason || null },
@@ -108,10 +108,10 @@ export function useDeclineJoinRequest() {
 /**
  * Helper: given a member's existing approved units/centre, and the form's selected values,
  * returns:
- *   - unitsToRequest: string[] — unit names the member is asking to join
- *   - centreToRequest: uuid|null — centre id the member is asking to join
- *   - removedUnits: string[] — unit names removed (apply immediately)
- *   - centreRemoved: boolean — whether centre was cleared
+ *   - unitsToRequest: string[] - unit names the member is asking to join
+ *   - centreToRequest: uuid|null - centre id the member is asking to join
+ *   - removedUnits: string[] - unit names removed (apply immediately)
+ *   - centreRemoved: boolean - whether centre was cleared
  *
  * Comparison is case-insensitive for unit names.
  */

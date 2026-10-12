@@ -40,7 +40,7 @@ function CheckInsList({ records }) {
             <div className="min-w-0">
               <p className="text-sm font-medium text-foreground truncate">{r.members?.first_name} {r.members?.last_name}</p>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <Clock className="h-3 w-3" /> {r.checked_in_at ? new Date(r.checked_in_at).toLocaleTimeString() : "—"}
+                <Clock className="h-3 w-3" /> {r.checked_in_at ? new Date(r.checked_in_at).toLocaleTimeString() : "-"}
               </p>
             </div>
           </div>
@@ -60,7 +60,7 @@ export default function Attendance() {
   const canManage = isAdmin || isUnitLeader || isWSFLeader;
   const isUnitLeaderOnly = isUnitLeader && !isAdmin;
   const isWSFLeaderOnly = isWSFLeader && !isAdmin && !isUnitLeader;
-  // Plain unit member: no leader roles, but belongs to at least one unit — read-only view of their unit meetings
+  // Plain unit member: no leader roles, but belongs to at least one unit - read-only view of their unit meetings
   const isUnitMemberOnly = !isAdmin && !isUnitLeader && !isWSFLeader && (myUnits?.length || 0) > 0;
 
   const queryClient = useQueryClient();
@@ -86,7 +86,7 @@ export default function Attendance() {
     },
   });
 
-  // Church members with an app account — options for the admin-only "Recorded by" picker
+  // Church members with an app account - options for the admin-only "Recorded by" picker
   const { data: recorderMembers = [] } = useQuery({
     queryKey: ["attendance-recorders", tenantId],
     enabled: !!tenantId && isAdmin,
@@ -115,9 +115,9 @@ export default function Attendance() {
   }, [recorderMembers, user?.id]);
 
   const recorderName = (id) => {
-    if (!id) return "—";
+    if (!id) return "-";
     const m = recorderOptions.find((o) => o.user_id === id);
-    return m?.name || "—";
+    return m?.name || "-";
   };
 
   const { data: wsfCentres = [] } = useQuery({
@@ -207,7 +207,7 @@ export default function Attendance() {
     },
   });
 
-  // Members eligible for the selected meeting — mirrors the check-in panel rules
+  // Members eligible for the selected meeting - mirrors the check-in panel rules
   const eligibleMembers = useMemo(() => {
     if (!selectedSession) return [];
     const active = rosterMemberPool.filter(m => m.membership_status !== "Inactive");
@@ -230,7 +230,7 @@ export default function Attendance() {
     const recordByMember = new Map(records.map(r => [r.member_id, r]));
     const seen = new Set();
     const rows = [];
-    const fmtTime = (iso) => (iso ? new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "—");
+    const fmtTime = (iso) => (iso ? new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "-");
 
     eligibleMembers.forEach((m) => {
       const rec = recordByMember.get(m.id);
@@ -238,10 +238,10 @@ export default function Attendance() {
       rows.push([
         rows.length + 1,
         `${m.first_name || ""} ${m.last_name || ""}`.trim(),
-        m.church_unit || "—",
+        m.church_unit || "-",
         rec ? "Present" : "Absent",
         fmtTime(rec?.checked_in_at),
-        rec?.check_in_method || "—",
+        rec?.check_in_method || "-",
       ]);
     });
 
@@ -251,10 +251,10 @@ export default function Attendance() {
       rows.push([
         rows.length + 1,
         `${r.members?.first_name || ""} ${r.members?.last_name || ""}`.trim() || "Unknown member",
-        "—",
+        "-",
         "Present",
         fmtTime(r.checked_in_at),
-        r.check_in_method || "—",
+        r.check_in_method || "-",
       ]);
     });
 
@@ -262,7 +262,7 @@ export default function Attendance() {
     const label = selectedSession.title || selectedSession.session_type;
 
     return {
-      title: `Attendance Roster — ${label}`,
+      title: `Attendance Roster - ${label}`,
       orgName: currentTenant?.name || "",
       logoUrl: currentTenant?.logo_url || null,
       meta: [
@@ -394,7 +394,7 @@ export default function Attendance() {
       ``,
       `ATTENDEES:`,
       `----------`,
-      ...records.map((r, i) => `${i + 1}. ${r.members?.first_name || ""} ${r.members?.last_name || ""} — ${r.check_in_method || "manual"} — ${r.checked_in_at ? new Date(r.checked_in_at).toLocaleTimeString() : "N/A"}`),
+      ...records.map((r, i) => `${i + 1}. ${r.members?.first_name || ""} ${r.members?.last_name || ""} - ${r.check_in_method || "manual"} - ${r.checked_in_at ? new Date(r.checked_in_at).toLocaleTimeString() : "N/A"}`),
     ].filter(Boolean).join("\n");
 
     const blob = new Blob([reportContent], { type: "text/plain" });
@@ -506,7 +506,7 @@ export default function Attendance() {
                     i + 1,
                     `${r.members?.first_name || ""} ${r.members?.last_name || ""}`,
                     r.check_in_method || "manual",
-                    r.checked_in_at ? new Date(r.checked_in_at).toLocaleTimeString() : "—",
+                    r.checked_in_at ? new Date(r.checked_in_at).toLocaleTimeString() : "-",
                   ]),
                 })}
               />
@@ -629,7 +629,7 @@ export default function Attendance() {
               </CardContent>
             </Card>
 
-            {/* Session Report — only for unit leaders after session is closed */}
+            {/* Session Report - only for unit leaders after session is closed */}
             {selectedSession && isClosed && (isAdmin || isUnitLeader || isWSFLeader) && (
               <Card className="border-0 shadow-sm">
                 <CardHeader><CardTitle className="text-base font-display flex items-center gap-2"><FileText className="h-4 w-4 text-accent" /> Meeting Report</CardTitle></CardHeader>

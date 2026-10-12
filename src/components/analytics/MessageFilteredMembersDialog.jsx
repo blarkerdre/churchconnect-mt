@@ -84,7 +84,7 @@ export default function MessageFilteredMembersDialog({
     }
     setSending(true);
     try {
-      // For tokens, send body as-is — server doesn't yet personalise per recipient.
+      // For tokens, send body as-is - server doesn't yet personalise per recipient.
       // Strip {first_name} fallback so emails read naturally.
       const cleanBody = message.replace(/\{first_name\}/g, "there");
       const { data, error } = await supabase.functions.invoke("send-email-alert", {

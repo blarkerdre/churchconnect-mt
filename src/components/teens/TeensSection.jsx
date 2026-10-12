@@ -118,7 +118,7 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
             <div>
               <Label>Gender</Label>
               <Select value={form.gender || ""} onValueChange={(v) => setForm({ ...form, gender: v })}>
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="-" /></SelectTrigger>
                 <SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem></SelectContent>
               </Select>
             </div>
@@ -133,7 +133,7 @@ function TeenForm({ open, onOpenChange, teen, memberId, onSaved }) {
               onChange={(e) => setForm({ ...form, pin: e.target.value.replace(/\D/g, "") })}
             />
             <p className="text-[11px] text-muted-foreground mt-1">
-              PIN lets your teen check in from any phone (e.g. a friend's). Optional — signing in as parent also works.
+              PIN lets your teen check in from any phone (e.g. a friend's). Optional - signing in as parent also works.
             </p>
             {teen?.id && (
               <label className="flex items-center gap-2 mt-2 text-xs">

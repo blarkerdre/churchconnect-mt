@@ -276,7 +276,7 @@ export default function UnitTaskDetailPanel({ open, onOpenChange, task, canManag
               <div className="border border-border rounded-md divide-y divide-border max-h-64 overflow-y-auto">
                 {assignments.map((a) => (
                   <div key={a.id} className="flex items-center justify-between px-3 py-2 text-sm gap-2">
-                    <span className="min-w-0 truncate">{a.members ? `${a.members.first_name} ${a.members.last_name}` : "—"}</span>
+                    <span className="min-w-0 truncate">{a.members ? `${a.members.first_name} ${a.members.last_name}` : "-"}</span>
                     <div className="flex items-center gap-2 text-xs">
                       <Badge className={statusBadge[a.status]}>{a.status}</Badge>
                       {a.acknowledged_at && <span className="text-muted-foreground hidden sm:inline">ack {new Date(a.acknowledged_at).toLocaleDateString()}</span>}

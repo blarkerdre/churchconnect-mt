@@ -209,7 +209,7 @@ export default function RoutePlannerDialog({ open, onOpenChange, bookings, trans
     const driverMember = transportMembers.find(m => m.user_id === driverId);
     const driverName = driverMember ? `${driverMember.first_name} ${driverMember.last_name}` : "Driver";
     const dateLabel = dateFrom === dateTo ? dateFrom : `${dateFrom} to ${dateTo}`;
-    const title = `${isLeader ? "Driver Route" : "My Route"} — ${driverName} — ${dateLabel}`;
+    const title = `${isLeader ? "Driver Route" : "My Route"} - ${driverName} - ${dateLabel}`;
     const totalPax = order.reduce((s, b) => s + (b.passengers || 1), 0);
 
     const headers = ["Stop #", ...(multiDay ? ["Date"] : []), "Pickup Time", "Passenger", "Phone", "Pax", "Pickup Address", "Postcode", "Pickup Notes", "Destination", "Status"];

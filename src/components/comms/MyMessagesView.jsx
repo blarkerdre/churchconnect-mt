@@ -10,7 +10,7 @@ const WhatsAppIcon = ({ className }) => (
 
 /**
  * Member-facing combined history of messages received via SMS / WhatsApp.
- * Email history isn't surfaced to members today — same behavior preserved.
+ * Email history isn't surfaced to members today - same behavior preserved.
  */
 export default function MyMessagesView({ smsEnabled, whatsappEnabled, renderList }) {
   const channels = [

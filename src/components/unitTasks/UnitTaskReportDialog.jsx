@@ -77,14 +77,14 @@ export default function UnitTaskReportDialog({ open, onOpenChange, unitOptions =
       ackPct: total ? Math.round((ack / total) * 100) : 0,
       donePct: total ? Math.round((done / total) * 100) : 0,
       overdue,
-      avgDays: doneCount ? (doneDays / doneCount).toFixed(1) : "—",
+      avgDays: doneCount ? (doneDays / doneCount).toFixed(1) : "-",
     };
   }, [filtered]);
 
   const items = useMemo(() => filtered.map((r) => ({
-    member: r.members ? `${r.members.first_name} ${r.members.last_name}` : "—",
-    title: r.unit_tasks?.title || "—",
-    unit: r.unit_tasks?.unit_name || "—",
+    member: r.members ? `${r.members.first_name} ${r.members.last_name}` : "-",
+    title: r.unit_tasks?.title || "-",
+    unit: r.unit_tasks?.unit_name || "-",
     priority: r.unit_tasks?.priority || "",
     taskStatus: r.unit_tasks?.status || "",
     assignStatus: r.status,
@@ -104,7 +104,7 @@ export default function UnitTaskReportDialog({ open, onOpenChange, unitOptions =
     }[groupBy];
     const map = {};
     items.forEach((it) => {
-      const k = keyFn(it) || "—";
+      const k = keyFn(it) || "-";
       (map[k] = map[k] || []).push(it);
     });
     return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0])).map(([key, rows]) => ({ key, rows }));
@@ -116,7 +116,7 @@ export default function UnitTaskReportDialog({ open, onOpenChange, unitOptions =
   const downloadCSV = () => {
     const lines = [headers];
     grouped.forEach((g) => {
-      if (groupBy !== "none") lines.push([`— ${g.key} (${g.rows.length}) —`]);
+      if (groupBy !== "none") lines.push([`- ${g.key} (${g.rows.length}) -`]);
       g.rows.forEach((it) => lines.push(toCells(it).map((c) => String(c ?? "").replace(/[\r\n,]+/g, " "))));
     });
     const csv = lines.map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -130,7 +130,7 @@ export default function UnitTaskReportDialog({ open, onOpenChange, unitOptions =
   const buildPrintRows = () => {
     const out = [];
     grouped.forEach((g) => {
-      if (groupBy !== "none") out.push([`— ${g.key} (${g.rows.length}) —`, "", "", "", "", "", "", "", ""]);
+      if (groupBy !== "none") out.push([`- ${g.key} (${g.rows.length}) -`, "", "", "", "", "", "", "", ""]);
       g.rows.forEach((it) => out.push(toCells(it)));
     });
     return { title: "Unit Tasks Report", headers, rows: out };
@@ -230,7 +230,7 @@ export default function UnitTaskReportDialog({ open, onOpenChange, unitOptions =
                         )}
                         {g.rows.map((it, i) => (
                           <tr key={`${g.key}-${i}`} className="border-t border-border">
-                            {toCells(it).map((c, j) => <td key={j} className="px-3 py-1.5 align-top">{c || "—"}</td>)}
+                            {toCells(it).map((c, j) => <td key={j} className="px-3 py-1.5 align-top">{c || "-"}</td>)}
                           </tr>
                         ))}
                       </React.Fragment>

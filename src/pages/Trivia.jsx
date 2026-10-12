@@ -122,7 +122,7 @@ export default function Trivia() {
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">{blurb}</p>
           {!quiz ? (
-            <p className="text-sm text-muted-foreground">Not available yet — an admin needs to add questions.</p>
+            <p className="text-sm text-muted-foreground">Not available yet - an admin needs to add questions.</p>
           ) : attempt ? (
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary" className="flex items-center gap-1">
@@ -193,7 +193,7 @@ export default function Trivia() {
           </div>
 
           <div className="grid gap-3 lg:grid-cols-2">
-            <QuizCard quiz={daily} icon={BookOpen} label="Today's quiz" blurb="Five quick questions — one attempt per day keeps your streak alive." />
+            <QuizCard quiz={daily} icon={BookOpen} label="Today's quiz" blurb="Five quick questions - one attempt per day keeps your streak alive." />
             <QuizCard quiz={weekly} icon={CalendarDays} label="Weekly challenge" blurb="Fifteen questions, open all week. One attempt per player." />
           </div>
         </TabsContent>

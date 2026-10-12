@@ -1,5 +1,5 @@
 // Structure for the Bible School (WOFBI) course final report.
-// Mirrors the Cardiff WOFBI BCC report template — all text below is a starting
+// Mirrors the Cardiff WOFBI BCC report template - all text below is a starting
 // point that the user can edit freely in the report editor.
 
 export const FINDING_FIELDS = [
@@ -74,7 +74,7 @@ export function buildIntroduction({ course = "", edition = "", centre = "", chur
       place ? ` held at ${place}` : ""
     }.`,
     `This report provides a summary of findings from ${courseLabel}${
-      edition ? ` — ${edition}` : ""
+      edition ? ` - ${edition}` : ""
     }. It must be noted that the session birthed greater interest for Bible School attendance as it spreads across members from other stations, and this is a breakthrough that has been made possible only by the grace of God.`,
     "The students all confirmed their lives have taken a different and positive turn since they started and completed the classes. They were excited about taking up their positions in life and expressing the seed of greatness deposited in them. Some of them received their healings, some received directions, and some received breakthroughs at work while going through the Bible School (Romans 8:19).",
   ].join("\n\n");

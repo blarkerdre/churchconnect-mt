@@ -23,7 +23,7 @@ function Board({ tenantId, scope, audience }) {
   });
 
   if (isLoading) return <p className="py-6 text-center text-sm text-muted-foreground">Loading…</p>;
-  if (!data.length) return <p className="py-6 text-center text-sm text-muted-foreground">No scores yet — be the first to play.</p>;
+  if (!data.length) return <p className="py-6 text-center text-sm text-muted-foreground">No scores yet - be the first to play.</p>;
 
   return (
     <ol className="divide-y">

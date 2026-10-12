@@ -134,7 +134,7 @@ export default function ServiceRosterDialog({ open, onOpenChange, unitOptions = 
   };
 
   const submit = async () => {
-    if (!tenantId) return toast.error("No tenant context — reload the page");
+    if (!tenantId) return toast.error("No tenant context - reload the page");
     if (!user?.id) return toast.error("Not signed in");
     if (!form.unit_name) return toast.error("Select a unit");
     if (!form.service_type) return toast.error("Select a service type");

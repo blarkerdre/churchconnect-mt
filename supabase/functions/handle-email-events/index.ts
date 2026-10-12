@@ -2,7 +2,7 @@ import { createEmailWebhookHandler } from 'npm:@lovable.dev/email-js@0.1.0'
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 // Lovable enforces suppression server-side at send time. These app-table
-// writes are a history/notification view only — they never gate sends.
+// writes are a history/notification view only - they never gate sends.
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
@@ -13,8 +13,8 @@ const REASON_STATUS: Record<string, 'bounced' | 'complained' | 'suppressed'> = {
 }
 
 const REASON_MESSAGE: Record<string, string> = {
-  bounce: 'Permanent bounce — email address is invalid or rejected',
-  complaint: 'Spam complaint — recipient marked email as spam',
+  bounce: 'Permanent bounce - email address is invalid or rejected',
+  complaint: 'Spam complaint - recipient marked email as spam',
   unsubscribe: 'Recipient unsubscribed',
 }
 

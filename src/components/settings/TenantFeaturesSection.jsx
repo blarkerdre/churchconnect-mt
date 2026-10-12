@@ -81,7 +81,7 @@ export default function TenantFeaturesSection() {
       <CardContent className="space-y-1">
         {!canEdit && (
           <p className="text-xs text-muted-foreground pb-2">
-            Read-only — module availability is managed by the platform.
+            Read-only - module availability is managed by the platform.
 
           </p>
         )}

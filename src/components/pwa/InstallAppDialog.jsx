@@ -61,7 +61,7 @@ export default function InstallAppDialog({ open, onOpenChange }) {
           Install {tenantName}
         </TenantDialogHeader>
         <DialogDescription className="text-base text-foreground">
-          Get one-tap access from your home screen — works offline, loads instantly,
+          Get one-tap access from your home screen - works offline, loads instantly,
           and feels just like a native app.
         </DialogDescription>
 
@@ -101,7 +101,7 @@ export default function InstallAppDialog({ open, onOpenChange }) {
             <p>
               <strong className="text-foreground">Heads up for Android users:</strong> After installing,
               Google may show a Play Protect warning that the app "is built for an older version of Android."
-              This comes from Android itself, not from this app — your data is safe. Tap{" "}
+              This comes from Android itself, not from this app - your data is safe. Tap{" "}
               <strong>Install anyway</strong> to continue. Google updates this automatically over time.
             </p>
           </div>

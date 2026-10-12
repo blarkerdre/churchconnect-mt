@@ -22,7 +22,7 @@ const DELIVERY_STATUS_CONFIG = {
   undelivered: { label: "Undelivered", className: "bg-destructive/10 text-destructive" },
 };
 
-// Treat older "queued/accepted" rows as Sent — Twilio's StatusCallback may not have reached us.
+// Treat older "queued/accepted" rows as Sent - Twilio's StatusCallback may not have reached us.
 function getStatusDisplay(log) {
   const ds = log.delivery_status;
   const ageMs = Date.now() - new Date(log.created_at).getTime();

@@ -74,7 +74,7 @@ export default function MemberTable({ members, onEdit, onDelete, onEmail, readOn
                   {m.membership_status || "Active"}
                 </Badge>
               </TableCell>
-              <TableCell className="text-sm text-slate-600">{m.church_unit !== "None" && m.church_unit ? m.church_unit : "—"}</TableCell>
+              <TableCell className="text-sm text-slate-600">{m.church_unit !== "None" && m.church_unit ? m.church_unit : "-"}</TableCell>
               <TableCell className="text-center"><YesNo value={m.water_baptism} /></TableCell>
               <TableCell className="text-center"><YesNo value={m.winners_satellite} /></TableCell>
               <TableCell className="text-center"><YesNo value={m.holy_spirit_baptism} /></TableCell>

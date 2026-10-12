@@ -97,7 +97,7 @@ export default function SLASection() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: "SLA signed", description: "Thank you — your signature has been recorded." });
+      toast({ title: "SLA signed", description: "Thank you - your signature has been recorded." });
       setSignOpen(false);
       setTypedName("");
       setAgreed(false);
@@ -239,7 +239,7 @@ export default function SLASection() {
           <ScrollArea className="max-h-[65vh] pr-4">
             <div
               className="prose prose-sm dark:prose-invert max-w-none"
-              // Preview only — content authored by super-admins, merged with local tokens.
+              // Preview only - content authored by super-admins, merged with local tokens.
               dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(mergedBody || "") }}
             />
           </ScrollArea>

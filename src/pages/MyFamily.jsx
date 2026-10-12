@@ -144,7 +144,7 @@ function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
             <div>
               <Label>Gender</Label>
               <Select value={form.gender || ""} onValueChange={v => setForm({ ...form, gender: v })}>
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="-" /></SelectTrigger>
                 <SelectContent><SelectItem value="Male">Male</SelectItem><SelectItem value="Female">Female</SelectItem></SelectContent>
               </Select>
             </div>
@@ -152,7 +152,7 @@ function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
           <div>
             <Label>Age group</Label>
             <Select value={form.age_group || ""} onValueChange={v => setForm({ ...form, age_group: v })}>
-              <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="-" /></SelectTrigger>
               <SelectContent>{AGE_GROUPS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
             </Select>
             <p className="text-[11px] text-muted-foreground mt-1">Early Years covers ages 2-9 (2-4, 5-7 and 8-9 years old). Ages 10-12 belong in Preteens and 13-17 in Teenagers.</p>

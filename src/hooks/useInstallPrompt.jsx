@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 
 /**
- * useInstallPrompt — captures the PWA install prompt and exposes platform info.
+ * useInstallPrompt - captures the PWA install prompt and exposes platform info.
  * - On Chrome/Edge/Android: beforeinstallprompt is captured; promptInstall() shows the native dialog.
  * - On iOS Safari: no API exists; show instructions instead (isIOS=true, canPrompt=false).
  */

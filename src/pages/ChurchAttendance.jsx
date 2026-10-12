@@ -91,7 +91,7 @@ export default function ChurchAttendance() {
   const recorderNameMap = useMemo(() => {
     const m = {};
     recorderMembers.forEach((p) => {
-      if (p.user_id) m[p.user_id] = [p.first_name, p.last_name].filter(Boolean).join(" ") || "—";
+      if (p.user_id) m[p.user_id] = [p.first_name, p.last_name].filter(Boolean).join(" ") || "-";
     });
     return m;
   }, [recorderMembers]);
@@ -106,7 +106,7 @@ export default function ChurchAttendance() {
     return list;
   }, [recorderMembers, user?.id]);
 
-  const recorderName = (id) => (id ? recorderNameMap[id] || (id === user?.id ? "You" : "—") : "—");
+  const recorderName = (id) => (id ? recorderNameMap[id] || (id === user?.id ? "You" : "-") : "-");
 
 
 
@@ -250,7 +250,7 @@ export default function ChurchAttendance() {
   const totalTestimonies = filteredReports.reduce((s, r) => s + (r.testimonies || 0), 0);
   const totalCars = filteredReports.reduce((s, r) => s + (r.cars || 0), 0);
 
-  // Chart data — sorted chronologically, last 20 services
+  // Chart data - sorted chronologically, last 20 services
   const chartData = useMemo(() => {
     const sorted = [...filteredReports].sort((a, b) => a.service_date.localeCompare(b.service_date));
     return sorted.slice(-20).map(r => ({
@@ -282,7 +282,7 @@ export default function ChurchAttendance() {
     title: "Church Attendance Report",
     headers: ["Date", "Service Type", "Title", "Adult M", "Adult F", "Children", "Teens", "Converts", "First Timers", "Testimonies", "Cars", "Total", "Recorded by", "Recorded on"],
     rows: filteredReports.map(r => [
-      format(parseISO(r.service_date), "dd MMM yyyy"), r.service_type, r.title || "—",
+      format(parseISO(r.service_date), "dd MMM yyyy"), r.service_type, r.title || "-",
       r.adult_male, r.adult_female, r.children, r.teens,
       r.converts || 0, r.first_timers || 0, r.testimonies || 0, r.cars || 0,
       r.total_attendance, recorderName(r.recorded_by), formatDateTime(r.created_at)

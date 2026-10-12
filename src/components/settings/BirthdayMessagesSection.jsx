@@ -152,7 +152,7 @@ export default function BirthdayMessagesSection() {
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div>
             <Label className="text-sm font-medium">Enable birthday messages</Label>
-            <p className="text-[11px] text-muted-foreground">Master switch — turn off to pause all sends.</p>
+            <p className="text-[11px] text-muted-foreground">Master switch - turn off to pause all sends.</p>
           </div>
           <Switch
             checked={current.enabled}

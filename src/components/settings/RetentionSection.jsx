@@ -66,7 +66,7 @@ export default function RetentionSection() {
               <Label className="font-medium">{LABELS[p.data_category] || p.data_category}</Label>
               {p.last_run_at && (
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Last run: {new Date(p.last_run_at).toLocaleDateString()} — deleted {p.last_run_deleted_count ?? 0}
+                  Last run: {new Date(p.last_run_at).toLocaleDateString()} - deleted {p.last_run_deleted_count ?? 0}
                 </p>
               )}
             </div>

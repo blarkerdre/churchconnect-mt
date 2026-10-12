@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
     }
 
     if (!authToken) {
-      console.warn(`No Twilio auth token configured (source=${tokenSource}) — rejecting webhook`);
+      console.warn(`No Twilio auth token configured (source=${tokenSource}) - rejecting webhook`);
       return new Response("Forbidden", { status: 403, headers: { "Content-Type": "text/plain" } });
     }
 
@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
     signatureValid = signatureValid && diff === 0;
 
     if (!signatureValid) {
-      console.warn(`Twilio signature mismatch (tokenSource=${tokenSource}) — rejecting`);
+      console.warn(`Twilio signature mismatch (tokenSource=${tokenSource}) - rejecting`);
       return new Response("Forbidden", { status: 403, headers: { "Content-Type": "text/plain" } });
     }
     console.log(`Signature validated using ${tokenSource} auth token`);

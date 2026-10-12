@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
     let notified = 0;
     const errors: Array<{ member_id: string; channel: string; error: string }> = [];
 
-    // In-app notifications (one row per user_id) — the only channel used.
+    // In-app notifications (one row per user_id) - the only channel used.
     const notifRows = allowedRecipients
       .filter((r) => r.user_id)
       .map((r) => ({

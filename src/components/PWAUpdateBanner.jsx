@@ -45,7 +45,7 @@ export default function PWAUpdateBanner() {
     }
 
     if (!stored) {
-      // First standalone launch — record fingerprint as the install snapshot.
+      // First standalone launch - record fingerprint as the install snapshot.
       try {
         localStorage.setItem(
           STORAGE_KEY,

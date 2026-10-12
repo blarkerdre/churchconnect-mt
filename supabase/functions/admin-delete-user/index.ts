@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
       ]);
     }
 
-    // Account-level rows (not tenant-scoped) — delete last
+    // Account-level rows (not tenant-scoped) - delete last
     await Promise.all([
       supabase.from("user_roles").delete().eq("user_id", user_id),
       supabase.from("profiles").delete().eq("user_id", user_id),

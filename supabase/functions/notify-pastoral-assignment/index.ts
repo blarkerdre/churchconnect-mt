@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Load the real pastoral care case — never trust client-supplied content
+    // Load the real pastoral care case - never trust client-supplied content
     const { data: pcRecord, error: pcErr } = await supabase
       .from("pastoral_care")
       .select("id, tenant_id, assigned_to, subject, care_type, description")
@@ -235,7 +235,7 @@ Deno.serve(async (req) => {
             const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
             const __quota = await checkSmsQuota(supabase, tenant_id, "sms", 1);
             if (!__quota.allowed) {
-              console.warn("[notify-pastoral-assignment] SMS quota exceeded for tenant", tenant_id, "— skipping send");
+              console.warn("[notify-pastoral-assignment] SMS quota exceeded for tenant", tenant_id, "- skipping send");
             } else {
             const response = await fetch(`${GATEWAY_URL}/Messages.json`, {
               method: "POST",
@@ -278,7 +278,7 @@ Deno.serve(async (req) => {
         }
       }
     } else if (recipientPhone && !smsEnabled) {
-      console.log("SMS notifications disabled — skipping SMS for pastoral care assignment");
+      console.log("SMS notifications disabled - skipping SMS for pastoral care assignment");
     }
 
     return new Response(JSON.stringify({ success: true }), {

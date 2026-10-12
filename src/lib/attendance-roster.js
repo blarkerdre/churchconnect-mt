@@ -6,7 +6,7 @@ import { toImageDataUrl } from "@/lib/logo-data-url";
  *
  * A roster object looks like:
  * {
- *   title:   "Sunday Service — 12 Jan 2026",
+ *   title:   "Sunday Service - 12 Jan 2026",
  *   orgName: "Tenant name",
  *   logoUrl: "https://.../logo.png"   (optional, resolved to a data URL when printing)
  *   meta:    [["Type", "Sunday Service"], ["Date", "2026-01-12"]],

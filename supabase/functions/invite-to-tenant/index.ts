@@ -187,7 +187,7 @@ Deno.serve(async (req) => {
     }
 
 
-    // User doesn't exist — check for pending invitation
+    // User doesn't exist - check for pending invitation
     const { data: existingInvite } = await supabase
       .from("tenant_invitations")
       .select("id, token")

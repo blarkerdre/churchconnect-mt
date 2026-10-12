@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
   }
 
   // Authorize: either pg_cron with service-role bearer (env match, or any JWT with
-  // role=service_role — covers legacy long JWT stored in Vault while env is the new sb_secret_*),
+  // role=service_role - covers legacy long JWT stored in Vault while env is the new sb_secret_*),
   // OR an admin JWT scoped to the tenant being acted on.
   const bearer = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
   let authorized = bearer === serviceKey;
@@ -218,7 +218,7 @@ Deno.serve(async (req) => {
 
       for (const channel of channels) {
         // Idempotency: insert log row first; on conflict skip (unless the
-        // existing row is a failure — those are retried later the same day).
+        // existing row is a failure - those are retried later the same day).
         // Skip log insert for manual test sends so they aren't blocked by
         // the unique constraint and don't pollute real birthday history.
         if (!isManual) {
@@ -233,7 +233,7 @@ Deno.serve(async (req) => {
             });
           if (logInsErr) {
             if ((logInsErr as any).code === "23505") {
-              // A row already exists for today — only retry if it failed.
+              // A row already exists for today - only retry if it failed.
               const { data: existing } = await svc
                 .from("birthday_message_log")
                 .select("status")
@@ -329,7 +329,7 @@ Deno.serve(async (req) => {
               } else {
                 errMsg = r.error || `${channel} send failed (${r.status ?? "network"})`;
                 // The messaging function never ran far enough to log this attempt,
-                // so record it ourselves — otherwise the failure is invisible in
+                // so record it ourselves - otherwise the failure is invisible in
                 // System Logs.
                 const { error: smsLogErr } = await svc.from("sms_log").insert({
                   tenant_id: t.tenant_id,

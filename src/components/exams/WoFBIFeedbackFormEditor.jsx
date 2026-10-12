@@ -65,7 +65,7 @@ export default function WoFBIFeedbackFormEditor() {
       setLocal({
         tenant_id: tenantId,
         enabled: false,
-        title: "Bible School — Feedback Form",
+        title: "Bible School - Feedback Form",
         intro_text: "We would love to hear your feedback and testimony by completing this form.",
         fields: DEFAULT_WOFBI_FEEDBACK_FIELDS,
       });
@@ -97,7 +97,7 @@ export default function WoFBIFeedbackFormEditor() {
       return data || [];
     },
   });
-  const courseName = (id) => courses.find((c) => c.id === id)?.name || "—";
+  const courseName = (id) => courses.find((c) => c.id === id)?.name || "-";
 
   const saveMutation = useMutation({
     mutationFn: async (payload) => {
@@ -151,7 +151,7 @@ export default function WoFBIFeedbackFormEditor() {
               return sum + (idx >= 0 ? (scale.length - idx) : 0) * n;
             }, 0) / total
           : 0;
-        return { row: r, counts, total, avg: score ? score.toFixed(1) : "—", max: scale.length };
+        return { row: r, counts, total, avg: score ? score.toFixed(1) : "-", max: scale.length };
       }),
     }));
     const ynStats = yesNo.map((f) => ({
@@ -166,7 +166,7 @@ export default function WoFBIFeedbackFormEditor() {
     const flat = [];
     fields.forEach((f) => {
       if (f.type === "section_heading") return;
-      if (f.type === "rating_grid") (f.rows || []).forEach((r) => flat.push({ key: `${f.id}::${r}`, label: `${f.label} — ${r}` }));
+      if (f.type === "rating_grid") (f.rows || []).forEach((r) => flat.push({ key: `${f.id}::${r}`, label: `${f.label} - ${r}` }));
       else flat.push({ key: f.id, label: f.label });
     });
     const header = ["Student", "Email", "Course", "Submitted", ...flat.map((c) => c.label)];
@@ -486,7 +486,7 @@ export default function WoFBIFeedbackFormEditor() {
                       {(f.rows || []).map((r) => (
                         <div key={r} className="flex justify-between text-sm gap-2">
                           <span className="text-muted-foreground">{r}</span>
-                          <span>{v?.[r] || "—"}</span>
+                          <span>{v?.[r] || "-"}</span>
                         </div>
                       ))}
                     </div>
@@ -496,7 +496,7 @@ export default function WoFBIFeedbackFormEditor() {
                   <div key={f.id}>
                     <p className="text-xs font-semibold">{f.label}</p>
                     <p className="text-sm whitespace-pre-wrap">
-                      {typeof v === "boolean" ? (v ? "Yes" : "No") : (v || "—")}
+                      {typeof v === "boolean" ? (v ? "Yes" : "No") : (v || "-")}
                     </p>
                   </div>
                 );

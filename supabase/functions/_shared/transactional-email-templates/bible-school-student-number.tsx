@@ -24,7 +24,7 @@ const BibleSchoolStudentNumberEmail = ({ firstName, courseName, tenantName, cour
           {firstName ? `Hi ${firstName},` : 'Hello,'}
         </Heading>
         <Text style={text}>
-          Congratulations — your application for{' '}
+          Congratulations - your application for{' '}
           <strong>{courseName || 'Bible School'}</strong> at{' '}
           {tenantName || SITE_NAME} has been approved.
         </Text>
@@ -39,7 +39,7 @@ const BibleSchoolStudentNumberEmail = ({ firstName, courseName, tenantName, cour
               </Text>
             ))}
             <Text style={hint}>
-              Please keep this safe — you'll need it for your exam and certificate.
+              Please keep this safe - you'll need it for your exam and certificate.
             </Text>
           </Section>
         )}
@@ -60,7 +60,7 @@ export const template = {
   component: BibleSchoolStudentNumberEmail,
   subject: (data: Record<string, any>) =>
     `Your ${data?.courseName || 'Bible School'} student number`,
-  displayName: 'Bible School — student number',
+  displayName: 'Bible School - student number',
   previewData: {
     firstName: 'Jane',
     courseName: 'Bible Foundation Course',

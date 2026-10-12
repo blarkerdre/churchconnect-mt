@@ -1,5 +1,5 @@
 // Real OOXML (.docx) generation for the Bible School course final report.
-// Built with JSZip (already a dependency) so Word/Google Docs open it natively —
+// Built with JSZip (already a dependency) so Word/Google Docs open it natively -
 // the previous HTML-renamed-to-.doc file was rejected as "corrupt" by Word.
 import JSZip from "jszip";
 import { FINDING_FIELDS, QC_CHECKLIST_FIELDS } from "@/lib/wofbi-report-defaults";
@@ -77,7 +77,7 @@ function cell(content, width, { header = false } = {}) {
     : "";
   const border = '<w:left w:val="single" w:sz="6" w:color="999999"/>';
   const borders = `<w:tcBorders><w:top w:val="single" w:sz="6" w:color="999999"/><w:bottom w:val="single" w:sz="6" w:color="999999"/>${border}<w:right w:val="single" w:sz="6" w:color="999999"/></w:tcBorders>`;
-  const text = String(content ?? "").trim() || "—";
+  const text = String(content ?? "").trim() || "-";
   const lines = text.split(/\n+/).filter(Boolean);
   const body = lines
     .map((l) =>
@@ -117,7 +117,7 @@ function qcObservationCell(row) {
   );
   if (!hasStructured) return String(row?.observations || "");
   return QC_CHECKLIST_FIELDS.map(
-    (f, i) => `${i + 1}. ${f.label}: ${String(row?.[f.key] ?? "").trim() || "—"}`,
+    (f, i) => `${i + 1}. ${f.label}: ${String(row?.[f.key] ?? "").trim() || "-"}`,
   ).join("\n");
 }
 
@@ -226,14 +226,14 @@ function buildBody(report, logoRelId, logo) {
   out.push(heading("3. INDUCTION", 2));
   out.push(
     para(
-      `The ${edition}induction took place on ${report.induction?.date || "—"} with ${
-        report.induction?.students || "—"
+      `The ${edition}induction took place on ${report.induction?.date || "-"} with ${
+        report.induction?.students || "-"
       } students in attendance.`,
     ),
   );
 
   out.push(heading("4. CLASS ATTENDANCE", 2));
-  out.push(para(`Class attendance was ${report.class_attendance || "—"}.`));
+  out.push(para(`Class attendance was ${report.class_attendance || "-"}.`));
 
   out.push(heading("5a. STATISTICS", 2));
   out.push(para(`a. Total number of students, Water Baptised – ${report.stats_a?.water_baptised || "0"}`));
@@ -301,8 +301,8 @@ function buildBody(report, logoRelId, logo) {
         r.lecturer,
         r.course,
         r.qc_person,
-        `1. Quality control Rating – ${r.qc_rating || "—"}\n2. Student Average Rating – ${
-          r.student_rating || "—"
+        `1. Quality control Rating – ${r.qc_rating || "-"}\n2. Student Average Rating – ${
+          r.student_rating || "-"
         }`,
       ]),
       [0.25, 0.27, 0.2, 0.28],

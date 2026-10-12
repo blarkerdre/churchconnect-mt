@@ -161,7 +161,7 @@ export default function SLATemplateAdmin() {
               <Loader2 className="h-4 w-4 animate-spin" /> Loading…
             </div>
           ) : templates.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No versions yet — publish the first one above.</p>
+            <p className="text-sm text-muted-foreground">No versions yet - publish the first one above.</p>
           ) : (
             <Table>
               <TableHeader>
@@ -211,7 +211,7 @@ export default function SLATemplateAdmin() {
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
         <DialogContent className="max-w-2xl w-[calc(100vw-1rem)] sm:w-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{title} — Preview</DialogTitle>
+            <DialogTitle>{title} - Preview</DialogTitle>
           </DialogHeader>
           <ScrollArea className="max-h-[65vh] pr-4">
             <div

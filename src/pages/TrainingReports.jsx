@@ -141,7 +141,7 @@ export default function TrainingReports() {
     return map;
   }, [profiles]);
 
-  // Training Rep unit members with an app account — options for "Recorded by"
+  // Training Rep unit members with an app account - options for "Recorded by"
   const { data: trainingRepUserIds = [] } = useQuery({
     queryKey: ["training-rep-recorders", tenantId],
     enabled: !!tenantId,
@@ -339,7 +339,7 @@ export default function TrainingReports() {
   const totalHGBaptism = reports.reduce((s, r) => s + r.holy_ghost_baptism, 0);
   const totalWBaptism = reports.reduce((s, r) => s + r.water_baptism, 0);
 
-  const recorderName = (r) => (r.recorded_by ? (profileMap[r.recorded_by] || "Unknown") : "—");
+  const recorderName = (r) => (r.recorded_by ? (profileMap[r.recorded_by] || "Unknown") : "-");
 
   const handleDownloadCSV = () => {
     const headers = ["Date", "Type", "Title", "Total", "Male", "Female", "HG Baptism", "Water Baptism", "Recorded by", "Recorded on", "Notes"];

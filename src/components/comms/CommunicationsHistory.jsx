@@ -11,7 +11,7 @@ const WhatsAppIcon = ({ className }) => (
 
 /**
  * Admin-facing combined History view for past + scheduled sends.
- * ScheduledList is rendered by the parent (it already exists in Communications.jsx) — we
+ * ScheduledList is rendered by the parent (it already exists in Communications.jsx) - we
  * accept it as a render prop to avoid duplicating its query/cancel logic.
  */
 export default function CommunicationsHistory({ tenantId, emailEnabled, smsEnabled, whatsappEnabled, renderScheduled }) {

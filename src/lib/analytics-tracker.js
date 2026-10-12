@@ -32,7 +32,7 @@ function safeSet(store, key, value) {
   try {
     store.setItem(key, value);
   } catch {
-    /* storage unavailable (private mode) — tracking silently degrades */
+    /* storage unavailable (private mode) - tracking silently degrades */
   }
 }
 
@@ -76,7 +76,7 @@ let lastKey = "";
 export function trackPageView({ isAuthenticated = false } = {}) {
   if (typeof window === "undefined") return;
   if (navigator.doNotTrack === "1" || window.doNotTrack === "1") return;
-  // Skip local development hosts and Lovable preview hosts — only the
+  // Skip local development hosts and Lovable preview hosts - only the
   // published site is counted, so the figures line up with the Lovable page.
   if (/^(localhost|127\.|\[?::1)/.test(window.location.hostname)) return;
   if (/preview--|\.lovableproject\.com$/.test(window.location.hostname)) return;

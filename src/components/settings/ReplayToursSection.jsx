@@ -13,7 +13,7 @@ export default function ReplayToursSection() {
     setBusy(true);
     try {
       await tour.resetAllTours();
-      toast.success("Onboarding tours reset — they'll auto-play again on each page.");
+      toast.success("Onboarding tours reset - they'll auto-play again on each page.");
     } catch (e) {
       toast.error(e?.message || "Could not reset tours");
     } finally {

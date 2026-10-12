@@ -98,7 +98,7 @@ export default function TenantInvitePanel({ tenantId, pendingOnly = false }) {
         ? "User added to this church"
         : "Invitation sent";
       toast({
-        title: result.email_warning ? "Invitation saved — email NOT sent" : okTitle,
+        title: result.email_warning ? "Invitation saved - email NOT sent" : okTitle,
         description: result.email_warning
           ? `${result.email_warning} Use "Copy invite link" to share it directly.`
           : undefined,

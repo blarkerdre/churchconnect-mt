@@ -59,7 +59,7 @@ function FeatureGrid({ items, cols = 2, centerText = false }) {
 }
 
 const SLIDES = [
-  // 1 — Title
+  // 1 - Title
   {
     bg: "from-[hsl(215,53%,18%)] to-[hsl(215,53%,30%)]",
     content: (
@@ -79,7 +79,7 @@ const SLIDES = [
       </SlideShell>
     ),
   },
-  // 2 — Overview
+  // 2 - Overview
   {
     bg: "from-[hsl(215,53%,24%)] to-[hsl(215,40%,35%)]",
     content: (
@@ -93,7 +93,7 @@ const SLIDES = [
       </SlideShell>
     ),
   },
-  // 3 — Dashboards
+  // 3 - Dashboards
   {
     bg: "from-[hsl(215,53%,20%)] to-[hsl(200,40%,28%)]",
     content: (
@@ -121,7 +121,7 @@ const SLIDES = [
       </SlideShell>
     ),
   },
-  // 4 — Member Management
+  // 4 - Member Management
   {
     bg: "from-[hsl(200,45%,22%)] to-[hsl(215,53%,28%)]",
     content: (
@@ -130,12 +130,12 @@ const SLIDES = [
           { icon: ClipboardList, title: "Profiles & Family", desc: "Full member profiles, occupation and nationality, emergency contacts and linked family members." },
           { icon: QrCode, title: "QR Registration", desc: "Public registration links and QR codes so new members can self-register in seconds." },
           { icon: TrendingUp, title: "Growth Milestones", desc: "Water Baptism, Holy Spirit Baptism, BFC, BCC, LCC and LDC progress at a glance." },
-          { icon: Eye, title: "Status Lifecycle", desc: "First Timer, New Convert, Visitor, Active and Inactive — with conversion reporting." },
+          { icon: Eye, title: "Status Lifecycle", desc: "First Timer, New Convert, Visitor, Active and Inactive - with conversion reporting." },
         ]} />
       </SlideShell>
     ),
   },
-  // 5 — Events & Attendance
+  // 5 - Events & Attendance
   {
     bg: "from-[hsl(215,53%,22%)] to-[hsl(240,35%,28%)]",
     content: (
@@ -148,7 +148,7 @@ const SLIDES = [
       </SlideShell>
     ),
   },
-  // 6 — Follow-ups
+  // 6 - Follow-ups
   {
     bg: "from-[hsl(280,30%,22%)] to-[hsl(215,53%,24%)]",
     content: (
@@ -162,7 +162,7 @@ const SLIDES = [
       </SlideShell>
     ),
   },
-  // 7 — Pastoral Care
+  // 7 - Pastoral Care
   {
     bg: "from-[hsl(160,35%,18%)] to-[hsl(215,53%,22%)]",
     content: (
@@ -184,7 +184,7 @@ const SLIDES = [
       </SlideShell>
     ),
   },
-  // 8 — Communications
+  // 8 - Communications
   {
     bg: "from-[hsl(215,53%,24%)] to-[hsl(42,40%,25%)]",
     content: (
@@ -198,7 +198,7 @@ const SLIDES = [
       </SlideShell>
     ),
   },
-  // 9 — Bible School
+  // 9 - Bible School
   {
     bg: "from-[hsl(215,53%,18%)] to-[hsl(160,35%,24%)]",
     content: (
@@ -214,7 +214,7 @@ const SLIDES = [
       </SlideShell>
     ),
   },
-  // 10 — Children & Teens
+  // 10 - Children & Teens
   {
     bg: "from-[hsl(200,45%,20%)] to-[hsl(280,30%,26%)]",
     content: (
@@ -228,7 +228,7 @@ const SLIDES = [
       </SlideShell>
     ),
   },
-  // 11 — Home Cell
+  // 11 - Home Cell
   {
     bg: "from-[hsl(42,30%,18%)] to-[hsl(215,53%,22%)]",
     content: (
@@ -242,7 +242,7 @@ const SLIDES = [
       </SlideShell>
     ),
   },
-  // 12 — Transportation
+  // 12 - Transportation
   {
     bg: "from-[hsl(215,53%,20%)] to-[hsl(200,50%,25%)]",
     content: (
@@ -270,7 +270,7 @@ const SLIDES = [
       </SlideShell>
     ),
   },
-  // 13 — Analytics
+  // 13 - Analytics
   {
     bg: "from-[hsl(215,53%,18%)] to-[hsl(280,30%,25%)]",
     content: (
@@ -284,7 +284,7 @@ const SLIDES = [
       </SlideShell>
     ),
   },
-  // 14 — Security
+  // 14 - Security
   {
     bg: "from-[hsl(215,53%,14%)] to-[hsl(215,53%,24%)]",
     content: (
@@ -301,7 +301,7 @@ const SLIDES = [
       </SlideShell>
     ),
   },
-  // 15 — Closing
+  // 15 - Closing
   {
     bg: "from-[hsl(215,53%,16%)] to-[hsl(42,40%,24%)]",
     content: (
@@ -312,7 +312,7 @@ const SLIDES = [
             Thank You
           </h2>
           <p className="text-white/70 text-sm sm:text-lg max-w-xl">
-            ChurchConnect — one secure platform for people, ministry and growth.
+            ChurchConnect - one secure platform for people, ministry and growth.
           </p>
           <div className="flex items-center gap-2 px-5 py-2 rounded-full font-semibold text-xs sm:text-sm" style={{ background: GOLD, color: "hsl(215,53%,12%)" }}>
             <Sparkles className="h-4 w-4" />

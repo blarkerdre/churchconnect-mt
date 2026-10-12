@@ -184,12 +184,12 @@ export default function WoFBIApplicationsTab() {
   const reviewerNameMap = useMemo(() => {
     const m = {};
     reviewerMembers.forEach((p) => {
-      if (p.user_id) m[p.user_id] = [p.first_name, p.last_name].filter(Boolean).join(" ") || "—";
+      if (p.user_id) m[p.user_id] = [p.first_name, p.last_name].filter(Boolean).join(" ") || "-";
     });
     return m;
   }, [reviewerMembers]);
 
-  const reviewerName = (id) => (id ? reviewerNameMap[id] || (id === user?.id ? "You" : "—") : "—");
+  const reviewerName = (id) => (id ? reviewerNameMap[id] || (id === user?.id ? "You" : "-") : "-");
 
 
 
@@ -198,7 +198,7 @@ export default function WoFBIApplicationsTab() {
       const app = applications.find((a) => a.id === id);
       if (!app) throw new Error("Row not found");
 
-      // Direct registration path — update course_registrations status only.
+      // Direct registration path - update course_registrations status only.
       if (app.source === "direct") {
         const regStatus = status === "approved" ? "approved" : status === "rejected" ? "rejected" : status;
         const patch = { status: regStatus };
@@ -489,7 +489,7 @@ export default function WoFBIApplicationsTab() {
       const st = normStatus(a.status);
       byStatus[st] = (byStatus[st] || 0) + 1;
       bySource[a.source] = (bySource[a.source] || 0) + 1;
-      const key = a.course?.name || "—";
+      const key = a.course?.name || "-";
       byCourse.set(key, (byCourse.get(key) || 0) + 1);
       const t = new Date(a.created_at).getTime();
       if (t >= monthStart) thisMonth++;
@@ -527,7 +527,7 @@ export default function WoFBIApplicationsTab() {
       a.course?.name || "",
       a.edition?.name || "",
       a.status,
-      a.reviewed_at ? reviewerName(a.reviewed_by) : "—",
+      a.reviewed_at ? reviewerName(a.reviewed_by) : "-",
       formatDateTime(a.reviewed_at),
       ...fields.filter((f) => f.type !== "section_heading").map((f) => {
         const v = a.answers?.[f.id];
@@ -627,7 +627,7 @@ export default function WoFBIApplicationsTab() {
                 <SelectItem value="all">All statuses</SelectItem>
                 <SelectItem value="submitted">Submitted / Pending</SelectItem>
                 <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="email_pending">Approved — email pending</SelectItem>
+                <SelectItem value="email_pending">Approved - email pending</SelectItem>
                 <SelectItem value="link_pending">Exam link pending</SelectItem>
                 <SelectItem value="link_sent">Exam link sent</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
@@ -803,8 +803,8 @@ export default function WoFBIApplicationsTab() {
                     <TableCell className="text-xs whitespace-nowrap">{formatDateTime(a.created_at)}</TableCell>
                     <TableCell className="font-medium">{a.first_name} {a.last_name}</TableCell>
                     <TableCell className="text-xs">{a.email}</TableCell>
-                    <TableCell className="text-xs">{a.course?.name || "—"}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{a.edition?.name || "—"}</TableCell>
+                    <TableCell className="text-xs">{a.course?.name || "-"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{a.edition?.name || "-"}</TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1">
                         <Badge variant={a.source === "direct" ? "outline" : "secondary"} className="text-[10px]">
@@ -823,7 +823,7 @@ export default function WoFBIApplicationsTab() {
                           <span className="block text-[11px] text-muted-foreground">{formatDateTime(a.reviewed_at)}</span>
                         </>
                       ) : (
-                        <span className="text-muted-foreground">—</span>
+                        <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -904,10 +904,10 @@ export default function WoFBIApplicationsTab() {
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto w-[calc(100vw-1rem)] sm:w-auto">
           <DialogHeader>
             <DialogTitle>
-              {detail?.source === "direct" ? "Direct enrolment" : "Application"} — {detail?.first_name} {detail?.last_name}
+              {detail?.source === "direct" ? "Direct enrolment" : "Application"} - {detail?.first_name} {detail?.last_name}
             </DialogTitle>
             <DialogDescription>
-              {detail?.source === "direct" ? "Registered" : "Submitted"} {detail && formatDateTime(detail.created_at)} · {detail?.email || "—"} · Course: {detail?.course?.name || "—"}
+              {detail?.source === "direct" ? "Registered" : "Submitted"} {detail && formatDateTime(detail.created_at)} · {detail?.email || "-"} · Course: {detail?.course?.name || "-"}
               {detail && (detail.reviewed_at || detail.reviewed_by) && (
                 <span className="block">Reviewed by {reviewerName(detail.reviewed_by)} · {formatDateTime(detail.reviewed_at)}</span>
               )}
@@ -947,11 +947,11 @@ export default function WoFBIApplicationsTab() {
                 );
                 const hasAnyContent = configuredFields.length > 0 || extraKeys.length > 0;
                 const renderRow = (id, label, v) => {
-                  const display = v === true ? "Yes" : v === false ? "No" : (v ?? "—");
+                  const display = v === true ? "Yes" : v === false ? "No" : (v ?? "-");
                   return (
                     <div key={id} className="p-2 grid grid-cols-3 gap-2 text-sm">
                       <div className="text-muted-foreground col-span-1">{label}</div>
-                      <div className="col-span-2 whitespace-pre-wrap break-words">{display || "—"}</div>
+                      <div className="col-span-2 whitespace-pre-wrap break-words">{display || "-"}</div>
                     </div>
                   );
                 };
@@ -1011,7 +1011,7 @@ export default function WoFBIApplicationsTab() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete entr{confirmDelete?.ids.length > 1 ? "ies" : "y"}?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the application for <strong>{confirmDelete?.label}</strong>. Their course registration, exam attempts, results and certificate (if any) will be kept — delete those from the Registrations tab. This action cannot be undone.
+              This will permanently delete the application for <strong>{confirmDelete?.label}</strong>. Their course registration, exam attempts, results and certificate (if any) will be kept - delete those from the Registrations tab. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

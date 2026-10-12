@@ -28,10 +28,10 @@ const NewTenantNotificationEmail = ({
         </Text>
 
         <Section style={detailsBox}>
-          <Text style={detailRow}><strong>Church Name:</strong> {churchName || '—'}</Text>
-          <Text style={detailRow}><strong>Slug:</strong> {slug || '—'}</Text>
-          <Text style={detailRow}><strong>Admin Name:</strong> {adminName || '—'}</Text>
-          <Text style={detailRow}><strong>Admin Email:</strong> {adminEmail || '—'}</Text>
+          <Text style={detailRow}><strong>Church Name:</strong> {churchName || '-'}</Text>
+          <Text style={detailRow}><strong>Slug:</strong> {slug || '-'}</Text>
+          <Text style={detailRow}><strong>Admin Name:</strong> {adminName || '-'}</Text>
+          <Text style={detailRow}><strong>Admin Email:</strong> {adminEmail || '-'}</Text>
           <Text style={detailRow}><strong>Registered:</strong> {createdAt || new Date().toISOString()}</Text>
         </Section>
 

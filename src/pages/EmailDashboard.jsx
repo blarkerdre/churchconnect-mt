@@ -164,7 +164,7 @@ export default function EmailDashboard() {
                   <TableCell className="text-xs max-w-[180px] truncate">{row.recipient_email}</TableCell>
                   <TableCell><Badge className={cfg.color}>{row.status}</Badge></TableCell>
                   <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">{format(new Date(row.created_at), "MMM d, HH:mm")}</TableCell>
-                  <TableCell className="hidden md:table-cell text-xs text-destructive max-w-[200px] truncate">{row.error_message || "—"}</TableCell>
+                  <TableCell className="hidden md:table-cell text-xs text-destructive max-w-[200px] truncate">{row.error_message || "-"}</TableCell>
                 </TableRow>
               );
             })}

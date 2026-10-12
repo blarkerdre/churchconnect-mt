@@ -187,7 +187,7 @@ function EventItem({ event, member, onRead, onOpen, user, tenantId, withTenant }
       <div className="flex items-start gap-3">
         <div className="h-10 w-10 rounded-lg bg-primary/10 flex flex-col items-center justify-center shrink-0">
           <span className="text-[11px] font-bold text-primary leading-none">
-            {event.event_date ? format(parseISO(event.event_date), "dd") : "—"}
+            {event.event_date ? format(parseISO(event.event_date), "dd") : "-"}
           </span>
           <span className="text-[9px] text-primary/60 uppercase leading-none mt-0.5">
             {event.event_date ? format(parseISO(event.event_date), "MMM") : ""}

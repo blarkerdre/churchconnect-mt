@@ -59,7 +59,7 @@ function triggerWelcomeEmail(email: string, firstName: string | null, lastName: 
 }
 
 // Note: course-registration confirmation emails are sent manually by an admin
-// from the Registrations list — never triggered automatically.
+// from the Registrations list - never triggered automatically.
 
 async function resolveTenantId(
   supabase: ReturnType<typeof createClient>,

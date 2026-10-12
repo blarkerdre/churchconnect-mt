@@ -188,12 +188,12 @@ export default function LecturerManager() {
                 {lecturers.map((l) => (
                   <TableRow key={l.id}>
                     <TableCell className="font-medium">{l.name}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{l.level || "—"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{l.level || "-"}</TableCell>
                     <TableCell>
                       {l.lecturer_type ? (
                         <Badge variant="outline" className="text-[10px] capitalize">{l.lecturer_type}</Badge>
                       ) : (
-                        <span className="text-sm text-muted-foreground">—</span>
+                        <span className="text-sm text-muted-foreground">-</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -310,7 +310,7 @@ function LecturerFeedbackDialog({ lecturer, onClose, tenantId }) {
     new Map(
       ratings
         .filter((r) => r.subject_id)
-        .map((r) => [r.subject_id, r.exam_subjects?.name || "—"])
+        .map((r) => [r.subject_id, r.exam_subjects?.name || "-"])
     ).entries()
   );
 
@@ -394,7 +394,7 @@ function FieldRow({ label, val }) {
   return (
     <div>
       <span className="text-muted-foreground">{label}:</span>{" "}
-      <span>{val || "—"}</span>
+      <span>{val || "-"}</span>
     </div>
   );
 }

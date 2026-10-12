@@ -89,7 +89,7 @@ export default function FeedbackSummary() {
   }
 
   const total = feedback.length;
-  const avg = total > 0 ? (feedback.reduce((s, f) => s + f.rating, 0) / total).toFixed(1) : "—";
+  const avg = total > 0 ? (feedback.reduce((s, f) => s + f.rating, 0) / total).toFixed(1) : "-";
   const distribution = [5, 4, 3, 2, 1].map((r) => ({
     rating: r,
     count: feedback.filter((f) => f.rating === r).length,

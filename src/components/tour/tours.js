@@ -1,5 +1,5 @@
 // Declarative tour definitions. Each step targets an element via `[data-tour="…"]`.
-// If a selector is missing on the page the step falls back to a centered modal — so
+// If a selector is missing on the page the step falls back to a centered modal - so
 // tours degrade gracefully as pages change. Steps with `when: (ctx) => boolean`
 // are filtered out for users who lack the relevant role.
 //
@@ -12,7 +12,7 @@ export const TOURS = {
     title: "App overview",
     steps: [
       { selector: '[data-tour="dashboard-help"]', title: "Welcome to Church Management Suite", body: "Quick tour of the app. You can re-open it any time from the Tour button in the page header." },
-      { selector: '[data-tour="sidebar-nav"]', title: "Main navigation", body: "Use the sidebar to switch modules — Members, Events, Attendance, Follow-ups, Communications and more. Only modules you have access to appear here." },
+      { selector: '[data-tour="sidebar-nav"]', title: "Main navigation", body: "Use the sidebar to switch modules - Members, Events, Attendance, Follow-ups, Communications and more. Only modules you have access to appear here." },
       { selector: '[data-tour="notification-bell"]', title: "Notifications", body: "Real-time alerts land here: announcements, follow-up assignments, pastoral care requests, check-in codes, and more." },
       { selector: '[data-tour="dashboard-feed"]', title: "Church feed", body: "The dashboard shows announcements, birthdays, upcoming events and recent activity across the church." },
       { selector: '[data-tour="tenant-switcher"]', title: "Switch churches", body: "If you belong to more than one church, switch between them here. Each switch is confirmed with your password.", when: (ctx) => ctx.hasMultipleTenants },
@@ -22,10 +22,10 @@ export const TOURS = {
   "my-profile-v1": {
     title: "My Profile walkthrough",
     steps: [
-      { selector: '[data-tour="my-profile-help"]', title: "Your profile", body: "This is your personal space — keep your contact details, photo, and preferences up to date." },
+      { selector: '[data-tour="my-profile-help"]', title: "Your profile", body: "This is your personal space - keep your contact details, photo, and preferences up to date." },
       { selector: '[data-tour="profile-completion"]', title: "Complete your profile", body: "The completion banner shows what's still missing (photo, phone, birthday, address). A complete profile helps your leaders serve you better." },
       { selector: '[data-tour="profile-feed"]', title: "Your feed", body: "See announcements aimed at you, messages, and reactions." },
-      { selector: '[data-tour="my-certificates"]', title: "Certificates", body: "Any training certificates issued to you appear here — download them any time." },
+      { selector: '[data-tour="my-certificates"]', title: "Certificates", body: "Any training certificates issued to you appear here - download them any time." },
     ],
   },
 
@@ -34,9 +34,9 @@ export const TOURS = {
     steps: [
       { selector: '[data-tour="members-help"]', title: "Members directory", body: "The full church directory. Search, filter, view profiles, and manage member records." },
       { selector: '[data-tour="members-add"]', title: "Add a member", body: "Register a new member here. Their profile carries through the rest of the app.", when: (c) => c.isAdmin || c.isLeader },
-      { selector: '[data-tour="members-import"]', title: "Bulk import", body: "Import multiple members from a spreadsheet — useful when migrating from another system.", when: (c) => c.isAdmin },
+      { selector: '[data-tour="members-import"]', title: "Bulk import", body: "Import multiple members from a spreadsheet - useful when migrating from another system.", when: (c) => c.isAdmin },
       { selector: '[data-tour="members-filters"]', title: "Filters & search", body: "Narrow by unit, status, or attendance state. Search matches name, email or phone." },
-      { selector: '[data-tour="members-table"]', title: "Member list", body: "Click a row to open the full profile — status history, giving, pastoral care, unit membership and more." },
+      { selector: '[data-tour="members-table"]', title: "Member list", body: "Click a row to open the full profile - status history, giving, pastoral care, unit membership and more." },
     ],
   },
 
@@ -52,7 +52,7 @@ export const TOURS = {
   "church-unit-v1": {
     title: "Church Unit walkthrough",
     steps: [
-      { selector: '[data-tour="church-unit-help"]', title: "Your unit", body: "This is your church unit's workspace — members, meetings, and communication scoped to your team." },
+      { selector: '[data-tour="church-unit-help"]', title: "Your unit", body: "This is your church unit's workspace - members, meetings, and communication scoped to your team." },
       { selector: '[data-tour="unit-members"]', title: "Unit members", body: "The people in your unit. Leaders can manage roles, assignments and communications from here." },
     ],
   },
@@ -61,7 +61,7 @@ export const TOURS = {
     title: "Attendance walkthrough",
     steps: [
       { selector: '[data-tour="attendance-help"]', title: "Unit attendance", body: "Track attendance at unit meetings. Sessions capture who came, plus demographics." },
-      { selector: '[data-tour="attendance-create"]', title: "New session", body: "Create a session for a meeting — set the date, unit, and topic.", when: (c) => c.isAdmin || c.isLeader },
+      { selector: '[data-tour="attendance-create"]', title: "New session", body: "Create a session for a meeting - set the date, unit, and topic.", when: (c) => c.isAdmin || c.isLeader },
       { selector: '[data-tour="attendance-checkin"]', title: "Check-in panel", body: "Mark members present. Members can also self check-in from their dashboard when the session is open." },
     ],
   },
@@ -89,7 +89,7 @@ export const TOURS = {
     title: "Pastoral Care walkthrough",
     steps: [
       { selector: '[data-tour="pastoral-care-help"]', title: "Pastoral care", body: "Prayer requests and pastoral needs are captured, assigned, and tracked here." },
-      { selector: '[data-tour="pc-request"]', title: "New request", body: "Log a request on behalf of a member — it can convert to an active pastoral case." },
+      { selector: '[data-tour="pc-request"]', title: "New request", body: "Log a request on behalf of a member - it can convert to an active pastoral case." },
       { selector: '[data-tour="pc-assign"]', title: "Assign a pastor", body: "Assign cases to pastors and track visits, calls, and life events.", when: (c) => c.isAdmin || c.isLeader },
     ],
   },
@@ -98,7 +98,7 @@ export const TOURS = {
     title: "Communications walkthrough",
     steps: [
       { selector: '[data-tour="communications-help"]', title: "Communications", body: "Announcements, direct SMS/email/WhatsApp and message history all live here." },
-      { selector: '[data-tour="comms-announcement"]', title: "Post an announcement", body: "Announcements can target the whole church or specific audiences — units, age groups, roles." },
+      { selector: '[data-tour="comms-announcement"]', title: "Post an announcement", body: "Announcements can target the whole church or specific audiences - units, age groups, roles." },
       { selector: '[data-tour="comms-direct"]', title: "Direct send", body: "Send SMS, email or WhatsApp to selected members. Delivery status is logged.", when: (c) => c.isAdmin || c.isLeader },
       { selector: '[data-tour="comms-history"]', title: "History", body: "Every send is recorded with delivery outcome and cost against your monthly quota." },
     ],
@@ -129,7 +129,7 @@ export const TOURS = {
       { selector: '[data-tour="exam-management-help"]', title: "Bible School", body: "Register for courses, take exams, and view results." },
       { selector: '[data-tour="exam-sessions"]', title: "Sessions", body: "Enroll in an open exam session and pick your courses." },
       { selector: '[data-tour="exam-take"]', title: "Take an exam", body: "When a session is live, sit the exam here. Answers are graded server-side automatically." },
-      { selector: '[data-tour="exam-results"]', title: "Results", body: "Once graded, your results and classification appear here — with a downloadable Statement of Result." },
+      { selector: '[data-tour="exam-results"]', title: "Results", body: "Once graded, your results and classification appear here - with a downloadable Statement of Result." },
     ],
   },
 
@@ -162,8 +162,8 @@ export const TOURS = {
   "testimony-v1": {
     title: "Testimony walkthrough",
     steps: [
-      { selector: '[data-tour="testimony-help"]', title: "Testimony", body: "Share what God has done — structured spiritual breakthrough sharing." },
-      { selector: '[data-tour="testimony-new"]', title: "Share a testimony", body: "Choose a category, describe your breakthrough, and choose visibility — private, leaders only, or public to the church." },
+      { selector: '[data-tour="testimony-help"]', title: "Testimony", body: "Share what God has done - structured spiritual breakthrough sharing." },
+      { selector: '[data-tour="testimony-new"]', title: "Share a testimony", body: "Choose a category, describe your breakthrough, and choose visibility - private, leaders only, or public to the church." },
     ],
   },
 
@@ -180,7 +180,7 @@ export const TOURS = {
     title: "Inventory walkthrough",
     steps: [
       { selector: '[data-tour="inventory-help"]', title: "Inventory", body: "Track church property, equipment, and consumables." },
-      { selector: '[data-tour="inv-items"]', title: "Items", body: "Add or edit items — category, location, condition, and photos." },
+      { selector: '[data-tour="inv-items"]', title: "Items", body: "Add or edit items - category, location, condition, and photos." },
       { selector: '[data-tour="inv-inspections"]', title: "Inspections", body: "Run scheduled inspections using checklists and record the results.", when: (c) => c.isAdmin || c.isLeader },
     ],
   },
@@ -188,18 +188,18 @@ export const TOURS = {
   "reports-v1": {
     title: "Reports Hub walkthrough",
     steps: [
-      { selector: '[data-tour="reports-help"]', title: "Reports Hub", body: "One place to view read-only reports across every module — Members, Attendance, Follow-ups, Home Cell, Bible School, and more." },
+      { selector: '[data-tour="reports-help"]', title: "Reports Hub", body: "One place to view read-only reports across every module - Members, Attendance, Follow-ups, Home Cell, Bible School, and more." },
     ],
   },
 
   "settings-v1": {
     title: "Settings walkthrough",
     steps: [
-      { selector: '[data-tour="settings-help"]', title: "Settings", body: "Church-wide configuration — branding, modules, templates, integrations and danger zone." },
+      { selector: '[data-tour="settings-help"]', title: "Settings", body: "Church-wide configuration - branding, modules, templates, integrations and danger zone." },
       { selector: '[data-tour="settings-modules"]', title: "Modules", body: "Enable or disable modules for your church. Disabled modules disappear from the sidebar." },
       { selector: '[data-tour="settings-branding"]', title: "Branding", body: "Your logo, colours, dashboard banner, and social preview images." },
       { selector: '[data-tour="settings-restart-tours"]', title: "Replay tours", body: "Click here any time to reset onboarding and replay every module's tour." },
-      { selector: '[data-tour="settings-danger"]', title: "Danger zone", body: "Permanent operations — data purge, backups, tenant deletion. Handle with care.", when: (c) => c.isTenantOwner || c.isSuperAdmin },
+      { selector: '[data-tour="settings-danger"]', title: "Danger zone", body: "Permanent operations - data purge, backups, tenant deletion. Handle with care.", when: (c) => c.isTenantOwner || c.isSuperAdmin },
     ],
   },
 
@@ -229,7 +229,7 @@ export const TOURS = {
       { selector: '[data-tour="mf-add-child"]', title: "Add each of your children", body: "Tap Add child to create a profile: name, date of birth, age group, allergies and any notes for the Children Church workers." },
       { selector: '[data-tour="mf-child-card"]', title: "Manage a child", body: "Each card shows your child. Use Edit to update details. The 'In care' badge appears when they're checked in at Children Church." },
       { selector: '[data-tour="mf-authorised"]', title: "Authorised pickup adults", body: "By default only you can pick up your child. Add trusted adults here (co-parent, grandparent, family friend) so they can collect too. Search by member name." },
-      { selector: '[data-tour="mf-onetime"]', title: "One-time pickup code", body: "Need someone not on the list to collect just today? Issue a one-time code. Share it with them — it expires that same day and can only be used once." },
+      { selector: '[data-tour="mf-onetime"]', title: "One-time pickup code", body: "Need someone not on the list to collect just today? Issue a one-time code. Share it with them - it expires that same day and can only be used once." },
     ],
   },
 
@@ -240,7 +240,7 @@ export const TOURS = {
       { selector: '[data-tour="cc-tab-checkin"]', title: "1. Drop-off / Check-in", body: "Search for the family by child, parent name or phone, then check the child in. A PIN is generated and sent to the parent by in-app notification, email and SMS." },
       { selector: '[data-tour="cc-tab-pickup"]', title: "2. Pickup", body: "At pickup, verify the collecting adult here. They must be an authorised adult, use the parent's PIN, or present a one-time pickup code." },
       { selector: '[data-tour="cc-tab-all"]', title: "All children", body: "Leaders and admins can browse every child registered in the tenant, view profiles, allergies and medical notes.", when: (ctx) => ctx.isLeader || ctx.isAdmin },
-      { selector: '[data-tour="cc-tab-report"]', title: "Report", body: "Leaders and admins see the attendance report — filter by date range, export, and (admins only) remove stale records.", when: (ctx) => ctx.isLeader || ctx.isAdmin },
+      { selector: '[data-tour="cc-tab-report"]', title: "Report", body: "Leaders and admins see the attendance report - filter by date range, export, and (admins only) remove stale records.", when: (ctx) => ctx.isLeader || ctx.isAdmin },
     ],
   },
 };

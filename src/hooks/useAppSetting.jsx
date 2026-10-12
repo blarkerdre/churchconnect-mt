@@ -4,7 +4,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 /**
  * Hook to fetch a configurable list from app_settings by key.
- * Always tenant-scoped — returns fallback until tenantId is known.
+ * Always tenant-scoped - returns fallback until tenantId is known.
  */
 export function useAppSetting(key, fallback = []) {
   const { tenantId } = useTenantQuery();

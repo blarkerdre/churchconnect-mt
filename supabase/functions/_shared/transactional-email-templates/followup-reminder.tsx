@@ -43,7 +43,7 @@ export const template = {
   component: FollowupReminderEmail,
   subject: (data: Record<string, any>) =>
     data?.followupType
-      ? `${data.followupType} Follow-up — ${data?.churchName || SITE_NAME}`
+      ? `${data.followupType} Follow-up - ${data?.churchName || SITE_NAME}`
       : `Follow-up from ${data?.churchName || SITE_NAME}`,
   displayName: 'Follow-up reminder',
   previewData: {

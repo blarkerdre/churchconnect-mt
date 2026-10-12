@@ -90,7 +90,7 @@ export default function Layout({ children }) {
   const { signOut, user, profile, isAdmin, isUnitLeader, isWSFLeader, isReportsOfficer, roles, leaderUnits, isTenantOwner, isTenantAdmin, myMember } = useAuth();
   const { currentTenant, tenantId, tenantSlug, tenantMemberships, switchTenant } = useTenant();
 
-  // Home Cell house-provider check — hosts get the same Home Cell menu access as leaders
+  // Home Cell house-provider check - hosts get the same Home Cell menu access as leaders
   const { data: hostedCentresCount = 0 } = useQuery({
     queryKey: ["my-hosted-centres-count", tenantId, myMember?.id],
     enabled: !!tenantId && !!myMember?.id,
@@ -247,7 +247,7 @@ export default function Layout({ children }) {
   }, []);
 
   // Payment gate: suspended tenants are blocked, but only tenant owners/admins
-  // see the billing screen — regular members continue to use the app.
+  // see the billing screen - regular members continue to use the app.
   if (subscriptionStatus === "suspended" && !isSuperAdmin) {
     if (isTenantAdmin || isTenantOwner) return <PaymentRequiredScreen />;
     return (
@@ -288,7 +288,7 @@ export default function Layout({ children }) {
               </div>
             )}
           </div>
-          {/* Church switcher — shown whenever the user belongs to more than one */}
+          {/* Church switcher - shown whenever the user belongs to more than one */}
           <div className="mt-3">
             <TenantSwitcherMenu
               memberships={tenantMemberships}
@@ -452,7 +452,7 @@ export default function Layout({ children }) {
           {isBackendMismatch() && isAdmin && (
             <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-lg bg-destructive/10 text-destructive text-xs font-medium border border-destructive/20">
               <AlertTriangle className="h-4 w-4 shrink-0" />
-              <span>Backend mismatch detected — connected to <code className="bg-destructive/10 px-1 rounded">{getBackendHost()}</code></span>
+              <span>Backend mismatch detected - connected to <code className="bg-destructive/10 px-1 rounded">{getBackendHost()}</code></span>
             </div>
           )}
           <div className="flex items-center justify-between gap-2">

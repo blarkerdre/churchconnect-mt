@@ -41,7 +41,7 @@ function statusMeta(s) {
 }
 
 function fmt(d) {
-  if (!d) return "—";
+  if (!d) return "-";
   try {
     return new Date(`${d}T00:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
   } catch {
@@ -378,7 +378,7 @@ export default function SessionManager() {
                   </div>
                   {c.attempts > 0 && (
                     <p className="text-[11px] text-muted-foreground">
-                      This session has exam attempts, so it can’t be deleted — close it instead.
+                      This session has exam attempts, so it can’t be deleted - close it instead.
                     </p>
                   )}
 

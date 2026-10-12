@@ -136,7 +136,7 @@ export default function WoFBICheckin() {
                   <span className="font-semibold">
                     {confirm.checked_in_at
                       ? new Date(confirm.checked_in_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                      : "—"}
+                      : "-"}
                   </span>
                   {confirm.elapsed_minutes != null && (
                     <> · {fmtDuration(confirm.elapsed_minutes)} on premises</>

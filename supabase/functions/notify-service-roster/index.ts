@@ -148,10 +148,10 @@ Deno.serve(async (req) => {
     const safeFromName = `"${String(churchShort).replace(/[\\"]/g, "\\$&")}"`;
     const fromAddress = `${safeFromName} <noreply@${senderDomain}>`;
 
-    const rosterHeading = `${group.service_type} Roster — ${group.service_date}`;
-    const rosterPlainList = rosterLines.map((r) => `• ${r.name} — ${r.title}`).join("\n");
+    const rosterHeading = `${group.service_type} Roster - ${group.service_date}`;
+    const rosterPlainList = rosterLines.map((r) => `• ${r.name} - ${r.title}`).join("\n");
     const rosterHtmlList = rosterLines
-      .map((r) => `<li style="margin:4px 0;color:#444;">${escHtml(r.name)} — <strong>${escHtml(r.title)}</strong></li>`)
+      .map((r) => `<li style="margin:4px 0;color:#444;">${escHtml(r.name)} - <strong>${escHtml(r.title)}</strong></li>`)
       .join("");
 
     let sent = 0;

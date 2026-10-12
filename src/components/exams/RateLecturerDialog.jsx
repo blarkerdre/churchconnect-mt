@@ -37,7 +37,7 @@ const QUESTIONS = [
     ],
   },
   {
-    key: "class_atmosphere", label: "4. Class atmosphere — Would you say the lecturer was:",
+    key: "class_atmosphere", label: "4. Class atmosphere - Would you say the lecturer was:",
     options: [
       ["in_control", "In control of the class"], ["unable_to_control", "Unable to control the class"],
       ["balance_right", "The balance was right"], ["not_sure", "Not sure"],
@@ -249,7 +249,7 @@ export default function RateLecturerDialog({ open, onOpenChange, initialCourseId
         action: existingFound ? "wofbi_lecturer_rating_updated" : "wofbi_lecturer_rating_submitted",
         entityType: "lecturer_ratings",
         entityId: form.subject_id,
-        title: `Lecturer feedback received — ${subjectName}`,
+        title: `Lecturer feedback received - ${subjectName}`,
         message: `${courseName} · rated ${form.overall_rating}/10`,
         details: { course: courseName, subject: subjectName, target_name: subjectName, overall_rating: form.overall_rating },
       });
@@ -279,7 +279,7 @@ export default function RateLecturerDialog({ open, onOpenChange, initialCourseId
             <Star className="h-5 w-5 text-primary" /> Rate the Lecturer
           </DialogTitle>
           <p className="text-xs text-muted-foreground pt-1">
-            We are continually committed to improving the standard of the institute — please share your feedback on how the lectures were delivered. You can rate each subject once.
+            We are continually committed to improving the standard of the institute - please share your feedback on how the lectures were delivered. You can rate each subject once.
           </p>
         </DialogHeader>
 
@@ -313,7 +313,7 @@ export default function RateLecturerDialog({ open, onOpenChange, initialCourseId
                   <SelectContent>
                     {subjects.map((s) => (
                       <SelectItem key={s.id} value={s.id}>
-                        {ratedSubjectIds.includes(s.id) ? "✓ " : ""}{s.code ? `${s.code} — ${s.name}` : s.name}
+                        {ratedSubjectIds.includes(s.id) ? "✓ " : ""}{s.code ? `${s.code} - ${s.name}` : s.name}
                         {ratedSubjectIds.includes(s.id) ? " (rated)" : ""}
                       </SelectItem>
                     ))}
@@ -350,7 +350,7 @@ export default function RateLecturerDialog({ open, onOpenChange, initialCourseId
 
             {existingFound && (
               <p className="text-xs text-primary">
-                You already rated this subject — submitting will update your feedback.
+                You already rated this subject - submitting will update your feedback.
               </p>
             )}
 

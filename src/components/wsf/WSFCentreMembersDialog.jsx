@@ -104,7 +104,7 @@ export default function WSFCentreMembersDialog({ open, onOpenChange, centre, isR
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
         <TenantDialogHeader>
-            {centre?.name} — Members
+            {centre?.name} - Members
             <Badge variant="outline" className="ml-2 font-mono">{centreMembers.length}</Badge>
           </TenantDialogHeader>
 

@@ -135,7 +135,7 @@ function SessionFormDialog({ open, onOpenChange, session, onSaved, isAdmin = fal
   const save = useMutation({
     mutationFn: async () => {
       if (!form.session_type || !form.session_date) throw new Error("Type and date required");
-      const title = `${form.session_type} — Preteens · ${format(new Date(form.session_date), "d MMM yyyy")}`;
+      const title = `${form.session_type} - Preteens · ${format(new Date(form.session_date), "d MMM yyyy")}`;
       const payload = {
         title,
         session_type: form.session_type,
@@ -267,7 +267,7 @@ function RosterDialog({ open, onOpenChange, session, canWrite }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{session?.title} — Roster</DialogTitle>
+          <DialogTitle>{session?.title} - Roster</DialogTitle>
         </DialogHeader>
         <div className="space-y-2">
           {preteens.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No preteens registered yet.</p>}
@@ -352,7 +352,7 @@ function ReportDialog({ open, onOpenChange, session }) {
   });
 
   const workerName = (r, id) => {
-    if (!id) return r.source === "self" ? "Self" : "—";
+    if (!id) return r.source === "self" ? "Self" : "-";
     return workerMap[id] || "Worker";
   };
 
@@ -389,7 +389,7 @@ function ReportDialog({ open, onOpenChange, session }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{session?.title} — Report</DialogTitle>
+          <DialogTitle>{session?.title} - Report</DialogTitle>
         </DialogHeader>
         <div className="space-y-2">
           {session?.notes && (
@@ -426,14 +426,14 @@ function ReportDialog({ open, onOpenChange, session }) {
                   <tr key={r.id} className="border-t">
                     <td className="p-2">{r.preteens?.first_name} {r.preteens?.last_name}</td>
                     <td className="p-2">
-                      {r.checked_in_at ? format(new Date(r.checked_in_at), "HH:mm") : "—"}
+                      {r.checked_in_at ? format(new Date(r.checked_in_at), "HH:mm") : "-"}
                       {r.status === "late" && <Badge className="ml-1 bg-amber-500 text-white text-[10px]">Late</Badge>}
                     </td>
-                    <td className="p-2">{r.checked_out_at ? format(new Date(r.checked_out_at), "HH:mm") : "—"}</td>
-                    <td className="p-2">{fmtDuration(r.duration_minutes) || "—"}</td>
+                    <td className="p-2">{r.checked_out_at ? format(new Date(r.checked_out_at), "HH:mm") : "-"}</td>
+                    <td className="p-2">{fmtDuration(r.duration_minutes) || "-"}</td>
                     <td className="p-2 capitalize">{r.source}</td>
                     <td className="p-2">{workerName(r, r.checked_in_by)}</td>
-                    <td className="p-2">{r.checked_out_at ? workerName(r, r.checked_out_by) : "—"}</td>
+                    <td className="p-2">{r.checked_out_at ? workerName(r, r.checked_out_by) : "-"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -495,7 +495,7 @@ function CumulativeReportDialog({ open, onOpenChange }) {
   });
 
   const workerName = (r, id) => {
-    if (!id) return r.source === "self" ? "Self" : "—";
+    if (!id) return r.source === "self" ? "Self" : "-";
     return workerMap[id] || "Worker";
   };
 
@@ -693,20 +693,20 @@ function CumulativeReportDialog({ open, onOpenChange }) {
                 )}
                 {filtered.map((r) => (
                   <tr key={r.id} className="border-t">
-                    <td className="p-2 whitespace-nowrap">{r.session?.session_date ? format(new Date(r.session.session_date), "d MMM yyyy") : "—"}</td>
-                    <td className="p-2">{r.session?.title || "—"}</td>
+                    <td className="p-2 whitespace-nowrap">{r.session?.session_date ? format(new Date(r.session.session_date), "d MMM yyyy") : "-"}</td>
+                    <td className="p-2">{r.session?.title || "-"}</td>
                     <td className="p-2">{r.preteens?.first_name} {r.preteens?.last_name}</td>
-                    <td className="p-2">{r.checked_in_at ? format(new Date(r.checked_in_at), "HH:mm") : "—"}</td>
-                    <td className="p-2">{r.checked_out_at ? format(new Date(r.checked_out_at), "HH:mm") : "—"}</td>
-                    <td className="p-2">{fmtDuration(r.duration_minutes) || "—"}</td>
+                    <td className="p-2">{r.checked_in_at ? format(new Date(r.checked_in_at), "HH:mm") : "-"}</td>
+                    <td className="p-2">{r.checked_out_at ? format(new Date(r.checked_out_at), "HH:mm") : "-"}</td>
+                    <td className="p-2">{fmtDuration(r.duration_minutes) || "-"}</td>
                     <td className="p-2">
-                      {r.status === "late" ? <Badge className="bg-amber-500 text-white">Late</Badge> : r.status === "on_time" ? <Badge variant="secondary">On time</Badge> : r.status || "—"}
+                      {r.status === "late" ? <Badge className="bg-amber-500 text-white">Late</Badge> : r.status === "on_time" ? <Badge variant="secondary">On time</Badge> : r.status || "-"}
                     </td>
                     <td className="p-2 capitalize">{r.source}</td>
                     <td className="p-2">{workerName(r, r.checked_in_by)}</td>
-                    <td className="p-2">{r.checked_out_at ? workerName(r, r.checked_out_by) : "—"}</td>
+                    <td className="p-2">{r.checked_out_at ? workerName(r, r.checked_out_by) : "-"}</td>
                     <td className="p-2 max-w-[200px]" title={r.session?.notes || ""}>
-                      <span className="line-clamp-2 text-xs text-muted-foreground">{r.session?.notes || "—"}</span>
+                      <span className="line-clamp-2 text-xs text-muted-foreground">{r.session?.notes || "-"}</span>
                     </td>
                   </tr>
                 ))}
@@ -838,7 +838,7 @@ function RegisteredPreteensDialog({ open, onOpenChange }) {
                   <div className="min-w-0">
                     <p className="font-medium truncate">{t.first_name} {t.last_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {[t.gender, age != null ? `${age} yrs` : null, t.date_of_birth ? format(new Date(t.date_of_birth), "d MMM yyyy") : null].filter(Boolean).join(" · ") || "—"}
+                      {[t.gender, age != null ? `${age} yrs` : null, t.date_of_birth ? format(new Date(t.date_of_birth), "d MMM yyyy") : null].filter(Boolean).join(" · ") || "-"}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-1 justify-end">
@@ -872,7 +872,7 @@ function RegisteredPreteensDialog({ open, onOpenChange }) {
                   </div>
                 </div>
                 <div className="mt-2 pt-2 border-t text-xs text-muted-foreground">
-                  <p><span className="font-medium text-foreground">Guardian:</span> {g ? `${g.first_name || ""} ${g.last_name || ""}`.trim() || "—" : "—"}</p>
+                  <p><span className="font-medium text-foreground">Guardian:</span> {g ? `${g.first_name || ""} ${g.last_name || ""}`.trim() || "-" : "-"}</p>
                   {(g?.phone || g?.email) && (
                     <p className="truncate">{[g?.phone, g?.email].filter(Boolean).join(" · ")}</p>
                   )}

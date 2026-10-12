@@ -38,7 +38,7 @@ const emptyFilters = {
 function fmtBool(v) {
   if (v === true) return "Yes";
   if (v === false) return "No";
-  return "—";
+  return "-";
 }
 
 function toCSV(rows) {
@@ -127,7 +127,7 @@ export default function QcReport() {
     },
   });
 
-  // Subjects with no QC check yet — surfaced as a hint for QC officers (edition-aware)
+  // Subjects with no QC check yet - surfaced as a hint for QC officers (edition-aware)
   const { data: allSubjects = [] } = useQuery({
     queryKey: ["qc-outstanding-subjects", tenantId, sessionId],
     enabled: !!tenantId && canCreate,
@@ -238,7 +238,7 @@ export default function QcReport() {
     const g = new Map();
     filtered.forEach((r) => {
       const id = r.lecturer_id;
-      if (!g.has(id)) g.set(id, { id, name: r.lecturers?.name || "—", rows: [] });
+      if (!g.has(id)) g.set(id, { id, name: r.lecturers?.name || "-", rows: [] });
       g.get(id).rows.push(r);
     });
     const avg = (rows, k) => {
@@ -264,7 +264,7 @@ export default function QcReport() {
     filtered.forEach((r) => {
       if (!r.exam_title_id) return;
       const id = r.exam_title_id;
-      if (!g.has(id)) g.set(id, { id, name: r.exam_titles?.name || "—", rows: [] });
+      if (!g.has(id)) g.set(id, { id, name: r.exam_titles?.name || "-", rows: [] });
       g.get(id).rows.push(r);
     });
     return Array.from(g.values()).map((x) => ({
@@ -465,13 +465,13 @@ export default function QcReport() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
               <SummaryTile label="Checks" value={summary.n} />
               <SummaryTile label="Lecturers" value={summary.uniqLect} />
-              <SummaryTile label="Avg total" value={summary.n ? `${summary.avgTotal.toFixed(1)}/20` : "—"} />
-              <SummaryTile label="% Started on time" value={summary.n ? `${summary.onTimeStart}%` : "—"} />
-              <SummaryTile label="% Finished on time" value={summary.n ? `${summary.onTimeFinish}%` : "—"} />
-              <SummaryTile label="% Introduced self" value={summary.n ? `${summary.introduced}%` : "—"} />
-              <SummaryTile label="% Test conducted" value={summary.n ? `${summary.testConducted}%` : "—"} />
-              <SummaryTile label="% Class recorded" value={summary.n ? `${summary.recorded}%` : "—"} />
-              <SummaryTile label="% Recording submitted" value={summary.n ? `${summary.recSubmitted}%` : "—"} />
+              <SummaryTile label="Avg total" value={summary.n ? `${summary.avgTotal.toFixed(1)}/20` : "-"} />
+              <SummaryTile label="% Started on time" value={summary.n ? `${summary.onTimeStart}%` : "-"} />
+              <SummaryTile label="% Finished on time" value={summary.n ? `${summary.onTimeFinish}%` : "-"} />
+              <SummaryTile label="% Introduced self" value={summary.n ? `${summary.introduced}%` : "-"} />
+              <SummaryTile label="% Test conducted" value={summary.n ? `${summary.testConducted}%` : "-"} />
+              <SummaryTile label="% Class recorded" value={summary.n ? `${summary.recorded}%` : "-"} />
+              <SummaryTile label="% Recording submitted" value={summary.n ? `${summary.recSubmitted}%` : "-"} />
             </div>
 
             <Tabs defaultValue="entries" className="w-full min-w-0">
@@ -505,12 +505,12 @@ export default function QcReport() {
                         {filtered.map((r) => (
                           <TableRow key={r.id}>
                             <TableCell className="whitespace-nowrap">{r.check_date}</TableCell>
-                            <TableCell className="font-medium">{r.lecturers?.name || "—"}</TableCell>
-                            <TableCell>{r.exam_titles?.name || "—"}</TableCell>
-                            <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{r.exam_sessions?.name || "—"}</TableCell>
-                            <TableCell>{r.tier ? <Badge variant="secondary">{r.tier}</Badge> : "—"}</TableCell>
-                            <TableCell>{r.qc_member_name || "—"}</TableCell>
-                            <TableCell className="text-right font-semibold">{r.total_score ?? "—"}/20</TableCell>
+                            <TableCell className="font-medium">{r.lecturers?.name || "-"}</TableCell>
+                            <TableCell>{r.exam_titles?.name || "-"}</TableCell>
+                            <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{r.exam_sessions?.name || "-"}</TableCell>
+                            <TableCell>{r.tier ? <Badge variant="secondary">{r.tier}</Badge> : "-"}</TableCell>
+                            <TableCell>{r.qc_member_name || "-"}</TableCell>
+                            <TableCell className="text-right font-semibold">{r.total_score ?? "-"}/20</TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-1">
                                 <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setViewRecord(r)}><Eye className="h-3.5 w-3.5" /></Button>
@@ -652,17 +652,17 @@ export default function QcReport() {
             <div className="space-y-3 text-sm">
               <div className="grid grid-cols-2 gap-2">
                 <div><span className="text-muted-foreground">Date:</span> {viewRecord.check_date}</div>
-                <div><span className="text-muted-foreground">Lecturer:</span> {viewRecord.lecturers?.name || "—"}</div>
-                <div><span className="text-muted-foreground">Course:</span> {viewRecord.exam_titles?.name || "—"}</div>
-                <div><span className="text-muted-foreground">Subject:</span> {viewRecord.exam_subjects?.name || "—"}</div>
-                <div><span className="text-muted-foreground">Tier:</span> {viewRecord.tier || "—"}</div>
-                <div><span className="text-muted-foreground">QC Member:</span> {viewRecord.qc_member_name || "—"}</div>
+                <div><span className="text-muted-foreground">Lecturer:</span> {viewRecord.lecturers?.name || "-"}</div>
+                <div><span className="text-muted-foreground">Course:</span> {viewRecord.exam_titles?.name || "-"}</div>
+                <div><span className="text-muted-foreground">Subject:</span> {viewRecord.exam_subjects?.name || "-"}</div>
+                <div><span className="text-muted-foreground">Tier:</span> {viewRecord.tier || "-"}</div>
+                <div><span className="text-muted-foreground">QC Member:</span> {viewRecord.qc_member_name || "-"}</div>
               </div>
               <div className="border-t pt-3 space-y-2">
                 {SCORE_FIELDS.map((f) => (
                   <div key={f.key} className="flex justify-between">
                     <span>{f.label}</span>
-                    <span className="font-semibold">{viewRecord[f.key] ?? "—"}/5</span>
+                    <span className="font-semibold">{viewRecord[f.key] ?? "-"}/5</span>
                   </div>
                 ))}
                 {viewRecord.orderliness_note && <div><span className="text-muted-foreground">Orderliness note:</span> {viewRecord.orderliness_note}</div>}
@@ -678,7 +678,7 @@ export default function QcReport() {
               </div>
               <div className="border-t pt-3 flex justify-between items-center">
                 <span className="font-medium">Total score</span>
-                <span className="text-xl font-bold text-primary">{viewRecord.total_score ?? "—"}/20</span>
+                <span className="text-xl font-bold text-primary">{viewRecord.total_score ?? "-"}/20</span>
               </div>
               {viewRecord.student_avg_rating != null && (
                 <div className="text-xs text-muted-foreground">Student's average rating of lecturer: {Number(viewRecord.student_avg_rating).toFixed(1)}/10</div>

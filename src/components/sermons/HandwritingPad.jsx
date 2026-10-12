@@ -140,7 +140,7 @@ export default function HandwritingPad({ open, onOpenChange, onConvert }) {
       if (error) throw error;
       const text = (data?.text || "").trim();
       if (!text) {
-        toast.error("Couldn't read that — try writing larger or clearer.");
+        toast.error("Couldn't read that - try writing larger or clearer.");
         return;
       }
       onConvert?.(text);

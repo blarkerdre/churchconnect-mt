@@ -50,7 +50,7 @@ export default function WoFBIApplicationFormEditor() {
       setLocal({
         tenant_id: tenantId,
         enabled: false,
-        title: "Bible School — Application Form",
+        title: "Bible School - Application Form",
         intro_text: "Please complete this application form to register for our Bible School programme.",
         fields: DEFAULT_WOFBI_FIELDS,
       });

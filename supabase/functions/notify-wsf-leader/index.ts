@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
             const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
             const __quota = await checkSmsQuota(supabase, tenant_id, "sms", 1);
             if (!__quota.allowed) {
-              console.warn("[notify-wsf-leader] SMS quota exceeded for tenant", tenant_id, "— skipping send");
+              console.warn("[notify-wsf-leader] SMS quota exceeded for tenant", tenant_id, "- skipping send");
             } else {
             const response = await fetch(`${GATEWAY_URL}/Messages.json`, {
               method: "POST",

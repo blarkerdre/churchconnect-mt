@@ -3,7 +3,7 @@ import { renderAsync } from 'npm:@react-email/components@0.0.22'
 import { EmailAPIError, sendLovableEmail } from 'npm:@lovable.dev/email-js@0.1.0'
 import { TEMPLATES } from './registry.ts'
 
-// Server-only: reads LOVABLE_API_KEY. Import from edge functions only — never
+// Server-only: reads LOVABLE_API_KEY. Import from edge functions only - never
 // expose sending to the browser.
 
 // Configuration baked in at scaffold time
@@ -12,7 +12,7 @@ const SITE_NAME = "MT-Church Connect"
 // It MUST match the subdomain delegated to Lovable's nameservers. NEVER use the root domain.
 const SENDER_DOMAIN = "notify.app.churchmanagementsuite.org"
 // FROM_DOMAIN is the domain shown in the From: header (e.g., "example.com").
-// Can be the root domain when display_from_root is enabled — this is cosmetic only.
+// Can be the root domain when display_from_root is enabled - this is cosmetic only.
 const FROM_DOMAIN = "app.churchmanagementsuite.org"
 
 export type SendTemplateEmailResult =
@@ -30,7 +30,7 @@ export interface SendTemplateEmailOptions {
  * Renders a registered template and sends it through Lovable's managed email
  * API. Suppression, retries, and rate limits are enforced by Lovable
  * server-side. A suppressed recipient is an expected outcome
- * ({ sent: false }); any other failure throws — EmailAPIError exposes
+ * ({ sent: false }); any other failure throws - EmailAPIError exposes
  * .code and .status for branching.
  */
 export async function sendTemplateEmail(
@@ -50,7 +50,7 @@ export async function sendTemplateEmail(
     )
   }
 
-  // Template-level `to` takes precedence — notification templates always
+  // Template-level `to` takes precedence - notification templates always
   // send to their fixed address.
   const recipient = template.to || to
   if (!recipient) {

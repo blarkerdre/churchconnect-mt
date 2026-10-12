@@ -83,7 +83,7 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
       if (statusFilter !== "All" && statusFilter !== "Overdue") {
         const s = statusFilter.toLowerCase();
         if (r.status !== s && !REF_STATUSES.includes(s)) {
-          // status filter doesn't match referral statuses — still allow if Combined uses follow-up status
+          // status filter doesn't match referral statuses - still allow if Combined uses follow-up status
           if (reportType === "signposts") return false;
         } else if (r.status !== s) return false;
       }
@@ -112,7 +112,7 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
       }
     });
     const completionRate = total ? Math.round((byStatus.Completed / total) * 100) : 0;
-    const avgDays = completedCount ? (completedDays / completedCount).toFixed(1) : "—";
+    const avgDays = completedCount ? (completedDays / completedCount).toFixed(1) : "-";
     return { total, byStatus, completionRate, avgDays, referrals: filteredReferrals.length };
   }, [filteredFollowups, filteredReferrals]);
 
@@ -121,11 +121,11 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
     const items = reportType === "signposts"
       ? filteredReferrals.map(r => ({
           kind: "signpost",
-          person_name: r.members ? `${r.members.first_name} ${r.members.last_name}` : "—",
-          followup_type: r.followups?.followup_type || "—",
+          person_name: r.members ? `${r.members.first_name} ${r.members.last_name}` : "-",
+          followup_type: r.followups?.followup_type || "-",
           status: r.status,
           priority: r.followups?.priority || "",
-          assigned_name: r.assigned_leader_id ? (profileMap[r.assigned_leader_id] || "—") : "Unassigned",
+          assigned_name: r.assigned_leader_id ? (profileMap[r.assigned_leader_id] || "-") : "Unassigned",
           assigned_to: r.assigned_leader_id,
           due_date: r.followups?.due_date || "",
           completed_date: "",
@@ -153,11 +153,11 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
       filteredReferrals.forEach(r => {
         items.push({
           kind: "signpost",
-          person_name: r.members ? `${r.members.first_name} ${r.members.last_name}` : "—",
+          person_name: r.members ? `${r.members.first_name} ${r.members.last_name}` : "-",
           followup_type: `↳ Sign-Post (${r.referral_type})`,
           status: r.status,
           priority: "",
-          assigned_name: r.assigned_leader_id ? (profileMap[r.assigned_leader_id] || "—") : "Unassigned",
+          assigned_name: r.assigned_leader_id ? (profileMap[r.assigned_leader_id] || "-") : "Unassigned",
           assigned_to: r.assigned_leader_id,
           due_date: "",
           completed_date: "",
@@ -173,11 +173,11 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
       assignee: (it) => it.assigned_name,
       status: (it) => it.status,
       type: (it) => it.followup_type,
-      target: (it) => it.target || "—",
+      target: (it) => it.target || "-",
     }[groupBy];
     const map = {};
     items.forEach(it => {
-      const k = keyFn(it) || "—";
+      const k = keyFn(it) || "-";
       (map[k] = map[k] || []).push(it);
     });
     return Object.entries(map)
@@ -196,7 +196,7 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
   const downloadCSV = () => {
     const lines = [headers];
     grouped.forEach(g => {
-      if (groupBy !== "none") lines.push([`— ${g.key} (${g.rows.length}) —`]);
+      if (groupBy !== "none") lines.push([`- ${g.key} (${g.rows.length}) -`]);
       g.rows.forEach(it => lines.push(toCells(it).map(c => String(c ?? "").replace(/[\r\n,]+/g, " "))));
     });
     const csv = lines.map(r => r.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -212,7 +212,7 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
   const buildPrintRows = () => {
     const rows = [];
     grouped.forEach(g => {
-      if (groupBy !== "none") rows.push([`— ${g.key} (${g.rows.length}) —`, "", "", "", "", "", "", "", ""]);
+      if (groupBy !== "none") rows.push([`- ${g.key} (${g.rows.length}) -`, "", "", "", "", "", "", "", ""]);
       g.rows.forEach(it => rows.push(toCells(it)));
     });
     return {
@@ -364,7 +364,7 @@ export default function FollowupReportDialog({ open, onOpenChange, followups = [
                                 key={j}
                                 className={`px-3 py-1.5 align-top ${j === headers.length - 1 ? "max-w-[260px]" : "whitespace-nowrap"}`}
                               >
-                                {c || "—"}
+                                {c || "-"}
                               </td>
                             ))}
                           </tr>

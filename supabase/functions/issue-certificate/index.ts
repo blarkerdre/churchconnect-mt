@@ -23,7 +23,7 @@ async function ensureWasm() {
 let _fontsPromise: Promise<Uint8Array[]> | null = null;
 async function loadFonts(): Promise<Uint8Array[]> {
   if (!_fontsPromise) {
-    // Google Fonts gstatic TTF URLs (resvg-wasm needs TTF/OTF — fontsource jsdelivr
+    // Google Fonts gstatic TTF URLs (resvg-wasm needs TTF/OTF - fontsource jsdelivr
     // packages no longer ship .ttf, only .woff2, which resvg-wasm cannot consume).
     const urls = [
       // Playfair Display 700 (serif headings)
@@ -33,9 +33,9 @@ async function loadFonts(): Promise<Uint8Array[]> {
       "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf",
       "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf",
       "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf",
-      // Great Vibes — script face for Bible School certificate title
+      // Great Vibes - script face for Bible School certificate title
       "https://fonts.gstatic.com/s/greatvibes/v19/RWmMoKWR9v4ksMfaWd_JN-XCg6UKDXlq.ttf",
-      // Pinyon Script — cursive course-name face
+      // Pinyon Script - cursive course-name face
       "https://fonts.gstatic.com/s/pinyonscript/v22/6xKpdSJbL9-e9LuoeQiDRQR8aOLQO4bhiDY.ttf",
     ];
     _fontsPromise = Promise.all(
@@ -55,7 +55,7 @@ async function loadFonts(): Promise<Uint8Array[]> {
     ).then((arr) => {
       const buffers = arr.filter((x): x is Uint8Array => !!x);
       if (buffers.length === 0) {
-        console.error("loadFonts: no font buffers loaded — text will not render");
+        console.error("loadFonts: no font buffers loaded - text will not render");
       }
       return buffers;
     });
@@ -205,7 +205,7 @@ Deno.serve(async (req) => {
         });
       }
       if (!comp.certificate_url) {
-        return new Response(JSON.stringify({ error: "Certificate file not generated yet — issue it first" }), {
+        return new Response(JSON.stringify({ error: "Certificate file not generated yet - issue it first" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -297,7 +297,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get member info — must belong to this tenant
+    // Get member info - must belong to this tenant
     const { data: member, error: memberErr } = await supabase
       .from("members")
       .select("*")
@@ -875,7 +875,7 @@ function escapeXml(str: string): string {
 
 /**
  * Releases a certificate to the student: in-app notification + (optionally) email.
- * Never throws — delivery problems must not fail the issuing flow.
+ * Never throws - delivery problems must not fail the issuing flow.
  */
 async function deliverCertificate(
   supabase: any,

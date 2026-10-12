@@ -235,7 +235,7 @@ export default function FollowupMessageDialog({
             {(channel === "sms" || channel === "phone") && hasPhone && <span>To: {followup?.person_phone}</span>}
           </div>
 
-          {/* Phone call — simplified UI */}
+          {/* Phone call - simplified UI */}
           {channel === "phone" && (
             <div className="bg-accent/10 rounded-lg p-4 text-center space-y-2">
               <PhoneCall className="h-8 w-8 mx-auto text-accent" />

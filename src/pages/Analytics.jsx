@@ -85,7 +85,7 @@ export default function Analytics() {
     },
   });
 
-  // Attendance trend by month — use MAX(digital check-ins, reported total_count)
+  // Attendance trend by month - use MAX(digital check-ins, reported total_count)
   // so demographic-only sessions (no digital check-ins) still appear in the trend.
   const attendanceTrend = useMemo(() => {
     const map = {};
@@ -109,7 +109,7 @@ export default function Analytics() {
 
   const activeMembers = useMemo(() => members.filter(m => m.membership_status === "Active"), [members]);
 
-  // Growth indices — use Active members as denominator and only count Active completions
+  // Growth indices - use Active members as denominator and only count Active completions
   const growthIndices = useMemo(() => {
     const indices = [
       { label: "Water Baptism", key: "water_baptism" },

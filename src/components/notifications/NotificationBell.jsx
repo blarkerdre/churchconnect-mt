@@ -99,7 +99,7 @@ export default function NotificationBell() {
   }, [user?.id, tenantId, permission]);
 
   const handleEnableAlerts = async () => {
-    // Play the chime immediately inside the user gesture — this both unlocks
+    // Play the chime immediately inside the user gesture - this both unlocks
     // mobile audio and lets the user hear that sound works before we even
     // ask for permission.
     testNotificationSound();
@@ -115,7 +115,7 @@ export default function NotificationBell() {
 
   const handleTestSound = () => {
     testNotificationSound();
-    toast.success("Playing test sound — check your device isn't on silent");
+    toast.success("Playing test sound - check your device isn't on silent");
   };
 
   useEffect(() => {

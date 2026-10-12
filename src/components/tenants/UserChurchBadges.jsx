@@ -58,7 +58,7 @@ export default function UserChurchBadges({ churches = [], currentTenantId }) {
                 ? "border-primary/40 text-primary bg-primary/5"
                 : "text-muted-foreground"
             }`}
-            title={`${c.name} — ${roleLabel(c.role)}`}
+            title={`${c.name} - ${roleLabel(c.role)}`}
           >
             {c.name}
             <span className="opacity-70 ml-1">· {roleLabel(c.role)}</span>

@@ -171,7 +171,7 @@ export default function CheckInPanel({ session, onClose }) {
       {session.session_type === "Unit Meeting" && session.unit && orphanRecords.length > 0 && (
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 space-y-2">
           <p className="text-xs font-semibold text-destructive">
-            Not in this unit ({orphanRecords.length}) — stale check-ins, not counted in stats
+            Not in this unit ({orphanRecords.length}) - stale check-ins, not counted in stats
           </p>
           {orphanRecords.map(r => {
             const m = memberById[r.member_id];

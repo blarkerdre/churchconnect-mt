@@ -63,7 +63,7 @@ export default function CertificateApprovals() {
   });
   const profileMap = useMemo(() => {
     const m = new Map();
-    profiles.forEach(p => m.set(p.user_id, p.full_name || p.email || "—"));
+    profiles.forEach(p => m.set(p.user_id, p.full_name || p.email || "-"));
     return m;
   }, [profiles]);
 
@@ -175,14 +175,14 @@ export default function CertificateApprovals() {
 
   const headers = ["Member", "Training", "Session Date", "Signposted By", "Signposted At", "Status", "Decision At", "Certificate #"];
   const buildRows = () => filtered.map(r => [
-    `${r.member?.first_name || ""} ${r.member?.last_name || ""}`.trim() || "—",
+    `${r.member?.first_name || ""} ${r.member?.last_name || ""}`.trim() || "-",
     r.training_type,
-    r.report?.session_date ? format(parseISO(r.report.session_date), "dd MMM yyyy") : "—",
-    profileMap.get(r.signposted_by) || "—",
-    r.signposted_at ? format(parseISO(r.signposted_at), "dd MMM yyyy HH:mm") : "—",
+    r.report?.session_date ? format(parseISO(r.report.session_date), "dd MMM yyyy") : "-",
+    profileMap.get(r.signposted_by) || "-",
+    r.signposted_at ? format(parseISO(r.signposted_at), "dd MMM yyyy HH:mm") : "-",
     r.signpost_status,
-    r.decision_at ? format(parseISO(r.decision_at), "dd MMM yyyy HH:mm") : "—",
-    r.certificate_number || "—",
+    r.decision_at ? format(parseISO(r.decision_at), "dd MMM yyyy HH:mm") : "-",
+    r.certificate_number || "-",
   ]);
 
   const handleCSV = () => {
@@ -278,7 +278,7 @@ export default function CertificateApprovals() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map(r => {
-                    const name = `${r.member?.first_name || ""} ${r.member?.last_name || ""}`.trim() || "—";
+                    const name = `${r.member?.first_name || ""} ${r.member?.last_name || ""}`.trim() || "-";
                     return (
                       <TableRow key={r.id}>
                         <TableCell className="text-sm">
@@ -286,20 +286,20 @@ export default function CertificateApprovals() {
                           {r.member?.email && <div className="text-xs text-muted-foreground">{r.member.email}</div>}
                         </TableCell>
                         <TableCell className="text-sm">{r.training_type}</TableCell>
-                        <TableCell className="text-sm">{r.report?.session_date ? format(parseISO(r.report.session_date), "dd MMM yyyy") : "—"}</TableCell>
-                        <TableCell className="text-xs">{profileMap.get(r.signposted_by) || "—"}</TableCell>
-                        <TableCell className="text-xs">{r.signposted_at ? format(parseISO(r.signposted_at), "dd MMM yyyy") : "—"}</TableCell>
+                        <TableCell className="text-sm">{r.report?.session_date ? format(parseISO(r.report.session_date), "dd MMM yyyy") : "-"}</TableCell>
+                        <TableCell className="text-xs">{profileMap.get(r.signposted_by) || "-"}</TableCell>
+                        <TableCell className="text-xs">{r.signposted_at ? format(parseISO(r.signposted_at), "dd MMM yyyy") : "-"}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Badge variant={STATUS_VARIANT[r.signpost_status]} className="capitalize text-[10px]">{r.signpost_status}</Badge>
                             {r.signpost_status === "approved" && !r.certificate_number && (
-                              <span title="Certificate not yet generated — needs re-issue">
+                              <span title="Certificate not yet generated - needs re-issue">
                                 <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
                               </span>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-xs">{r.certificate_number || "—"}</TableCell>
+                        <TableCell className="text-xs">{r.certificate_number || "-"}</TableCell>
                         <TableCell className="text-right">
                           {r.signpost_status === "pending" && (
                             <div className="flex justify-end gap-1">
@@ -386,7 +386,7 @@ function ReportView({ rows, trainingTypes, profileMap }) {
         totalDays += (new Date(r.decision_at) - new Date(r.signposted_at)) / 86400000;
       }
     });
-    s.avgDays = decidedCount > 0 ? (totalDays / decidedCount).toFixed(1) : "—";
+    s.avgDays = decidedCount > 0 ? (totalDays / decidedCount).toFixed(1) : "-";
     return s;
   }, [filtered]);
 

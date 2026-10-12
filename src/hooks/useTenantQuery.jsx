@@ -18,7 +18,7 @@ export function useTenantQuery() {
 
   /**
    * Injects tenant_id into an insert/update payload object.
-   * If tenantId is null (during migration), it still works — the column is nullable.
+   * If tenantId is null (during migration), it still works - the column is nullable.
    */
   const withTenant = useCallback(
     (payload) => {

@@ -481,7 +481,7 @@ export default function MyProfile() {
                       </div>
                     </div>
 
-                    {/* Church Units — only for Active/Inactive */}
+                    {/* Church Units - only for Active/Inactive */}
                     {showChurchUnits && (
                       <div>
                         <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 flex gap-2.5 items-start mb-3">
@@ -517,7 +517,7 @@ export default function MyProfile() {
                       </div>
                     )}
 
-                    {/* Baptism — only for First Timer / New Convert */}
+                    {/* Baptism - only for First Timer / New Convert */}
                     {showBaptism && !showSpiritualDev && (
                       <div>
                         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Baptism</h3>
@@ -528,7 +528,7 @@ export default function MyProfile() {
                       </div>
                     )}
 
-                    {/* Spiritual Development — only for Active/Inactive */}
+                    {/* Spiritual Development - only for Active/Inactive */}
                     {showSpiritualDev && (
                       <div>
                         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Spiritual Development</h3>
@@ -547,7 +547,7 @@ export default function MyProfile() {
                                <Label>Home Cell Centre</Label>
                                <Select value={form.wsf_centre_id || ""} onValueChange={v => set("wsf_centre_id", v)}>
                                  <SelectTrigger><SelectValue placeholder="Select Home Cell Centre" /></SelectTrigger>
-                                <SelectContent>{wsfCentres.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` — ${c.location}` : ""}</SelectItem>)}</SelectContent>
+                                <SelectContent>{wsfCentres.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` - ${c.location}` : ""}</SelectItem>)}</SelectContent>
                               </Select>
                             </div>
                           )}
@@ -574,12 +574,12 @@ export default function MyProfile() {
                       </div>
                     )}
 
-                    {/* Welcome Questions — First Timer / New Convert only */}
+                    {/* Welcome Questions - First Timer / New Convert only */}
                     {isFirstTimerOrNewConvert && (
                       <WelcomeQuestions form={form} set={set} tenantName={currentTenant?.name} />
                     )}
 
-                    {/* Emergency Contact — hidden for First Timer / New Convert */}
+                    {/* Emergency Contact - hidden for First Timer / New Convert */}
                     {!isFirstTimerOrNewConvert && (
                       <div>
                         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
@@ -871,7 +871,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
           </div>
         </div>
 
-        {/* Church Units — only for Active/Inactive */}
+        {/* Church Units - only for Active/Inactive */}
         {showChurchUnits && (
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Church Units</h3>
@@ -893,7 +893,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
           </div>
         )}
 
-        {/* Baptism — only for First Timer / New Convert */}
+        {/* Baptism - only for First Timer / New Convert */}
         {showBaptism && !showSpiritualDev && (
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Baptism</h3>
@@ -904,7 +904,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
           </div>
         )}
 
-        {/* Spiritual Development — only for Active/Inactive */}
+        {/* Spiritual Development - only for Active/Inactive */}
         {showSpiritualDev && (
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Spiritual Development</h3>
@@ -917,7 +917,7 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
                    <Label>Home Cell Centre</Label>
                    <Select value={form.wsf_centre_id || ""} onValueChange={v => set("wsf_centre_id", v)}>
                      <SelectTrigger><SelectValue placeholder="Select Home Cell Centre" /></SelectTrigger>
-                    <SelectContent>{wsfCentres.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` — ${c.location}` : ""}</SelectItem>)}</SelectContent>
+                    <SelectContent>{wsfCentres.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` - ${c.location}` : ""}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               )}
@@ -944,12 +944,12 @@ function CreateMemberProfile({ user, onCreated, wsfCentres, churchUnits }) {
           </div>
         )}
 
-        {/* Welcome Questions — First Timer / New Convert only */}
+        {/* Welcome Questions - First Timer / New Convert only */}
         {isFirstTimerOrNewConvert && (
           <WelcomeQuestions form={form} set={set} tenantName={currentTenant?.name} />
         )}
 
-        {/* Emergency Contact — hidden for First Timer / New Convert */}
+        {/* Emergency Contact - hidden for First Timer / New Convert */}
         {!isFirstTimerOrNewConvert && (
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>

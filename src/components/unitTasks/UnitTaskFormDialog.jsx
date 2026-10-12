@@ -82,7 +82,7 @@ export default function UnitTaskFormDialog({ open, onOpenChange, unitOptions = [
   const submit = async () => {
     if (!form.title.trim()) return toast.error("Title is required");
     if (!form.unit_name) return toast.error("Select a unit");
-    if (!tenantId) return toast.error("No tenant context — reload the page");
+    if (!tenantId) return toast.error("No tenant context - reload the page");
     if (!user?.id) return toast.error("Not signed in");
 
     setSaving(true);

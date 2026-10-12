@@ -213,7 +213,7 @@ export default function Transportation() {
           });
           if (resp?.match) {
             nearest = resp.match;
-            extraDesc = `Nearest pickup: ${nearest.name} — ${nearest.address} (${nearest.distance_km} km away)`;
+            extraDesc = `Nearest pickup: ${nearest.name} - ${nearest.address} (${nearest.distance_km} km away)`;
           }
         } catch (e) { /* swallow; save booking anyway */ }
       }
@@ -436,7 +436,7 @@ export default function Transportation() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["transportation"] });
       if (data) setDetailBooking(data);
-      toast({ title: "Acknowledged — thank you!" });
+      toast({ title: "Acknowledged - thank you!" });
     },
     onError: (err) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -926,7 +926,7 @@ export default function Transportation() {
               <p className="text-[11px] text-muted-foreground mt-1">We'll match you to the nearest active pickup point.</p>
             </div>
             <div>
-              <Label>Pickup Location <span className="text-xs text-muted-foreground">(optional — leave blank to use nearest)</span></Label>
+              <Label>Pickup Location <span className="text-xs text-muted-foreground">(optional - leave blank to use nearest)</span></Label>
               {pickupLocations.length > 0 ? (
                 <Select value={form.pickup_address} onValueChange={v => setForm(f => ({ ...f, pickup_address: v }))}>
                   <SelectTrigger><SelectValue placeholder="Select or type below" /></SelectTrigger>
@@ -1015,7 +1015,7 @@ export default function Transportation() {
               >
                 <SelectTrigger><SelectValue placeholder="Select a unit member or enter manually" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="manual">— Enter manually below —</SelectItem>
+                  <SelectItem value="manual">- Enter manually below -</SelectItem>
                   {["Kingdom Chariot", "Transportation"].map(group => {
                     let members = transportMembers.filter(m => m.unit_label === group);
                     if (group === "Kingdom Chariot") {
@@ -1109,7 +1109,7 @@ export default function Transportation() {
             <div><Label>Name</Label><Input value={locationForm.name} onChange={e => setLocationForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Canton Bus Stop" /></div>
             <div><Label>Address</Label><Input value={locationForm.address} onChange={e => setLocationForm(f => ({ ...f, address: e.target.value }))} placeholder="Full address" /></div>
             <div>
-              <Label>Postcode <span className="text-xs text-muted-foreground">(recommended — enables nearest-pickup matching)</span></Label>
+              <Label>Postcode <span className="text-xs text-muted-foreground">(recommended - enables nearest-pickup matching)</span></Label>
               <Input value={locationForm.postcode} onChange={e => setLocationForm(f => ({ ...f, postcode: e.target.value.toUpperCase() }))} placeholder="e.g. CF10 1AA" />
             </div>
             <div><Label>Notes</Label><Textarea value={locationForm.notes} onChange={e => setLocationForm(f => ({ ...f, notes: e.target.value }))} rows={2} /></div>

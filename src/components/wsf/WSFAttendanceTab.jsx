@@ -110,10 +110,10 @@ export default function WSFAttendanceTab({ centres }) {
   const reporterNameMap = useMemo(() => {
     const m = {};
     tenantProfiles.forEach(p => {
-      if (p.user_id) m[p.user_id] = p.full_name || p.email || "—";
+      if (p.user_id) m[p.user_id] = p.full_name || p.email || "-";
     });
     leaderMembers.forEach(mem => {
-      if (mem.user_id) m[mem.user_id] = `${mem.first_name || ""} ${mem.last_name || ""}`.trim() || m[mem.user_id] || "—";
+      if (mem.user_id) m[mem.user_id] = `${mem.first_name || ""} ${mem.last_name || ""}`.trim() || m[mem.user_id] || "-";
     });
     return m;
   }, [tenantProfiles, leaderMembers]);
@@ -124,7 +124,7 @@ export default function WSFAttendanceTab({ centres }) {
     leaderMembers.forEach(mem => {
       if (mem.user_id && !seen.has(mem.user_id)) {
         seen.add(mem.user_id);
-        list.push({ user_id: mem.user_id, name: reporterNameMap[mem.user_id] || "—" });
+        list.push({ user_id: mem.user_id, name: reporterNameMap[mem.user_id] || "-" });
       }
     });
     if (user?.id && !seen.has(user.id)) {
@@ -231,7 +231,7 @@ export default function WSFAttendanceTab({ centres }) {
     ? `${dateFrom || "…"} → ${dateTo || "…"}`
     : "All time";
 
-  const reporterName = (r) => (r.reported_by ? (reporterNameMap[r.reported_by] || "—") : "—");
+  const reporterName = (r) => (r.reported_by ? (reporterNameMap[r.reported_by] || "-") : "-");
 
   const buildPrintRows = () => ({
     title: "Home Cell Attendance Report",
@@ -240,7 +240,7 @@ export default function WSFAttendanceTab({ centres }) {
       const adults = r.male + r.female;
       const total = adults + r.children;
       const venue = r.held_at_home_cell === false ? "Off-venue" : "At cell";
-      return [format(new Date(r.meeting_date), "dd MMM yyyy"), r.wsf_centres?.name || "—", venue, r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies, reporterName(r), formatDateTime(r.created_at)];
+      return [format(new Date(r.meeting_date), "dd MMM yyyy"), r.wsf_centres?.name || "-", venue, r.male, r.female, adults, r.children, total, r.first_timers, r.testimonies, reporterName(r), formatDateTime(r.created_at)];
     }),
   });
 
@@ -359,7 +359,7 @@ export default function WSFAttendanceTab({ centres }) {
                 { title: "Cell Centres", value: summaryStats.centresInScope, sub: filterCentreId === "all" ? "All centres" : "Filtered", icon: Home, color: "text-primary" },
                 { title: "Meetings Held", value: summaryStats.held, sub: `${filteredReports.length} report${filteredReports.length === 1 ? "" : "s"}`, icon: CheckCircle2, color: "text-accent" },
                 { title: "Off-Venue", value: summaryStats.offVenue, sub: "Not at home cell", icon: Home, color: "text-chart-2" },
-                { title: "Meetings Not Held", value: summaryStats.notHeld ?? "—", sub: summaryStats.hasRange ? "Weekly cadence" : (summaryStats.notHeld === null ? "Set a date range" : "Estimated"), icon: AlertCircle, color: "text-destructive" },
+                { title: "Meetings Not Held", value: summaryStats.notHeld ?? "-", sub: summaryStats.hasRange ? "Weekly cadence" : (summaryStats.notHeld === null ? "Set a date range" : "Estimated"), icon: AlertCircle, color: "text-destructive" },
                 { title: "Avg Attendance", value: summaryStats.avgAttendance, sub: "Per meeting", icon: TrendingUp, color: "text-chart-3" },
                 { title: "Total Attendance", value: summaryStats.totalAttendance, sub: "All meetings", icon: Users, color: "text-chart-4" },
               ].map(stat => (
@@ -485,7 +485,7 @@ export default function WSFAttendanceTab({ centres }) {
                           {reporterName(r)} · {formatDateTime(r.created_at)}
                         </span>
                       </TableCell>
-                      <TableCell>{r.wsf_centres?.name || "—"}</TableCell>
+                      <TableCell>{r.wsf_centres?.name || "-"}</TableCell>
                       <TableCell>
                         {r.held_at_home_cell === false ? (
                           <Badge variant="outline" className="text-muted-foreground">Off-venue</Badge>

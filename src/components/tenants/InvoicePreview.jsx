@@ -88,7 +88,7 @@ const InvoicePreview = forwardRef(function InvoicePreview({ invoice, churchName 
         Bill To
       </div>
       <div style={{ fontSize: "14px", lineHeight: 1.6, marginBottom: "16px" }}>
-        <strong>{billTo.name || churchName || "—"}</strong>
+        <strong>{billTo.name || churchName || "-"}</strong>
         {billTo.email && <><br />{billTo.email}</>}
         {billTo.address && <><br />{billTo.address}</>}
       </div>
@@ -112,7 +112,7 @@ const InvoicePreview = forwardRef(function InvoicePreview({ invoice, churchName 
         {lineItems.map((item, idx) => (
           <div key={idx} style={{ fontSize: "13px", padding: "6px 0", display: "flex", justifyContent: "space-between" }}>
             <span>
-              {item.description || "—"}
+              {item.description || "-"}
               {item.quantity && Number(item.quantity) !== 1 ? ` × ${item.quantity}` : ""}
             </span>
             <span>{invoice.currency} {fmt(item.amount)}</span>

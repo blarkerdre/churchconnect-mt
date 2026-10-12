@@ -104,7 +104,7 @@ export default function CertificatesReport() {
   });
   const issuerMap = useMemo(() => {
     const m = new Map();
-    issuers.forEach((p) => m.set(p.id, [p.first_name, p.last_name].filter(Boolean).join(" ") || p.email || "—"));
+    issuers.forEach((p) => m.set(p.id, [p.first_name, p.last_name].filter(Boolean).join(" ") || p.email || "-"));
     return m;
   }, [issuers]);
 
@@ -113,7 +113,7 @@ export default function CertificatesReport() {
     const m = new Map();
     completions.forEach((c) => {
       if (!c.certificate_number) return;
-      const name = `${c.members?.first_name || ""} ${c.members?.last_name || ""}`.trim() || "—";
+      const name = `${c.members?.first_name || ""} ${c.members?.last_name || ""}`.trim() || "-";
       m.set(c.certificate_number, {
         name,
         email: c.members?.email || "",
@@ -151,7 +151,7 @@ export default function CertificatesReport() {
   const orphanMemberMap = useMemo(() => {
     const m = new Map();
     orphanMembers.forEach((p) => m.set(p.id, {
-      name: `${p.first_name || ""} ${p.last_name || ""}`.trim() || "—",
+      name: `${p.first_name || ""} ${p.last_name || ""}`.trim() || "-",
       email: p.email || "",
     }));
     return m;
@@ -162,7 +162,7 @@ export default function CertificatesReport() {
     if (info) return info;
     const mid = a.details?.member_id;
     if (mid && orphanMemberMap.has(mid)) return { ...orphanMemberMap.get(mid), member_id: mid, completion_date: a.details?.completion_date };
-    return { name: "—", email: "", member_id: mid, completion_date: a.details?.completion_date };
+    return { name: "-", email: "", member_id: mid, completion_date: a.details?.completion_date };
   };
 
   // Build reissue stats per cert number
@@ -233,7 +233,7 @@ export default function CertificatesReport() {
     const uniqueMembers = new Set(filteredCerts.map((c) => c.member_id)).size;
     const byProg = new Map();
     filteredCerts.forEach((c) => byProg.set(c.training_type, (byProg.get(c.training_type) || 0) + 1));
-    let topProg = "—", topCount = 0;
+    let topProg = "-", topCount = 0;
     byProg.forEach((v, k) => { if (v > topCount) { topProg = k; topCount = v; } });
     return { issuedCount, reissuedCount, uniqueMembers, topProg, topCount };
   }, [auditRows, filteredCerts, programme]);
@@ -242,7 +242,7 @@ export default function CertificatesReport() {
   const byProgramme = useMemo(() => {
     const map = new Map();
     filteredCerts.forEach((c) => {
-      const k = c.training_type || "—";
+      const k = c.training_type || "-";
       const e = map.get(k) || { programme: k, issued: 0, reissued: 0, members: new Set() };
       e.issued += 1;
       e.reissued += reissueStats.get(c.certificate_number)?.reissued || 0;
@@ -331,7 +331,7 @@ export default function CertificatesReport() {
       });
       toast({
         title: mode === "zip" ? "ZIP downloaded" : "Merged PDF downloaded",
-        description: `${downloaded} certificate(s)${skipped ? ` — ${skipped} skipped (no file issued)` : ""}.`,
+        description: `${downloaded} certificate(s)${skipped ? ` - ${skipped} skipped (no file issued)` : ""}.`,
       });
     } catch (e) {
       toast({ title: "Bulk download failed", description: e.message, variant: "destructive" });
@@ -396,9 +396,9 @@ export default function CertificatesReport() {
         c.certificate_number,
         c.completion_date ? format(parseISO(c.completion_date), "dd MMM yyyy") : "",
         stats.firstIssuedAt ? format(parseISO(stats.firstIssuedAt), "dd MMM yyyy") : (c.created_at ? format(parseISO(c.created_at), "dd MMM yyyy") : ""),
-        stats.lastReissuedAt ? format(parseISO(stats.lastReissuedAt), "dd MMM yyyy") : "—",
+        stats.lastReissuedAt ? format(parseISO(stats.lastReissuedAt), "dd MMM yyyy") : "-",
         stats.reissued || 0,
-        issuerMap.get(c.issued_by) || "—",
+        issuerMap.get(c.issued_by) || "-",
       ];
     }),
   });
@@ -414,8 +414,8 @@ export default function CertificatesReport() {
         info.name,
         a.details?.certificate_number || "",
         a.details?.training_type || "",
-        info.completion_date ? format(parseISO(info.completion_date), "dd MMM yyyy") : "—",
-        issuerMap.get(a.user_id) || "—",
+        info.completion_date ? format(parseISO(info.completion_date), "dd MMM yyyy") : "-",
+        issuerMap.get(a.user_id) || "-",
       ];
     }),
   });
@@ -560,13 +560,13 @@ export default function CertificatesReport() {
 
                         <TableCell>{c.training_type}</TableCell>
                         <TableCell><Badge variant="outline" className="text-[10px]">{c.certificate_number}</Badge></TableCell>
-                        <TableCell>{c.completion_date ? format(parseISO(c.completion_date), "dd MMM yyyy") : "—"}</TableCell>
-                        <TableCell>{stats.firstIssuedAt ? format(parseISO(stats.firstIssuedAt), "dd MMM yyyy") : (c.created_at ? format(parseISO(c.created_at), "dd MMM yyyy") : "—")}</TableCell>
-                        <TableCell>{stats.lastReissuedAt ? format(parseISO(stats.lastReissuedAt), "dd MMM yyyy") : "—"}</TableCell>
+                        <TableCell>{c.completion_date ? format(parseISO(c.completion_date), "dd MMM yyyy") : "-"}</TableCell>
+                        <TableCell>{stats.firstIssuedAt ? format(parseISO(stats.firstIssuedAt), "dd MMM yyyy") : (c.created_at ? format(parseISO(c.created_at), "dd MMM yyyy") : "-")}</TableCell>
+                        <TableCell>{stats.lastReissuedAt ? format(parseISO(stats.lastReissuedAt), "dd MMM yyyy") : "-"}</TableCell>
                         <TableCell className="text-center">
                           {stats.reissued ? <Badge>{stats.reissued}</Badge> : <span className="text-muted-foreground">0</span>}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{issuerMap.get(c.issued_by) || "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{issuerMap.get(c.issued_by) || "-"}</TableCell>
                         <TableCell>
                           {c.sent_to_student_at ? (
                             <Badge variant="secondary" className="text-[10px]">
@@ -640,10 +640,10 @@ export default function CertificatesReport() {
                           <div>{info.name}</div>
                           {info.email && <div className="text-xs text-muted-foreground">{info.email}</div>}
                         </TableCell>
-                        <TableCell><Badge variant="outline" className="text-[10px]">{a.details?.certificate_number || "—"}</Badge></TableCell>
-                        <TableCell>{a.details?.training_type || "—"}</TableCell>
-                        <TableCell className="text-sm">{info.completion_date ? format(parseISO(info.completion_date), "dd MMM yyyy") : "—"}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{issuerMap.get(a.user_id) || "—"}</TableCell>
+                        <TableCell><Badge variant="outline" className="text-[10px]">{a.details?.certificate_number || "-"}</Badge></TableCell>
+                        <TableCell>{a.details?.training_type || "-"}</TableCell>
+                        <TableCell className="text-sm">{info.completion_date ? format(parseISO(info.completion_date), "dd MMM yyyy") : "-"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{issuerMap.get(a.user_id) || "-"}</TableCell>
                       </TableRow>
                     );
                   })}

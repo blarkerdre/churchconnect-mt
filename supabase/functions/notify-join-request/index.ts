@@ -282,7 +282,7 @@ Deno.serve(async (req) => {
           </div>
           <p style="margin:0 0 16px;color:#555;font-size:15px;">Please log in to approve or decline this request from your dashboard.</p>
           <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
-          <p style="margin:0;color:#999;font-size:12px;text-align:center;">Automated notification — ${escHtml(churchName)}</p>
+          <p style="margin:0;color:#999;font-size:12px;text-align:center;">Automated notification - ${escHtml(churchName)}</p>
         </td></tr>
       </table>
     </td></tr>
@@ -318,7 +318,7 @@ Deno.serve(async (req) => {
             const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
             const __quota = await checkSmsQuota(supabase, tenant_id, "sms", 1);
             if (!__quota.allowed) {
-              console.warn("[notify-join-request] SMS quota exceeded for tenant", tenant_id, "— skipping send");
+              console.warn("[notify-join-request] SMS quota exceeded for tenant", tenant_id, "- skipping send");
             } else {
             const response = await fetch(`${GATEWAY_URL}/Messages.json`, {
               method: "POST",

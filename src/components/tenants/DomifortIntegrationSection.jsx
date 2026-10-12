@@ -250,7 +250,7 @@ await fetch('${INGEST_URL}', {
                             )}
                           </TableCell>
                           <TableCell className="text-xs">
-                            {t.last_used_at ? new Date(t.last_used_at).toLocaleString() : "—"}
+                            {t.last_used_at ? new Date(t.last_used_at).toLocaleString() : "-"}
                           </TableCell>
                           <TableCell>{t.request_count ?? 0}</TableCell>
                           <TableCell className="text-xs">
@@ -333,13 +333,13 @@ await fetch('${INGEST_URL}', {
                           <TableCell className="text-xs">{new Date(b.received_at).toLocaleString()}</TableCell>
                           <TableCell className="font-mono text-xs">{b.external_ref}</TableCell>
                           <TableCell>
-                            <div className="text-sm">{b.customer_name || "—"}</div>
+                            <div className="text-sm">{b.customer_name || "-"}</div>
                             {b.customer_email && (
                               <div className="text-xs text-muted-foreground">{b.customer_email}</div>
                             )}
                           </TableCell>
-                          <TableCell>{b.status || "—"}</TableCell>
-                          <TableCell className="text-xs">{b.service_type || "—"}</TableCell>
+                          <TableCell>{b.status || "-"}</TableCell>
+                          <TableCell className="text-xs">{b.service_type || "-"}</TableCell>
                           <TableCell className="text-xs">{b.tenant_id ? "Routed" : "Unrouted"}</TableCell>
                         </TableRow>
                       ))}
@@ -378,7 +378,7 @@ await fetch('${INGEST_URL}', {
                           </TableCell>
                           <TableCell>{l.auth_valid ? "✓" : "✗"}</TableCell>
                           <TableCell>{l.signature_valid ? "✓" : "✗"}</TableCell>
-                          <TableCell className="font-mono text-xs">{l.external_ref || "—"}</TableCell>
+                          <TableCell className="font-mono text-xs">{l.external_ref || "-"}</TableCell>
                           <TableCell className="text-xs text-destructive">{l.error || ""}</TableCell>
                         </TableRow>
                       ))}
@@ -463,7 +463,7 @@ await fetch('${INGEST_URL}', {
             <AlertDialogTitle>Revoke this token?</AlertDialogTitle>
             <AlertDialogDescription>
               {revokeTarget?.label} ({revokeTarget?.token_prefix}…) will stop working immediately.
-              This cannot be undone — DomiFort will need to be issued a new token.
+              This cannot be undone - DomiFort will need to be issued a new token.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

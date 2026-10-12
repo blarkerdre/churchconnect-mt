@@ -116,7 +116,7 @@ export default function DashboardBannerSettings() {
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 {slide.type === "book" ? <BookOpen className="h-3 w-3" /> : <ImageIcon className="h-3 w-3" />}
-                Slide {i + 1} — {slide.type === "book" ? "Book Promotion" : "Image Banner"}
+                Slide {i + 1} - {slide.type === "book" ? "Book Promotion" : "Image Banner"}
               </span>
               <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeSlide(i)}>
                 <Trash2 className="h-3.5 w-3.5" />

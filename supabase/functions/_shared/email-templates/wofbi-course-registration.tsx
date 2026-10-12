@@ -52,7 +52,7 @@ export const WoFBICourseRegistrationEmail: React.FC<WoFBICourseRegistrationEmail
                 <Text style={numberLabel}>Your student number</Text>
                 <Text style={numberValue}><strong>{studentNumber}</strong></Text>
                 <Text style={hint}>
-                  Please keep this safe — you'll need it for your exam and certificate.
+                  Please keep this safe - you'll need it for your exam and certificate.
                 </Text>
               </Section>
             ) : null}
@@ -82,7 +82,7 @@ export const WoFBICourseRegistrationEmail: React.FC<WoFBICourseRegistrationEmail
 
           <Section style={footerSection}>
             <Text style={footerText}>
-              {tenantName || 'Your Church'} — Bible School
+              {tenantName || 'Your Church'} - Bible School
             </Text>
             <Text style={footerText}>
               This email was sent because you registered for a Bible School course.

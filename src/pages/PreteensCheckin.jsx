@@ -252,8 +252,8 @@ export default function PreteensCheckin() {
             if (already) {
               const label = alreadyIn ? "Already checked in" : "Already checked out";
               const sub = alreadyIn
-                ? "No change — this preteen is already signed in."
-                : "No change — this preteen is already signed out.";
+                ? "No change - this preteen is already signed in."
+                : "No change - this preteen is already signed out.";
               return (
                 <>
                   <CheckCheck className={`h-12 w-12 mx-auto ${alreadyIn ? "text-green-600" : "text-slate-500"}`} />
@@ -335,7 +335,7 @@ export default function PreteensCheckin() {
                 I'm a preteen (self check-in)
               </Button>
               <Button variant="outline" className="w-full" onClick={() => setMode("parent")}>
-                <Mail className="h-4 w-4 mr-1" /> Parent — email me a link
+                <Mail className="h-4 w-4 mr-1" /> Parent - email me a link
               </Button>
               <Button variant="ghost" className="w-full" onClick={() => setMode("parent-pin")}>
                 Use parent-set PIN
@@ -405,8 +405,8 @@ export default function PreteensCheckin() {
               {pendingPreteen?.id && (
                 <p aria-live="polite" className={`text-xs rounded-md px-2 py-1.5 ${isCheckedIn(pendingPreteen.id) ? "bg-green-50 text-green-800 border border-green-200" : "bg-slate-50 text-slate-700 border border-slate-200"}`}>
                   {isCheckedIn(pendingPreteen.id)
-                    ? "Currently checked in — entering PIN will check them out."
-                    : "Not checked in yet — entering PIN will check them in."}
+                    ? "Currently checked in - entering PIN will check them out."
+                    : "Not checked in yet - entering PIN will check them in."}
                 </p>
               )}
               <div className="space-y-1.5">
@@ -468,8 +468,8 @@ export default function PreteensCheckin() {
               <p className="text-sm text-center">Hi {selfPreteen.first_name}! Enter your PIN.</p>
               <p aria-live="polite" className={`text-xs rounded-md px-2 py-1.5 ${isCheckedIn(selfPreteen.id) ? "bg-green-50 text-green-800 border border-green-200" : "bg-slate-50 text-slate-700 border border-slate-200"}`}>
                 {isCheckedIn(selfPreteen.id)
-                  ? "You're currently checked in — entering your PIN will check you out."
-                  : "You're not checked in yet — entering your PIN will check you in."}
+                  ? "You're currently checked in - entering your PIN will check you out."
+                  : "You're not checked in yet - entering your PIN will check you in."}
               </p>
               <div className="space-y-1.5">
                 <Label>Your 4-digit PIN</Label>
@@ -621,8 +621,8 @@ export default function PreteensCheckin() {
               {pendingPreteen.id && (
                 <p aria-live="polite" className={`text-xs rounded-md px-2 py-1.5 ${isCheckedIn(pendingPreteen.id) ? "bg-green-50 text-green-800 border border-green-200" : "bg-slate-50 text-slate-700 border border-slate-200"}`}>
                   {isCheckedIn(pendingPreteen.id)
-                    ? "Currently checked in — entering PIN will check them out."
-                    : "Not checked in yet — entering PIN will check them in."}
+                    ? "Currently checked in - entering PIN will check them out."
+                    : "Not checked in yet - entering PIN will check them in."}
                 </p>
               )}
               <div className="space-y-1.5">

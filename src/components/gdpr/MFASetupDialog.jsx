@@ -93,7 +93,7 @@ export default function MFASetupDialog() {
         {step === "intro" && (
           <div className="space-y-3 text-sm">
             <p>You'll need an authenticator app (Google Authenticator, 1Password, Authy, etc.).</p>
-            <p className="text-muted-foreground">Optional — you can also turn it on later from My Profile.</p>
+            <p className="text-muted-foreground">Optional - you can also turn it on later from My Profile.</p>
 
           </div>
         )}
