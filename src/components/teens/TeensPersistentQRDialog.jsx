@@ -16,7 +16,7 @@ export default function TeensPersistentQRDialog({ open, onOpenChange }) {
     ? `${window.location.origin}/t/${tenantSlug}/teens/checkin`
     : "";
   const churchName = currentTenant?.name || "Church";
-  const label = `${churchName} — Teens Attendance`;
+  const label = `${churchName} - Teens Attendance`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(url);

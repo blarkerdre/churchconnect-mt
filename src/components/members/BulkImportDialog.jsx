@@ -136,7 +136,7 @@ export default function BulkImportDialog({ open, onOpenChange, onComplete }) {
         } else if (email) {
           toInsert.push(memberData);
         } else {
-          // No email — always insert as new
+          // No email - always insert as new
           toInsert.push(memberData);
         }
       }
@@ -249,9 +249,9 @@ export default function BulkImportDialog({ open, onOpenChange, onComplete }) {
                       <tr key={i} className={`border-b ${hasError ? "bg-destructive/5" : ""}`}>
                         <td className="p-2 text-muted-foreground">{i + 2}</td>
                         <td className="p-2">{r.first_name} {r.last_name}</td>
-                        <td className="p-2">{r.email || "—"}</td>
-                        <td className="p-2">{r.phone || "—"}</td>
-                        <td className="p-2">{r.membership_status || "—"}</td>
+                        <td className="p-2">{r.email || "-"}</td>
+                        <td className="p-2">{r.phone || "-"}</td>
+                        <td className="p-2">{r.membership_status || "-"}</td>
                       </tr>
                     );
                   })}

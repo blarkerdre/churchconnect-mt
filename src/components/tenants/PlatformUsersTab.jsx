@@ -164,8 +164,8 @@ export default function PlatformUsersTab() {
                 const isSelf = u.user_id === user?.id;
                 return (
                   <TableRow key={u.user_id}>
-                    <TableCell className="font-medium">{u.full_name || "—"}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{u.email || "—"}</TableCell>
+                    <TableCell className="font-medium">{u.full_name || "-"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{u.email || "-"}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {u.memberships.length === 0 && (
@@ -184,7 +184,7 @@ export default function PlatformUsersTab() {
                           <Crown className="h-3 w-3 mr-1" /> Super Admin
                         </Badge>
                       ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
+                        <span className="text-xs text-muted-foreground">-</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">

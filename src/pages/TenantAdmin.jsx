@@ -1115,7 +1115,7 @@ export default function TenantAdmin() {
                   <SelectContent>
                     {PLAN_TIERS.map(p => (
                       <SelectItem key={p.value} value={p.value}>
-                        {p.label} — {p.memberLimit} members, {p.storageLimit}MB
+                        {p.label} - {p.memberLimit} members, {p.storageLimit}MB
                       </SelectItem>
                     ))}
                   </SelectContent>

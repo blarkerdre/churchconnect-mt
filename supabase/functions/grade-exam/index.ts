@@ -457,12 +457,12 @@ async function sendResultEmail_fn(
       <a href="${safeTenantUrl}/auth" style="background:#1a2d4d;border-radius:6px;color:#fff;display:inline-block;font-size:15px;font-weight:600;padding:12px 32px;text-decoration:none;">View Full Results</a>
     </div>
     <p style="color:#4a5568;font-size:14px;line-height:1.6;margin:0;">
-      ${result.passed ? "Congratulations on passing! Keep up the great work." : "Don&#39;t be discouraged — you can retake the exam when ready."}
+      ${result.passed ? "Congratulations on passing! Keep up the great work." : "Don&#39;t be discouraged - you can retake the exam when ready."}
     </p>
   </div>
   <hr style="border-color:#e2e8f0;margin:0;" />
   <div style="padding:24px 32px;text-align:center;">
-    <p style="color:#a0aec0;font-size:12px;margin:0 0 4px;">Bible School — Exam Results</p>
+    <p style="color:#a0aec0;font-size:12px;margin:0 0 4px;">Bible School - Exam Results</p>
   </div>
 </div></body></html>`;
 
@@ -474,7 +474,7 @@ async function sendResultEmail_fn(
     await sendRawManagedEmail({
       supabase: adminClient,
       to: member.email.trim().toLowerCase(),
-      subject: `Exam Result: ${result.subjectName} — ${statusText}`,
+      subject: `Exam Result: ${result.subjectName} - ${statusText}`,
       html,
       text,
       label: "exam-result",

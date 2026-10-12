@@ -9,7 +9,7 @@ if (window.location.pathname === '/index' || window.location.pathname === '/inde
 
 // Recover from stale dynamic-import chunks after a new deploy.
 // The cached index.html references chunk hashes that no longer exist on the
-// CDN. Clear caches + service workers and hard-reload — at most once per
+// CDN. Clear caches + service workers and hard-reload - at most once per
 // cooldown window (shared guard), so a broken chunk can't loop reloads.
 import { hardReload } from './lib/lazy-retry.js'
 

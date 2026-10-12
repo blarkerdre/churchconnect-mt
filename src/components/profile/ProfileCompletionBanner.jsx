@@ -59,7 +59,7 @@ export default function ProfileCompletionBanner() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-foreground">Complete your profile</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {pct}% complete — add missing details to help your church serve you better.
+              {pct}% complete - add missing details to help your church serve you better.
             </p>
             <Progress value={pct} className="h-1.5 mt-2" />
           </div>

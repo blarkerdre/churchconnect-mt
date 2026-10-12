@@ -129,7 +129,7 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
     if (autoSubmitRef.current && timeLeft === 0 && !submitted) {
       autoSubmitRef.current = false;
       if (previewMode) {
-        toast({ title: "⏰ Time's up! (Preview mode — no auto-submit)" });
+        toast({ title: "⏰ Time's up! (Preview mode - no auto-submit)" });
       } else {
         toast({ title: "⏰ Time's up! Auto-submitting your exam." });
         doSubmit();
@@ -163,7 +163,7 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
           action: "wofbi_exam_submitted",
           entityType: "exam_attempts",
           entityId: data?.attempt_id || subjectId || null,
-          title: `Exam submitted — ${subjectName || trainingType || "Bible School"}`,
+          title: `Exam submitted - ${subjectName || trainingType || "Bible School"}`,
           message: `${trainingType || "Bible School"}${scoreText}`,
           details: {
             course: trainingType || null,
@@ -223,7 +223,7 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
     return qOpts;
   };
 
-  const title = subjectName ? `${trainingType} — ${subjectName}` : `${trainingType} Examination`;
+  const title = subjectName ? `${trainingType} - ${subjectName}` : `${trainingType} Examination`;
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
@@ -250,7 +250,7 @@ export default function TakeExamDialog({ open, onOpenChange, trainingType, membe
 
         {previewMode && (
           <div className="px-4 py-2.5 rounded-lg bg-accent/10 border border-accent/30 text-accent-foreground text-sm font-medium flex items-center gap-2">
-            👁️ Preview Mode — This is how members will see the exam
+            👁️ Preview Mode - This is how members will see the exam
           </div>
         )}
 
@@ -362,7 +362,7 @@ function ExamResult({ result, questions, onClose }) {
               <p className="text-sm font-medium"><span className="text-muted-foreground mr-1">{idx + 1}.</span>{q.question_text}</p>
               <div className="flex items-center gap-2 mt-1 text-xs">
                 {ansRow?.is_correct ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <XCircle className="h-3.5 w-3.5 text-destructive" />}
-                <span>Your answer: <strong>{ansRow?.selected_answer || "—"}</strong></span>
+                <span>Your answer: <strong>{ansRow?.selected_answer || "-"}</strong></span>
                 {!ansRow?.is_correct && correctAnswer && <span className="text-emerald-600">Correct: <strong>{correctAnswer}</strong></span>}
               </div>
             </div>

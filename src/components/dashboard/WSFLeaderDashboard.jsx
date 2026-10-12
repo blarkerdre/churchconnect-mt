@@ -77,7 +77,7 @@ export default function WSFLeaderDashboard() {
     enabled: centreIds.length > 0,
   });
 
-  // Compute upcoming birthdays (next 7 days) from centre members — must be before early returns
+  // Compute upcoming birthdays (next 7 days) from centre members - must be before early returns
   const upcomingBirthdays = useMemo(() => {
     const today = new Date();
     return centreMembers.filter(m => {
@@ -123,7 +123,7 @@ export default function WSFLeaderDashboard() {
     ? Math.round(recentReports.reduce((sum, r) => sum + r.male + r.female + r.children, 0) / totalReports)
     : 0;
 
-  // Chart data — last reports reversed for chronological order
+  // Chart data - last reports reversed for chronological order
   const chartData = [...recentReports].reverse().map(r => ({
     date: format(new Date(r.meeting_date), "dd MMM"),
     total: r.male + r.female + r.children,

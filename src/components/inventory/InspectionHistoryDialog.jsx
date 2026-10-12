@@ -42,7 +42,7 @@ export default function InspectionHistoryDialog({ open, onOpenChange, item }) {
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <TenantDialogHeader>
           <History className="h-4 w-4" />
-          Inspection History — {item.name}
+          Inspection History - {item.name}
         </TenantDialogHeader>
 
         {isLoading ? (
@@ -71,7 +71,7 @@ export default function InspectionHistoryDialog({ open, onOpenChange, item }) {
                         <Badge variant="outline" className={`shrink-0 ${resultColor[r.result === "na" ? "needs_attention" : r.result] || ""}`}>
                           {r.result}
                         </Badge>
-                        <span className="text-muted-foreground">{r.prompt_snapshot}{r.comment ? ` — ${r.comment}` : ""}</span>
+                        <span className="text-muted-foreground">{r.prompt_snapshot}{r.comment ? ` - ${r.comment}` : ""}</span>
                       </li>
                     ))}
                   </ul>

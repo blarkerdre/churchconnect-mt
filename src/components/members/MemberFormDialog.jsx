@@ -83,7 +83,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
 
   const memberUserId = member?.user_id;
 
-  // Units the current user leads (in this tenant) — used to allow direct assignment
+  // Units the current user leads (in this tenant) - used to allow direct assignment
   // without requiring admin approval.
   const { data: myLedUnits = [] } = useQuery({
     queryKey: ["my-led-units", currentUser?.id, tenantId],
@@ -590,7 +590,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
             </div>
           </div>
 
-          {/* Approval-required banner — when editing existing member as non-admin OR self-edit */}
+          {/* Approval-required banner - when editing existing member as non-admin OR self-edit */}
           {member && (!isAdmin || (member.user_id && member.user_id === currentUser?.id)) && (showChurchUnits) && (
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 flex gap-2.5 items-start">
               <InfoIcon className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
@@ -603,7 +603,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
             </div>
           )}
 
-          {/* Church Units — only for Active/Inactive */}
+          {/* Church Units - only for Active/Inactive */}
           {showChurchUnits && (
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Church Units</h3>
@@ -650,7 +650,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
             </div>
           )}
 
-          {/* Create User Account — admin only, new members only */}
+          {/* Create User Account - admin only, new members only */}
           {!member && isAdmin && (
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">User Account</h3>
@@ -695,7 +695,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
             </div>
           )}
 
-          {/* Baptism — only for First Timer / New Convert */}
+          {/* Baptism - only for First Timer / New Convert */}
           {showBaptism && !showSpiritualDev && (
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Baptism</h3>
@@ -706,7 +706,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
             </div>
           )}
 
-          {/* Spiritual Development — only for Active/Inactive */}
+          {/* Spiritual Development - only for Active/Inactive */}
           {showSpiritualDev && (
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Spiritual Development</h3>
@@ -725,7 +725,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
                     <Label>Home Cell Centre {form.wsf_centre_id && wsfCentres.find(c => c.id === form.wsf_centre_id) ? <span className="text-xs text-muted-foreground font-normal ml-1">(auto-suggested by location)</span> : null}</Label>
                     <Select value={form.wsf_centre_id || ""} onValueChange={(v) => set("wsf_centre_id", v)}>
                       <SelectTrigger><SelectValue placeholder="Select Home Cell Centre" /></SelectTrigger>
-                      <SelectContent>{wsfCentres.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` — ${c.location}` : ""}</SelectItem>)}</SelectContent>
+                      <SelectContent>{wsfCentres.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` - ${c.location}` : ""}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                 )}
@@ -755,7 +755,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
           {/* Member Journey Timeline */}
           {member && <MemberJourneyTimeline memberId={member.id} />}
 
-          {/* Account Linking — admin only */}
+          {/* Account Linking - admin only */}
           {member && isAdmin && (
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">User Account</h3>
@@ -822,7 +822,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
             </div>
           )}
 
-          {/* User Role Assignment — only for linked members, visible to admins */}
+          {/* User Role Assignment - only for linked members, visible to admins */}
           {member && memberUserId && isAdmin && (
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">User Roles</h3>
@@ -874,7 +874,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
                             pendingRoles.some((r) => !userRoles.includes(r));
                           return dirty ? (
                             <p className="text-xs text-amber-600 italic">
-                              Unsaved role changes — click Update to apply.
+                              Unsaved role changes - click Update to apply.
                             </p>
                           ) : null;
                         })()}
@@ -890,12 +890,12 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
             </div>
           )}
 
-          {/* Welcome Questions — First Timer / New Convert only */}
+          {/* Welcome Questions - First Timer / New Convert only */}
           {isFirstTimerOrNewConvert && (
             <WelcomeQuestions form={form} set={set} tenantName={currentTenant?.name} />
           )}
 
-          {/* Emergency Contact — hidden for First Timer / New Convert */}
+          {/* Emergency Contact - hidden for First Timer / New Convert */}
           {!isFirstTimerOrNewConvert && (
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
@@ -906,7 +906,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
             </div>
           )}
 
-          {/* GDPR Consent — new registrations only */}
+          {/* GDPR Consent - new registrations only */}
           {!member && (
             <MemberConsentBlock form={form} set={set} />
           )}

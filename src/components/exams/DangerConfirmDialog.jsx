@@ -24,13 +24,13 @@ import { toast } from "@/components/ui/use-toast";
  * Props:
  *  - open: boolean
  *  - onOpenChange: (open) => void
- *  - title: string                  — dialog title (e.g. "Delete Course")
- *  - entityName: string             — name shown in body (e.g. course name)
- *  - confirmText?: string           — text user must type (defaults to entityName)
- *  - impacts: string[]              — bullet list of cascade warnings
- *  - confirmLabel?: string          — confirm button label (default "Delete")
- *  - isPending?: boolean            — shows spinner on confirm
- *  - onConfirm: () => void | Promise — runs after password verification
+ *  - title: string                  - dialog title (e.g. "Delete Course")
+ *  - entityName: string             - name shown in body (e.g. course name)
+ *  - confirmText?: string           - text user must type (defaults to entityName)
+ *  - impacts: string[]              - bullet list of cascade warnings
+ *  - confirmLabel?: string          - confirm button label (default "Delete")
+ *  - isPending?: boolean            - shows spinner on confirm
+ *  - onConfirm: () => void | Promise - runs after password verification
  */
 export default function DangerConfirmDialog({
   open,

@@ -45,7 +45,7 @@ export function useTourCompletion(tourId) {
       if (cancelled) return;
       const done = !!data;
       // Never overwrite a "true" already known from localStorage or a live
-      // in-session dismissal — otherwise a race between the fetch and a
+      // in-session dismissal - otherwise a race between the fetch and a
       // Skip click would flip completed back to false and re-trigger auto.
       setCompleted((prev) => (prev === true ? true : done));
       try {

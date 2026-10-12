@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
     const callerId = userData.user.id;
 
     const { tenant_id, member_name, title, situation, action, god_did, share_publicly, sender_email } = await req.json();
-    // Always derive user_id from the verified JWT — never trust the client
+    // Always derive user_id from the verified JWT - never trust the client
     const user_id = callerId;
 
     if (!tenant_id) {

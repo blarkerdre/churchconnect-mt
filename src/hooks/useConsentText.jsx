@@ -8,7 +8,7 @@ const DEFAULT_PRIVACY_URL =
   "https://winners-chapel.org.uk/wp-content/uploads/2024/11/WMA_PrivacyPolicy2024.pdf";
 
 /**
- * Hook for authenticated pages — uses tenant context.
+ * Hook for authenticated pages - uses tenant context.
  */
 export function useConsentText(tenantId) {
   const { data } = useQuery({

@@ -3,7 +3,7 @@ import { useSignedMemberPhoto } from "@/hooks/useSignedMemberPhoto";
 
 /**
  * Renders a member's profile photo. Accepts either:
- *  - `photoUrl` prop (string) — storage path or legacy full URL
+ *  - `photoUrl` prop (string) - storage path or legacy full URL
  *  - `member` prop (object) with `photo_url`
  *
  * If no photo is available, renders the optional `fallback` node, or initials

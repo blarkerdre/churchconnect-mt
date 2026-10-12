@@ -275,7 +275,7 @@ export default function CourseReportTab() {
 
       toast({
         title: "Opened in a new tab",
-        description: "Your browser blocked the download — use Share / Save from the new tab to keep the Word file.",
+        description: "Your browser blocked the download - use Share / Save from the new tab to keep the Word file.",
       });
     } else if (result === "failed") {
       toast({
@@ -689,13 +689,13 @@ export default function CourseReportTab() {
               </Select>
               {courseId && !loadingSessions && sessions.length === 0 && (
                 <p className="text-[11px] text-muted-foreground">
-                  No exam sessions include this course yet — the report will cover all data for the course.
+                  No exam sessions include this course yet - the report will cover all data for the course.
                 </p>
               )}
               <p className="text-[11px] text-muted-foreground">
                 {sessionId === NO_SESSION
                   ? "One combined report across every intake of this course. Edition and dates are left blank for you to fill in."
-                  : "Report covers only this intake — edition, dates, registrations, attendance and results are scoped to it."}
+                  : "Report covers only this intake - edition, dates, registrations, attendance and results are scoped to it."}
               </p>
             </div>
 
@@ -785,7 +785,7 @@ export default function CourseReportTab() {
                 </p>
                 {!hasTemplateLogo && !report.cover.logo_url_custom && (
                   <p className="text-xs text-amber-600">
-                    No Bible School logo saved for this course — using the church logo. Upload one in
+                    No Bible School logo saved for this course - using the church logo. Upload one in
                     Settings → Certificate Templates.
                   </p>
                 )}

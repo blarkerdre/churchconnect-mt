@@ -2,7 +2,7 @@ import { useAppSetting } from "@/hooks/useAppSetting";
 import { useTenant } from "@/contexts/TenantContext";
 
 /**
- * Sub-feature registry — maps parent feature paths to toggleable sub-features.
+ * Sub-feature registry - maps parent feature paths to toggleable sub-features.
  */
 export const SUB_FEATURES = {
   "/members": [

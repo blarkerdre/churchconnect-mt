@@ -47,7 +47,7 @@ export default function AuthExamCallback() {
             }
           }
         } catch (e) {
-          // Non-fatal — continue navigation.
+          // Non-fatal - continue navigation.
           console.warn("Student number lookup failed:", e);
         }
         const next = params.get("next") || "/";

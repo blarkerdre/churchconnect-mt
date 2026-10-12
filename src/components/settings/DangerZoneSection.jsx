@@ -383,7 +383,7 @@ export default function DangerZoneSection() {
               <div>
                 <p className="text-sm font-semibold text-foreground">Import Data from Backup</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Restore data from a previously exported ZIP file containing CSV files. Existing records will not be overwritten — only new records will be added.
+                  Restore data from a previously exported ZIP file containing CSV files. Existing records will not be overwritten - only new records will be added.
                 </p>
               </div>
             </div>
@@ -533,7 +533,7 @@ export default function DangerZoneSection() {
               <AlertDialogDescription>
                 This will restore all data from the archive created{" "}
                 {selectedArchive && formatDistanceToNow(new Date(selectedArchive.purged_at), { addSuffix: true })}.
-                Existing data will not be removed — restored records will be added back.
+                Existing data will not be removed - restored records will be added back.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

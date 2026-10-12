@@ -24,14 +24,14 @@ const PaymentReceiptEmail = ({
   currency = 'GBP',
   paymentDate = new Date().toISOString().split('T')[0],
   paymentMethod = 'Stripe',
-  reference = '—',
+  reference = '-',
   billingCycle = 'monthly',
   nextDueDate,
   settingsUrl = 'https://churchconnect-mt.lovable.app/settings',
 }: PaymentReceiptProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Payment receipt for {churchName} — {currency} {amount}</Preview>
+    <Preview>Payment receipt for {churchName} - {currency} {amount}</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={headerSection}>
@@ -72,7 +72,7 @@ const PaymentReceiptEmail = ({
 export const template = {
   component: PaymentReceiptEmail,
   subject: (data: Record<string, any>) =>
-    `Payment Receipt — ${data.currency || 'GBP'} ${data.amount || '0.00'} for ${data.churchName || 'your subscription'}`,
+    `Payment Receipt - ${data.currency || 'GBP'} ${data.amount || '0.00'} for ${data.churchName || 'your subscription'}`,
   displayName: 'Payment receipt',
   previewData: {
     churchName: 'Grace Community Church',

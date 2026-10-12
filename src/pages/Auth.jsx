@@ -52,7 +52,7 @@ export default function Auth() {
   // Auto sign-out accounts with no tenant membership. Credentials still
   // authenticate against auth.users, but without a tenant row the account
   // has no access to any church, so we don't leave them signed in.
-  // A *failed* lookup is not the same as "no membership" — never sign out then.
+  // A *failed* lookup is not the same as "no membership" - never sign out then.
   const didAutoSignOutRef = useRef(false);
   useEffect(() => {
     if (!user) didAutoSignOutRef.current = false;
@@ -176,7 +176,7 @@ export default function Auth() {
       return <Navigate to={`/t/${slug}`} replace />;
     }
 
-    // Couldn't load the account (network / transient auth error) — keep the
+    // Couldn't load the account (network / transient auth error) - keep the
     // session and let the user retry instead of forcing a sign-out.
     if (dataError || !dataLoaded) {
       return (
@@ -200,7 +200,7 @@ export default function Auth() {
         </div>
       );
     }
-    // Signed in but genuinely no tenant — force sign-out (safety net).
+    // Signed in but genuinely no tenant - force sign-out (safety net).
     if (!didAutoSignOutRef.current) {
       didAutoSignOutRef.current = true;
       signOut();

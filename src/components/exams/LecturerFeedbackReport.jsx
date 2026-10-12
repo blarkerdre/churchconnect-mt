@@ -203,7 +203,7 @@ export default function LecturerFeedbackReport() {
     const groups = new Map();
     filtered.forEach((r) => {
       const id = r.lecturer_id;
-      if (!groups.has(id)) groups.set(id, { id, name: r.lecturers?.name || "—", rows: [] });
+      if (!groups.has(id)) groups.set(id, { id, name: r.lecturers?.name || "-", rows: [] });
       groups.get(id).rows.push(r);
     });
     return Array.from(groups.values()).map((g) => ({
@@ -220,7 +220,7 @@ export default function LecturerFeedbackReport() {
     filtered.forEach((r) => {
       if (!r.subject_id) return;
       const key = r.subject_id;
-      if (!groups.has(key)) groups.set(key, { id: key, subject: r.exam_subjects?.name || "—", course: r.exam_titles?.name || "—", rows: [] });
+      if (!groups.has(key)) groups.set(key, { id: key, subject: r.exam_subjects?.name || "-", course: r.exam_titles?.name || "-", rows: [] });
       groups.get(key).rows.push(r);
     });
     return Array.from(groups.values()).map((g) => ({
@@ -235,7 +235,7 @@ export default function LecturerFeedbackReport() {
     filtered.forEach((r) => {
       if (!r.course_id) return;
       const key = r.course_id;
-      if (!groups.has(key)) groups.set(key, { id: key, course: r.exam_titles?.name || "—", rows: [] });
+      if (!groups.has(key)) groups.set(key, { id: key, course: r.exam_titles?.name || "-", rows: [] });
       groups.get(key).rows.push(r);
     });
     return Array.from(groups.values()).map((g) => ({
@@ -394,12 +394,12 @@ export default function LecturerFeedbackReport() {
               <SummaryTile label="Lecturers rated" value={summary.uniqLect} />
               <SummaryTile
                 label="Avg rating"
-                value={summary.n ? `${summary.avg.toFixed(1)}/10` : "—"}
+                value={summary.n ? `${summary.avg.toFixed(1)}/10` : "-"}
                 trend={summary.trend}
               />
-              <SummaryTile label="% Have again" value={summary.n ? `${summary.haveAgainYes}%` : "—"} />
-              <SummaryTile label="% Good delivery" value={summary.n ? `${summary.deliveryGood}%` : "—"} />
-              <SummaryTile label="% Good timing" value={summary.n ? `${summary.timeGood}%` : "—"} />
+              <SummaryTile label="% Have again" value={summary.n ? `${summary.haveAgainYes}%` : "-"} />
+              <SummaryTile label="% Good delivery" value={summary.n ? `${summary.deliveryGood}%` : "-"} />
+              <SummaryTile label="% Good timing" value={summary.n ? `${summary.timeGood}%` : "-"} />
             </div>
 
             {/* Breakdowns */}
@@ -555,13 +555,13 @@ export default function LecturerFeedbackReport() {
                           {filtered.map((r) => (
                             <TableRow key={r.id}>
                               <TableCell className="text-xs whitespace-nowrap">{new Date(r.created_at).toLocaleDateString()}</TableCell>
-                              <TableCell className="text-xs whitespace-nowrap text-muted-foreground">{r.exam_sessions?.name || "—"}</TableCell>
-                              <TableCell>{r.lecturers?.name || "—"}</TableCell>
-                              <TableCell className="text-sm text-muted-foreground">{r.exam_subjects?.name || "—"}</TableCell>
-                              <TableCell className="text-sm">{r.members ? `${r.members.first_name} ${r.members.last_name}` : "—"}</TableCell>
-                              <TableCell className="text-right tabular-nums">{r.overall_rating ?? "—"}</TableCell>
-                              <TableCell className="text-xs">{OPTION_LABELS.have_again?.[r.have_again] || "—"}</TableCell>
-                              <TableCell className="max-w-[240px] truncate text-xs text-muted-foreground" title={r.comments || ""}>{r.comments || "—"}</TableCell>
+                              <TableCell className="text-xs whitespace-nowrap text-muted-foreground">{r.exam_sessions?.name || "-"}</TableCell>
+                              <TableCell>{r.lecturers?.name || "-"}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{r.exam_subjects?.name || "-"}</TableCell>
+                              <TableCell className="text-sm">{r.members ? `${r.members.first_name} ${r.members.last_name}` : "-"}</TableCell>
+                              <TableCell className="text-right tabular-nums">{r.overall_rating ?? "-"}</TableCell>
+                              <TableCell className="text-xs">{OPTION_LABELS.have_again?.[r.have_again] || "-"}</TableCell>
+                              <TableCell className="max-w-[240px] truncate text-xs text-muted-foreground" title={r.comments || ""}>{r.comments || "-"}</TableCell>
                               <TableCell className="text-right">
                                 <Button
                                   size="sm"

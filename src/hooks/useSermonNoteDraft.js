@@ -75,7 +75,7 @@ export default function useSermonNoteDraft({ userId, noteId, note, open, values,
       setSavedAt(payload.updatedAt);
       setStatus("saved");
     } catch {
-      /* quota exceeded — drafts are best-effort */
+      /* quota exceeded - drafts are best-effort */
     }
   }, [enabled, userId, noteId]);
 

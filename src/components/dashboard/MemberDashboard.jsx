@@ -105,7 +105,7 @@ export default function MemberDashboard({ currentUser, myMember }) {
 
   return (
     <div className="space-y-6">
-      {/* No member profile in THIS church yet — explain the empty dashboard */}
+      {/* No member profile in THIS church yet - explain the empty dashboard */}
       {!myMember && currentTenant && (
         <Card className="border-amber-300 bg-amber-50/60">
           <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -114,7 +114,7 @@ export default function MemberDashboard({ currentUser, myMember }) {
                 You don't have a profile in {currentTenant.name} yet
               </p>
               <p className="text-xs text-amber-800/80 mt-0.5">
-                You have access to this church, but no member record here — that's why this
+                You have access to this church, but no member record here - that's why this
                 dashboard looks empty. Complete your profile, or switch back to another church.
               </p>
             </div>
@@ -156,7 +156,7 @@ export default function MemberDashboard({ currentUser, myMember }) {
                   <Badge className="bg-primary-foreground/20 text-primary-foreground/90 text-xs border-0">{myMember.church_unit}</Badge>
                 )}
                 {myMember.winners_satellite && (
-                  <Badge className="bg-accent/30 text-accent text-xs border-0">WSF — {myMember.wsf_centres?.name || "Member"}</Badge>
+                  <Badge className="bg-accent/30 text-accent text-xs border-0">WSF - {myMember.wsf_centres?.name || "Member"}</Badge>
                 )}
               </div>
             )}

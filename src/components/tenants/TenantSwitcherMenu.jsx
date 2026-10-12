@@ -4,7 +4,7 @@ import { Check, ChevronsUpDown, Building2 } from "lucide-react";
 /**
  * Church switcher used in the sidebar (expanded and collapsed) and in the
  * top header badge, so accounts belonging to more than one church can always
- * reach it — including on mobile.
+ * reach it - including on mobile.
  *
  * Selecting a church calls `onSelect(tenantId)`; the caller owns the
  * password-confirmation flow.

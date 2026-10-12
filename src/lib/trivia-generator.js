@@ -98,7 +98,7 @@ function blankQuestion(v, kjv) {
     options,
     correct_index,
     reference: v.reference,
-    explanation: `${v.reference} — "${v.text}"`,
+    explanation: `${v.reference} - "${v.text}"`,
     difficulty: "easy",
     source: "generated",
   };

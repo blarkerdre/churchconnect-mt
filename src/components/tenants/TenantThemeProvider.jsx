@@ -167,7 +167,7 @@ export default function TenantThemeProvider({ children }) {
       root.style.setProperty("--ring", primaryHsl);
       root.style.setProperty("--chart-1", primaryHsl);
 
-      // Foreground for primary buttons — light bg needs dark text
+      // Foreground for primary buttons - light bg needs dark text
       if (isLightColor(primaryHsl)) {
         root.style.setProperty("--primary-foreground", "215 45% 15%");
       } else {

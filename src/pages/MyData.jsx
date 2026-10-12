@@ -167,7 +167,7 @@ export default function MyData() {
                 <Alert>
                   <AlertDescription>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span>Latest request ({new Date(exportReq.created_at).toLocaleDateString()}) —</span>
+                      <span>Latest request ({new Date(exportReq.created_at).toLocaleDateString()}) -</span>
                       <Badge variant={
                         exportReq.status === "approved" ? "default" :
                         exportReq.status === "downloaded" ? "secondary" :
@@ -236,20 +236,20 @@ export default function MyData() {
               {erasure && erasure.status !== "rejected" && (
                 <Alert>
                   <AlertDescription>
-                    You have a request from {new Date(erasure.created_at).toLocaleDateString()} — status:
+                    You have a request from {new Date(erasure.created_at).toLocaleDateString()} - status:
                     {" "}<Badge variant={erasure.status === "completed" ? "default" : "secondary"}>{erasure.status}</Badge>
                     {erasure.review_note && <div className="text-xs mt-1">Note: {erasure.review_note}</div>}
                   </AlertDescription>
                 </Alert>
               )}
-              <p>Under Article 17 you can request deletion of your personal data. Your church administrator will review the request — some records (giving, attendance for statutory reports) may be retained under legal obligation.</p>
+              <p>Under Article 17 you can request deletion of your personal data. Your church administrator will review the request - some records (giving, attendance for statutory reports) may be retained under legal obligation.</p>
               <p className="text-muted-foreground text-xs">
                 Approved requests anonymise your record and remove your personal artefacts. A 30-day recovery archive is kept then destroyed.
               </p>
               <div>
                 <Label>Reason (optional)</Label>
                 <Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)}
-                  placeholder="Help us understand — this is optional." maxLength={500} />
+                  placeholder="Help us understand - this is optional." maxLength={500} />
               </div>
               <Button variant="destructive" onClick={() => erasureMutation.mutate()}
                 disabled={erasureMutation.isPending || (erasure && ["pending", "approved"].includes(erasure.status))}>

@@ -29,7 +29,7 @@ const sections = [
     title: "Data we collect & how we use it",
     body: [
       "We collect the church membership, attendance, communications, and ministry data that church administrators choose to enter into the app.",
-      "Data is used only to operate the features the church has enabled — for example, attendance reporting, follow-ups, pastoral care, and announcements.",
+      "Data is used only to operate the features the church has enabled - for example, attendance reporting, follow-ups, pastoral care, and announcements.",
       "We do not sell member data and we do not use it to train third-party AI models.",
     ],
   },

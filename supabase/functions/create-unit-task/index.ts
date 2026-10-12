@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
     }
     console.log("[create-unit-task] assignments created", rows.length);
 
-    // Fire notifications (best-effort) — call with service role so it bypasses user checks
+    // Fire notifications (best-effort) - call with service role so it bypasses user checks
     try {
       admin.functions.invoke("notify-unit-task-assignment", {
         body: { task_id: task.id, tenant_id },

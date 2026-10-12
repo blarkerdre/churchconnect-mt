@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
       return json({ error: "Missing application_id or registration_id" }, 400);
     }
 
-    // Load application — either directly, or derived from a course_registrations row.
+    // Load application - either directly, or derived from a course_registrations row.
     let app: any = null;
     if (application_id) {
       const { data, error } = await admin
@@ -316,7 +316,7 @@ Deno.serve(async (req) => {
       emailSent = false;
       emailError = (e as Error).message || String(e);
       console.error("[provision-exam-account] sendLoggedTemplateEmail threw", e);
-      // Non-fatal — return link so admin can share manually if needed.
+      // Non-fatal - return link so admin can share manually if needed.
     }
 
     console.log("[provision-exam-account] done", { memberId, userId, emailSent, emailError });

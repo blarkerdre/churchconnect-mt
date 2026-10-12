@@ -105,7 +105,7 @@ for (const [name, idx, aliases] of BOOKS) {
   _bookMap.set(key(name), idx);
   for (const a of aliases) _bookMap.set(key(a), idx);
 }
-// Disambiguation: Jude/Judges collision on "jud" — prefer Judges when followed by a chapter, since Jude has only 1 chapter; handled at parse time when needed.
+// Disambiguation: Jude/Judges collision on "jud" - prefer Judges when followed by a chapter, since Jude has only 1 chapter; handled at parse time when needed.
 
 function normalizeBookToken(raw) {
   const k = raw.toLowerCase().replace(/\./g, "").replace(/\s+/g, "");
@@ -224,7 +224,7 @@ export async function lookupVerses(refOrString) {
     }
     return { ref, verses: items, notFound: items.length === 0, source: "local" };
   } catch (err) {
-    // Local KJV chunk failed — fall back to public API.
+    // Local KJV chunk failed - fall back to public API.
     try {
       return await fetchVersesFromApi(ref);
     } catch (apiErr) {

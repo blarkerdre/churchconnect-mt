@@ -139,12 +139,12 @@ export default function WSFCreationReport({ centres = [], zones = [], members = 
                 {filtered.map(c => (
                   <tr key={c.id} className="border-t">
                     <td className="p-2">{c.name}</td>
-                    <td className="p-2">{zoneMap[c.zone_id]?.name || "—"}</td>
-                    <td className="p-2">{c.city || "—"}</td>
-                    <td className="p-2">{c.postcode || "—"}</td>
-                    <td className="p-2">{memberMap[c.leader_id] || "—"}</td>
-                    <td className="p-2">{c.host_name || "—"}</td>
-                    <td className="p-2">{c.meeting_day || "—"}</td>
+                    <td className="p-2">{zoneMap[c.zone_id]?.name || "-"}</td>
+                    <td className="p-2">{c.city || "-"}</td>
+                    <td className="p-2">{c.postcode || "-"}</td>
+                    <td className="p-2">{memberMap[c.leader_id] || "-"}</td>
+                    <td className="p-2">{c.host_name || "-"}</td>
+                    <td className="p-2">{c.meeting_day || "-"}</td>
                     <td className="p-2">
                       {c.is_active === false
                         ? <Badge variant="secondary">Hidden</Badge>

@@ -54,7 +54,7 @@ function qcObservationCell(row) {
   );
   if (!hasStructured) return String(row?.observations || "");
   return QC_CHECKLIST_FIELDS.map(
-    (f, i) => `${i + 1}. ${f.label}: ${String(row?.[f.key] ?? "").trim() || "—"}`,
+    (f, i) => `${i + 1}. ${f.label}: ${String(row?.[f.key] ?? "").trim() || "-"}`,
   ).join("\n");
 }
 
@@ -85,11 +85,11 @@ export function buildReportHtml(report) {
 
     <h2>3. INDUCTION</h2>
     <p>The ${escHtml(edition)}induction took place on ${escHtml(
-      report.induction?.date || "—",
-    )} with ${escHtml(report.induction?.students || "—")} students in attendance.</p>
+      report.induction?.date || "-",
+    )} with ${escHtml(report.induction?.students || "-")} students in attendance.</p>
 
     <h2>4. CLASS ATTENDANCE</h2>
-    <p>Class attendance was ${escHtml(report.class_attendance || "—")}.</p>
+    <p>Class attendance was ${escHtml(report.class_attendance || "-")}.</p>
 
     <h2>5a. STATISTICS</h2>
     <p>a. Total number of students, Water Baptised – ${escHtml(report.stats_a?.water_baptised || "0")}</p>
@@ -144,7 +144,7 @@ export function buildReportHtml(report) {
         r.lecturer,
         r.course,
         r.qc_person,
-        `1. Quality control Rating – ${r.qc_rating || "—"}\n2. Student Average Rating – ${r.student_rating || "—"}`,
+        `1. Quality control Rating – ${r.qc_rating || "-"}\n2. Student Average Rating – ${r.student_rating || "-"}`,
       ]),
       ["25%", "27%", "20%", "28%"],
     )}
@@ -337,7 +337,7 @@ export function printReport(report) {
 }
 
 /**
- * Word (.docx) export — a real OOXML package (Word rejects HTML renamed to .doc).
+ * Word (.docx) export - a real OOXML package (Word rejects HTML renamed to .doc).
  * Returns "downloaded" | "opened" | "failed" so the caller can tell the user what
  * happened when the browser blocks file downloads (mobile Safari / installed PWAs).
  */

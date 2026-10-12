@@ -2,7 +2,7 @@ import React from "react";
 
 /** 1 -> "1st", 2 -> "2nd", 11 -> "11th" */
 export function ordinal(n) {
-  if (n == null || !isFinite(n)) return "—";
+  if (n == null || !isFinite(n)) return "-";
   const i = Math.round(n);
   const mod100 = i % 100;
   if (mod100 >= 11 && mod100 <= 13) return `${i}th`;
@@ -23,7 +23,7 @@ export function positionCls(pos) {
 }
 
 export function PositionBadge({ pos }) {
-  if (!pos) return <span className="text-xs text-muted-foreground">—</span>;
+  if (!pos) return <span className="text-xs text-muted-foreground">-</span>;
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${positionCls(pos)}`}>
       {ordinal(pos)}

@@ -18,7 +18,7 @@ export default function TeenAttendanceQRDialog({ open, onOpenChange, session, on
   const path = tenantSlug ? `/t/${tenantSlug}/teens/checkin/${session?.qr_token}` : `/teens/checkin/${session?.qr_token}`;
   const url = session ? `${window.location.origin}${path}` : "";
   const churchName = currentTenant?.name || "Church";
-  const label = `${churchName} — ${session?.title || "Teens Attendance"}`;
+  const label = `${churchName} - ${session?.title || "Teens Attendance"}`;
 
   useEffect(() => {
     if (!open || !session?.id) return;

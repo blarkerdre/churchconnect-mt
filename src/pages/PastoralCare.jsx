@@ -126,7 +126,7 @@ export default function PastoralCare() {
 
   const lifeEventCaseIds = new Set(lifeEvents.map(le => le.pastoral_care_id).filter(Boolean));
 
-  // Exclude life-event-linked pastoral_care rows from the regular list — life events
+  // Exclude life-event-linked pastoral_care rows from the regular list - life events
   // get their own dedicated cards below.
   const regularCases = cases.filter(c => !lifeEventCaseIds.has(c.id));
   const visibleCases = canManage ? regularCases : regularCases.filter(c => c.created_by === user?.id);
@@ -493,7 +493,7 @@ export default function PastoralCare() {
                 <Select value={statusUpdate.assigned_to || "unassigned"} onValueChange={v => setStatusUpdate(f => ({ ...f, assigned_to: v === "unassigned" ? "" : v }))}>
                   <SelectTrigger><SelectValue placeholder="Select unit member" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="unassigned">— Unassigned —</SelectItem>
+                    <SelectItem value="unassigned">- Unassigned -</SelectItem>
                     {pastoralUnitMembers.map(p => (
                       <SelectItem key={p.user_id} value={p.user_id}>{p.full_name || p.email}</SelectItem>
                     ))}

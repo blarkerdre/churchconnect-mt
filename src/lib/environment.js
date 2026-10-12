@@ -19,7 +19,7 @@ export function isPreviewEnvironment() {
 
 /**
  * Returns "Preview" or "Published" based on hostname.
- * Both environments share the same database — this label only
+ * Both environments share the same database - this label only
  * indicates which deployment the user is viewing, NOT data isolation.
  */
 export function getEnvironmentLabel() {

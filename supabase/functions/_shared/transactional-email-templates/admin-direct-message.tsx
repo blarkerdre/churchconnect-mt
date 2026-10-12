@@ -41,7 +41,7 @@ const DirectMessageEmail = (props: Props) => {
           ))}
           <Hr style={hr} />
           <Text style={footer}>
-            {props.senderName ? `${props.senderName} — ${churchName}` : churchName}
+            {props.senderName ? `${props.senderName} - ${churchName}` : churchName}
           </Text>
         </Container>
       </Body>

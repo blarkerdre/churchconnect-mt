@@ -62,7 +62,7 @@ const TenantInvoiceEmail = ({
 }: TenantInvoiceProps) => {
   const isReceipt = documentType === 'receipt'
   const heading = isReceipt ? 'Receipt' : 'Invoice'
-  const previewText = `${heading} ${invoiceNumber} — ${currency} ${total}`
+  const previewText = `${heading} ${invoiceNumber} - ${currency} ${total}`
 
   return (
     <Html lang="en" dir="ltr">
@@ -123,7 +123,7 @@ const TenantInvoiceEmail = ({
             )}
             {lineItems.map((item, idx) => (
               <Text key={idx} style={detailRow}>
-                {item.description || '—'}
+                {item.description || '-'}
                 {item.quantity && item.quantity !== 1 ? ` × ${item.quantity}` : ''}
                 <span style={{ float: 'right' as const }}>
                   {currency} {(Number(item.amount) || 0).toFixed(2)}
@@ -193,7 +193,7 @@ export const template = {
   component: TenantInvoiceEmail,
   subject: (data: Record<string, any>) => {
     const docType = data.documentType === 'receipt' ? 'Receipt' : 'Invoice'
-    return `${docType} ${data.invoiceNumber || ''} — ${data.currency || 'GBP'} ${data.total || '0.00'}`.trim()
+    return `${docType} ${data.invoiceNumber || ''} - ${data.currency || 'GBP'} ${data.total || '0.00'}`.trim()
   },
   displayName: 'Tenant invoice / receipt',
   previewData: {
@@ -207,7 +207,7 @@ export const template = {
     dueDate: '2026-05-05',
     currency: 'GBP',
     lineItems: [
-      { description: 'Monthly Subscription — May 2026', quantity: 1, unit_price: 50, amount: 50 },
+      { description: 'Monthly Subscription - May 2026', quantity: 1, unit_price: 50, amount: 50 },
       { description: 'Setup Fee', quantity: 1, unit_price: 5, amount: 5 },
     ],
     subtotal: '55.00',

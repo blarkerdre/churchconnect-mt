@@ -20,7 +20,7 @@ export default function RegistrationQRCode({ open, onOpenChange }) {
               <QrCode className="h-5 w-5" /> Registration QR Code
             </TenantDialogHeader>
           <p className="text-sm text-muted-foreground py-4 text-center">
-            Unable to generate QR code — church context not resolved yet. Please try again.
+            Unable to generate QR code - church context not resolved yet. Please try again.
           </p>
         </DialogContent>
       </Dialog>
@@ -31,7 +31,7 @@ export default function RegistrationQRCode({ open, onOpenChange }) {
 
   const churchName = currentTenant?.name || "Church";
   const logoUrl = currentTenant?.logo_url || "/winners-logo.png";
-  const label = `${churchName} — Member Registration`;
+  const label = `${churchName} - Member Registration`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(registrationUrl);

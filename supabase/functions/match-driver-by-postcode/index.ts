@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
 
     // Authorization: must be tenant admin/owner, app-level admin, or a
     // Transportation/Kingdom Chariot unit leader. Tenant membership alone is
-    // NOT sufficient — this function uses the service role to update other
+    // NOT sufficient - this function uses the service role to update other
     // members' transportation bookings, which RLS otherwise restricts.
     const isTenantAdmin = ["owner", "admin"].includes(String(membership.role || "").toLowerCase());
     let authorized = isTenantAdmin;

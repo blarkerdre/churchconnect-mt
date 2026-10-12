@@ -136,7 +136,7 @@ export default function Members() {
       const { error } = await supabase.from("members").delete().eq("id", member.id).eq("tenant_id", tenantId);
       if (error) throw error;
 
-      // If member had a linked auth account, try to delete that too — but
+      // If member had a linked auth account, try to delete that too - but
       // only when they have no memberships in other tenants (so we never
       // strand a user who still belongs to another church).
       let authOutcome = "no_account"; // no_account | deleted | retained_other_tenants | retained_error
@@ -174,7 +174,7 @@ export default function Members() {
       const messages = {
         no_account: "Member deleted",
         deleted: "Member and login account deleted",
-        retained_other_tenants: "Member deleted. Login retained — user still belongs to another church.",
+        retained_other_tenants: "Member deleted. Login retained - user still belongs to another church.",
         retained_error: "Member deleted, but the login account could not be removed. Only a super-admin can delete login accounts.",
       };
       toast({
@@ -358,7 +358,7 @@ export default function Members() {
                 {unlinkedAccounts.length} login account{unlinkedAccounts.length > 1 ? "s" : ""} with access to this church {unlinkedAccounts.length > 1 ? "aren't" : "isn't"} connected to a directory record
               </p>
               <p className="text-xs text-muted-foreground">
-                Some are duplicate sign-ups of people already in the directory — link those instead of adding them again. The rest have never been added.
+                Some are duplicate sign-ups of people already in the directory - link those instead of adding them again. The rest have never been added.
               </p>
             </div>
 
@@ -368,7 +368,7 @@ export default function Members() {
                 {dupes.map(a => (
                   <div key={a.user_id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-background p-2.5">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{a.full_name || "—"}</p>
+                      <p className="text-sm font-medium text-foreground truncate">{a.full_name || "-"}</p>
                       <p className="text-xs text-muted-foreground truncate">{a.email || ""}</p>
                       <p className="text-xs text-muted-foreground truncate mt-0.5">
                         Matches directory record: {a.suggestedMember.first_name} {a.suggestedMember.last_name}
@@ -396,7 +396,7 @@ export default function Members() {
                 {missing.map(a => (
                   <div key={a.user_id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-background p-2.5">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{a.full_name || "—"}</p>
+                      <p className="text-sm font-medium text-foreground truncate">{a.full_name || "-"}</p>
                       <p className="text-xs text-muted-foreground truncate">{a.email || ""}</p>
                     </div>
                     {canAddMember && (
@@ -486,7 +486,7 @@ export default function Members() {
                               <Badge key={u} variant="secondary" className="text-xs">{u}</Badge>
                             ))}
                           </div>
-                        ) : <span className="text-xs text-muted-foreground">—</span>}
+                        ) : <span className="text-xs text-muted-foreground">-</span>}
                       </td>
                     )}
                     <td className="p-3 sm:p-4">
@@ -575,7 +575,7 @@ export default function Members() {
         impacts={[
           "This member's record will be permanently deleted.",
           "Attendance history, follow-ups, sign-posts, pastoral cases and registrations linked to this member will be affected.",
-          ...(deleteTarget?.user_id ? ["The linked login account will also be permanently deleted — they will no longer be able to sign in."] : []),
+          ...(deleteTarget?.user_id ? ["The linked login account will also be permanently deleted - they will no longer be able to sign in."] : []),
         ]}
         isPending={deleteMutation.isPending}
         onConfirm={confirmDelete}

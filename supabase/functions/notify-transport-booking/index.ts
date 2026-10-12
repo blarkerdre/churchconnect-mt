@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
         const pc = (s.pickup_postcode as string) || "";
         const phone = (s.phone as string) || "";
         const pax = (s.passengers as number) || 1;
-        return `${i + 1}. ${time} — ${name}${pax > 1 ? ` (${pax} pax)` : ""} @ ${addr}${pc ? ` [${pc}]` : ""}${phone ? ` • ${phone}` : ""}`;
+        return `${i + 1}. ${time} - ${name}${pax > 1 ? ` (${pax} pax)` : ""} @ ${addr}${pc ? ` [${pc}]` : ""}${phone ? ` • ${phone}` : ""}`;
       });
       const title = `Your pickup route${dateLabel ? ` (${dateLabel})` : ""}`;
       const message = `You have ${stops.length} pickup${stops.length === 1 ? "" : "s"} scheduled:\n${lines.join("\n")}`;
@@ -295,7 +295,7 @@ Deno.serve(async (req) => {
       ? ` Driver: ${driverName}${driverPhone ? ` (${driverPhone})` : ""}.`
       : "";
     const pickupAtPhrase = pickup ? ` from ${pickup}` : "";
-    const pickupDescPhrase = pickupLocationDescription ? ` — ${pickupLocationDescription}` : "";
+    const pickupDescPhrase = pickupLocationDescription ? ` - ${pickupLocationDescription}` : "";
     const passengerHeadings: Record<string, { subject: string; heading: string; bodyLine: string }> = {
       "Pickup Scheduled": {
         subject: `Your pickup time is scheduled`,
@@ -320,7 +320,7 @@ Deno.serve(async (req) => {
       "Picked Up": {
         subject: `You're on your way`,
         heading: "You're On Your Way",
-        bodyLine: "You've been picked up — see you soon at the destination.",
+        bodyLine: "You've been picked up - see you soon at the destination.",
       },
       "Completed": {
         subject: `Trip completed`,
@@ -503,7 +503,7 @@ Deno.serve(async (req) => {
             const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
             const __quota = await checkSmsQuota(supabase, tenant_id, "sms", 1);
             if (!__quota.allowed) {
-              console.warn("[notify-transport-booking] SMS quota exceeded for tenant", tenant_id, "— skipping send");
+              console.warn("[notify-transport-booking] SMS quota exceeded for tenant", tenant_id, "- skipping send");
             } else {
             const response = await fetch(`${GATEWAY_URL}/Messages.json`, {
               method: "POST",

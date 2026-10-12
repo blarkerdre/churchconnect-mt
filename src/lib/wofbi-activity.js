@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
  *
  * Runs through the `log_wofbi_activity` SECURITY DEFINER function because
  * students/QC officers cannot insert into notifications or audit_log directly.
- * Failures are swallowed — logging must never block the user's action.
+ * Failures are swallowed - logging must never block the user's action.
  */
 export async function logWofbiActivity(tenantId, { action, entityType, entityId = null, title = null, message = null, details = {} } = {}) {
   if (!tenantId || !action || !entityType) return;

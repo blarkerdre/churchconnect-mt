@@ -156,7 +156,7 @@ export default function PendingJoinRequests({ filter = "all" }) {
             <Textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g. We're at capacity right now — please try again next month."
+              placeholder="e.g. We're at capacity right now - please try again next month."
               rows={3}
             />
           </div>

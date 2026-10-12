@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
         customer: sub.stripe_customer_id,
         amount: amountMinor,
         currency: (charge.currency || "GBP").toLowerCase(),
-        description: `Overage ${charge.metric} — ${charge.period_start} (${charge.quantity})`,
+        description: `Overage ${charge.metric} - ${charge.period_start} (${charge.quantity})`,
         metadata: {
           tenant_id: charge.tenant_id,
           metric: charge.metric,

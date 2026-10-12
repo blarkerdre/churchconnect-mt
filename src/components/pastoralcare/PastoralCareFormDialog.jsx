@@ -82,7 +82,7 @@ export default function PastoralCareFormDialog({ open, onOpenChange, record, mem
                   >
                     <SelectTrigger><SelectValue placeholder="Choose a member" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__manual__">— Enter name manually —</SelectItem>
+                      <SelectItem value="__manual__">- Enter name manually -</SelectItem>
                       {members.map((m) => (
                         <SelectItem key={m.id} value={m.id}>{m.first_name} {m.last_name}</SelectItem>
                       ))}
@@ -131,7 +131,7 @@ export default function PastoralCareFormDialog({ open, onOpenChange, record, mem
                   <Select value={form.assigned_leader} onValueChange={(v) => set("assigned_leader", v)}>
                     <SelectTrigger><SelectValue placeholder="Select a unit member" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={null}>— Unassigned —</SelectItem>
+                      <SelectItem value={null}>- Unassigned -</SelectItem>
                       {assignableMembers.map(m => (
                         <SelectItem key={m.id} value={`${m.first_name} ${m.last_name}`}>
                           {m.first_name} {m.last_name}

@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Load the real follow-up record — never trust client-supplied content
+    // Load the real follow-up record - never trust client-supplied content
     const { data: followup, error: fuErr } = await supabase
       .from("followups")
       .select("id, tenant_id, assigned_to, member_id, description, followup_type, members:member_id(first_name, last_name)")
@@ -258,7 +258,7 @@ Deno.serve(async (req) => {
             const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
             const __quota = await checkSmsQuota(supabase, tenant_id, "sms", 1);
             if (!__quota.allowed) {
-              console.warn("[notify-followup-assignment] SMS quota exceeded for tenant", tenant_id, "— skipping send");
+              console.warn("[notify-followup-assignment] SMS quota exceeded for tenant", tenant_id, "- skipping send");
             } else {
             const response = await fetch(`${GATEWAY_URL}/Messages.json`, {
               method: "POST",
@@ -301,7 +301,7 @@ Deno.serve(async (req) => {
         }
       }
     } else if (recipientPhone && !smsEnabled) {
-      console.log("SMS notifications disabled — skipping SMS for follow-up assignment");
+      console.log("SMS notifications disabled - skipping SMS for follow-up assignment");
     }
 
     return new Response(JSON.stringify({ success: true }), {

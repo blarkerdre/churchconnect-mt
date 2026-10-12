@@ -63,7 +63,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
   });
 
 
-  // Question counts per subject — powers the row badge and enables/disables
+  // Question counts per subject - powers the row badge and enables/disables
   // the quick "preview exam" icon.
   const subjectIds = subjects.map((s) => s.id);
   const { data: questionCounts = {} } = useQuery({
@@ -127,7 +127,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle className="text-base font-display flex items-center gap-2 flex-wrap">
-              <Layers className="h-4 w-4 text-primary" /> {course.name} — Subjects
+              <Layers className="h-4 w-4 text-primary" /> {course.name} - Subjects
               <Badge variant="secondary" className="text-[10px] h-4">{sessionName}</Badge>
             </CardTitle>
             <div className="flex items-center gap-2">
@@ -178,7 +178,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
                     <span className="text-xs text-muted-foreground font-mono w-5">{idx + 1}.</span>
                     {s.code && <Badge variant="outline" className="text-[9px] h-4 font-mono">{s.code}</Badge>}
                     <span className="text-sm font-medium text-foreground break-words">{s.name}</span>
-                    {s.description && <span className="text-xs text-muted-foreground hidden sm:inline">— {s.description}</span>}
+                    {s.description && <span className="text-xs text-muted-foreground hidden sm:inline">- {s.description}</span>}
                     <Badge variant="outline" className="text-[9px] h-4">Pass: {s.pass_mark_percentage}%</Badge>
                     <Badge variant="secondary" className="text-[9px] h-4">{qCount} question{qCount === 1 ? "" : "s"}</Badge>
                     {s.time_limit_minutes && <Badge variant="outline" className="text-[9px] h-4">⏱ {s.time_limit_minutes}min</Badge>}
@@ -356,7 +356,7 @@ export default function SubjectManager({ course, onSelectSubject, selectedSubjec
         title="Delete Subject"
         entityName={deleteTarget?.name || ""}
         impacts={[
-          "Only this edition's copy of the subject is deleted — other editions keep theirs.",
+          "Only this edition's copy of the subject is deleted - other editions keep theirs.",
           "All questions under this subject will be permanently deleted.",
           "All member exam attempts and answers for this subject will be permanently deleted.",
         ]}

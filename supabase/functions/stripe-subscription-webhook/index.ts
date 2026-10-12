@@ -29,7 +29,7 @@ serve(async (req) => {
   // SECURITY: fail closed when the webhook secret is unset.
   // Accepting unsigned events lets attackers forge payment notifications.
   if (!webhookSecret) {
-    console.error("[stripe-webhook] STRIPE_WEBHOOK_SECRET is not configured — rejecting request");
+    console.error("[stripe-webhook] STRIPE_WEBHOOK_SECRET is not configured - rejecting request");
     return new Response(JSON.stringify({ error: "Webhook not configured" }), {
       status: 500,
       headers: corsHeaders,

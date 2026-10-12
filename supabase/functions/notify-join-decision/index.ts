@@ -219,7 +219,7 @@ Deno.serve(async (req) => {
             </div>`
           : "";
         const bodyParagraph = approved
-          ? `Great news! Your request to join <strong>${escHtml(targetLabel)}</strong> has been approved. You're now part of the group — welcome!`
+          ? `Great news! Your request to join <strong>${escHtml(targetLabel)}</strong> has been approved. You're now part of the group - welcome!`
           : `We're sorry to let you know that your request to join <strong>${escHtml(targetLabel)}</strong> was not approved at this time.`;
 
         const html = `
@@ -239,7 +239,7 @@ Deno.serve(async (req) => {
           ${reasonBlock}
           <p style="margin:0 0 16px;color:#555;font-size:14px;">${approved ? "You can view your updated profile and units in the app." : "If you'd like to discuss this further, please reach out to your church leadership."}</p>
           <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
-          <p style="margin:0;color:#999;font-size:12px;text-align:center;">Automated notification — ${escHtml(churchName)}</p>
+          <p style="margin:0;color:#999;font-size:12px;text-align:center;">Automated notification - ${escHtml(churchName)}</p>
         </td></tr>
       </table>
     </td></tr>
@@ -247,8 +247,8 @@ Deno.serve(async (req) => {
 </body></html>`;
 
         const text = approved
-          ? `Hi ${firstName},\n\nGreat news! Your request to join ${targetLabel} has been ${verb}. Welcome!\n\n— ${churchName}`
-          : `Hi ${firstName},\n\nYour request to join ${targetLabel} was ${verb}.${declineReason ? `\n\nReason: ${declineReason}` : ""}\n\nIf you'd like to discuss this further, please reach out to your church leadership.\n\n— ${churchName}`;
+          ? `Hi ${firstName},\n\nGreat news! Your request to join ${targetLabel} has been ${verb}. Welcome!\n\n- ${churchName}`
+          : `Hi ${firstName},\n\nYour request to join ${targetLabel} was ${verb}.${declineReason ? `\n\nReason: ${declineReason}` : ""}\n\nIf you'd like to discuss this further, please reach out to your church leadership.\n\n- ${churchName}`;
 
         try {
           await sendRawManagedEmail({
@@ -295,7 +295,7 @@ Deno.serve(async (req) => {
             const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
             const __quota = await checkSmsQuota(supabase, jr.tenant_id, "sms", 1);
             if (!__quota.allowed) {
-              console.warn("[notify-join-decision] SMS quota exceeded for tenant", jr.tenant_id, "— skipping send");
+              console.warn("[notify-join-decision] SMS quota exceeded for tenant", jr.tenant_id, "- skipping send");
             } else {
             const response = await fetch(`${GATEWAY_URL}/Messages.json`, {
               method: "POST",

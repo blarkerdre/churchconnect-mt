@@ -63,7 +63,7 @@ function ChildProfileDialog({ open, onOpenChange, childId, tenantId }) {
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{child ? `${child.first_name} ${child.last_name}` : "Child profile"}</DialogTitle>
-          <DialogDescription>Children Church worker view — handle this information confidentially.</DialogDescription>
+          <DialogDescription>Children Church worker view - handle this information confidentially.</DialogDescription>
         </DialogHeader>
         {isLoading || !child ? (
           <p className="text-sm text-muted-foreground py-4">Loading…</p>
@@ -194,7 +194,7 @@ function ClaimInviteButton({ tenantId, memberId, defaultPhone, defaultEmail, ten
       });
       if (error) throw error;
       setLink(buildClaimUrl(tenantSlug, token));
-      toast.success("Invite link ready — share it with the parent.");
+      toast.success("Invite link ready - share it with the parent.");
     } catch (e) {
       toast.error(e.message || "Could not create invite");
     } finally {
@@ -291,7 +291,7 @@ function WalkInRegisterDialog({ open, onOpenChange, tenantId, onRegistered }) {
         _parent: {
           first_name: parent.first_name, last_name: parent.last_name,
           phone: parent.phone, email: parent.email,
-          notes: [parent.notes, "Photo ID seen at drop-off"].filter(Boolean).join(" — "),
+          notes: [parent.notes, "Photo ID seen at drop-off"].filter(Boolean).join(" - "),
         },
         _children: cleanChildren,
         _consent: consent,
@@ -360,14 +360,14 @@ function WalkInRegisterDialog({ open, onOpenChange, tenantId, onRegistered }) {
                   <div>
                     <Label>Age group</Label>
                     <Select value={c.age_group} onValueChange={(v) => updateChild(i, { age_group: v })}>
-                      <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="-" /></SelectTrigger>
                       <SelectContent>{AGE_GROUPS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                   <div>
                     <Label>Gender</Label>
                     <Select value={c.gender} onValueChange={(v) => updateChild(i, { gender: v })}>
-                      <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="-" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Male">Male</SelectItem>
                         <SelectItem value="Female">Female</SelectItem>
@@ -488,7 +488,7 @@ function CheckInPanel({ tenantId, tenantSlug }) {
     setBroughtById(fallback);
   }, [broughtByOptions, selectedFamily, broughtById]);
 
-  // Search across members (parents), children, and guardian links — return grouped families.
+  // Search across members (parents), children, and guardian links - return grouped families.
   const { data: families = [], isFetching: searching } = useQuery({
     queryKey: ["cc-family-search", tenantId, search],
     enabled: !!tenantId && search.trim().length >= 2,
@@ -510,7 +510,7 @@ function CheckInPanel({ tenantId, tenantSlug }) {
         .or(`first_name.ilike.${like},last_name.ilike.${like}`)
         .limit(20);
 
-      // 3) Matching guardians (authorised adults) — find the child via child_guardians.member_id
+      // 3) Matching guardians (authorised adults) - find the child via child_guardians.member_id
       const guardQ = supabase.from("child_guardians")
         .select("child_id, member_id, members:member_id(id, first_name, last_name, phone, email)")
         .eq("tenant_id", tenantId);
@@ -649,7 +649,7 @@ function CheckInPanel({ tenantId, tenantSlug }) {
           if (parts.length) {
             toast.success(`Pickup PIN sent via ${parts.join(" + ")}`);
           } else {
-            toast.warning("Pickup PIN issued — share it in person (no contact channels available).");
+            toast.warning("Pickup PIN issued - share it in person (no contact channels available).");
           }
           if (deliveryRes?.errors?.length) {
             console.warn("send-pickup-pin partial errors", deliveryRes.errors);
@@ -678,7 +678,7 @@ function CheckInPanel({ tenantId, tenantSlug }) {
 
   return (
     <Card>
-      <CardHeader><CardTitle className="text-base">Drop-off</CardTitle><CardDescription>Search by child name, parent name, or phone — then select who to check in.</CardDescription></CardHeader>
+      <CardHeader><CardTitle className="text-base">Drop-off</CardTitle><CardDescription>Search by child name, parent name, or phone - then select who to check in.</CardDescription></CardHeader>
       <CardContent className="space-y-3">
         {issuedPin ? (
           <div className="text-center space-y-3 py-2">
@@ -967,7 +967,7 @@ function PickupPanel({ tenantId, isLeader }) {
                 <Label>Authorised adults</Label>
                 <div className="text-xs space-y-0.5 mt-1">
                   {guardians.length === 0 ? <p className="text-muted-foreground">⚠ No authorised adults registered.</p>
-                    : guardians.map(g => <p key={g.id}>• {g.members?.first_name} {g.members?.last_name} <span className="text-muted-foreground">({g.relationship || "—"})</span></p>)}
+                    : guardians.map(g => <p key={g.id}>• {g.members?.first_name} {g.members?.last_name} <span className="text-muted-foreground">({g.relationship || "-"})</span></p>)}
                 </div>
               </div>
 
@@ -1070,8 +1070,8 @@ function ReportPanel({ tenantId, isAdmin = false }) {
           : "";
         return {
           ...r,
-          _dropoff_worker_name: workerMap.get(r.dropoff_worker_user_id) || "—",
-          _pickup_worker_name: r.pickup_worker_user_id ? (workerMap.get(r.pickup_worker_user_id) || "—") : "",
+          _dropoff_worker_name: workerMap.get(r.dropoff_worker_user_id) || "-",
+          _pickup_worker_name: r.pickup_worker_user_id ? (workerMap.get(r.pickup_worker_user_id) || "-") : "",
           _dropoff_parent_name: r.dropoff_parent ? `${r.dropoff_parent.first_name} ${r.dropoff_parent.last_name}` : "",
           _pickup_adult_name: r.pickup_adult ? `${r.pickup_adult.first_name} ${r.pickup_adult.last_name}` : "",
           _delegation_name: r.pickup_delegation?.delegate_name || legacyDelegate || "",
@@ -1205,19 +1205,19 @@ function ReportPanel({ tenantId, isAdmin = false }) {
                     <td className="p-2 whitespace-nowrap">{r.service_date}</td>
                     <td className="p-2">{r.children?.first_name} {r.children?.last_name}</td>
                     <td className="p-2 whitespace-nowrap">{format(new Date(r.dropoff_at), "HH:mm")}</td>
-                    <td className="p-2">{r._dropoff_parent_name || "—"}</td>
+                    <td className="p-2">{r._dropoff_parent_name || "-"}</td>
                     <td className="p-2">{r._dropoff_worker_name}</td>
-                    <td className="p-2 whitespace-nowrap">{r.pickup_at ? format(new Date(r.pickup_at), "HH:mm") : "—"}</td>
-                    <td className="p-2">{r.pickup_method || "—"}</td>
+                    <td className="p-2 whitespace-nowrap">{r.pickup_at ? format(new Date(r.pickup_at), "HH:mm") : "-"}</td>
+                    <td className="p-2">{r.pickup_method || "-"}</td>
                     <td className="p-2">
                       {r._pickup_worker_name ? (
                         isOverride ? (
                           <Badge variant="destructive" className="text-[10px]">Leader: {r._pickup_worker_name}</Badge>
                         ) : r._pickup_worker_name
-                      ) : "—"}
+                      ) : "-"}
                     </td>
-                    <td className="p-2">{r._pickup_adult_name || "—"}{r.override_reason ? <div className="text-[10px] text-muted-foreground mt-0.5" title={r.override_reason}>Reason: {r.override_reason.length > 40 ? r.override_reason.slice(0,40)+"…" : r.override_reason}</div> : null}</td>
-                    <td className="p-2">{r._delegation_name || "—"}</td>
+                    <td className="p-2">{r._pickup_adult_name || "-"}{r.override_reason ? <div className="text-[10px] text-muted-foreground mt-0.5" title={r.override_reason}>Reason: {r.override_reason.length > 40 ? r.override_reason.slice(0,40)+"…" : r.override_reason}</div> : null}</td>
+                    <td className="p-2">{r._delegation_name || "-"}</td>
                     <td className="p-2"><Badge variant={r.status === "flagged" ? "destructive" : r.status === "picked_up" ? "default" : "outline"}>{r.status}</Badge></td>
                     {isAdmin && (
                       <td className="p-2">
@@ -1418,7 +1418,7 @@ function AllChildrenPanel({ tenantId }) {
     <Card>
       <CardHeader>
         <CardTitle className="text-base">All Early Years in this tenant ({rows.length})</CardTitle>
-        <CardDescription>Every registered child — tap a row to view the full profile.</CardDescription>
+        <CardDescription>Every registered child - tap a row to view the full profile.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
         <div className="relative">

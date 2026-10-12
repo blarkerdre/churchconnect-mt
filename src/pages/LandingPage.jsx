@@ -63,7 +63,7 @@ export default function LandingPage() {
             <span style={{ color: "hsl(42 68% 54%)" }}>Management Platform</span>
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base text-white/70 sm:text-lg">
-            Streamline membership, attendance, events, follow-ups, pastoral care, and communications — everything your church needs to grow and thrive.
+            Streamline membership, attendance, events, follow-ups, pastoral care, and communications - everything your church needs to grow and thrive.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button size="lg" className="w-full sm:w-auto text-base" asChild>

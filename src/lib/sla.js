@@ -174,7 +174,7 @@ export function downloadSlaPdf(args, filename = "service-level-agreement.pdf") {
   doc.save(filename);
 }
 
-export const DEFAULT_SLA_BODY = `<h1>ChurchConnect — Service Level Agreement</h1>
+export const DEFAULT_SLA_BODY = `<h1>ChurchConnect - Service Level Agreement</h1>
 <p><em>Church Management Suite</em></p>
 <p><strong>Between DomiFort Solutions Limited (trading as "ChurchConnect") and {{tenant_name}}</strong></p>
 <p>Version 1.0 · Effective {{effective_date}} · Governing law: England &amp; Wales</p>
@@ -186,15 +186,15 @@ export const DEFAULT_SLA_BODY = `<h1>ChurchConnect — Service Level Agreement</
 
 <h2>2. Definitions</h2>
 <ul>
-  <li><strong>Service</strong> — the {{app_name}} multi-tenant church management web application and associated background services made available to the Customer.</li>
-  <li><strong>Tenant</strong> — the isolated logical instance of the Service allocated to the Customer, including its members, attendance, communications and configuration data.</li>
-  <li><strong>Uptime</strong> — the percentage of time in a calendar month during which the Service is materially available to authenticated users, excluding Scheduled Maintenance and the exclusions listed in section 4.</li>
-  <li><strong>Downtime</strong> — a period in which the Service is not materially available to authenticated users due to a fault attributable to the Service Provider.</li>
-  <li><strong>Scheduled Maintenance</strong> — planned work notified in advance in accordance with section 5.</li>
-  <li><strong>Support Hours</strong> — 09:00–17:30 UK time, Monday to Friday, excluding UK public holidays.</li>
-  <li><strong>Incident</strong> — a reproducible fault, defect or availability issue reported by the Customer.</li>
-  <li><strong>Severity</strong> — the classification assigned to an Incident as defined in section 6.</li>
-  <li><strong>Personal Data</strong> — has the meaning given in the UK GDPR.</li>
+  <li><strong>Service</strong> - the {{app_name}} multi-tenant church management web application and associated background services made available to the Customer.</li>
+  <li><strong>Tenant</strong> - the isolated logical instance of the Service allocated to the Customer, including its members, attendance, communications and configuration data.</li>
+  <li><strong>Uptime</strong> - the percentage of time in a calendar month during which the Service is materially available to authenticated users, excluding Scheduled Maintenance and the exclusions listed in section 4.</li>
+  <li><strong>Downtime</strong> - a period in which the Service is not materially available to authenticated users due to a fault attributable to the Service Provider.</li>
+  <li><strong>Scheduled Maintenance</strong> - planned work notified in advance in accordance with section 5.</li>
+  <li><strong>Support Hours</strong> - 09:00–17:30 UK time, Monday to Friday, excluding UK public holidays.</li>
+  <li><strong>Incident</strong> - a reproducible fault, defect or availability issue reported by the Customer.</li>
+  <li><strong>Severity</strong> - the classification assigned to an Incident as defined in section 6.</li>
+  <li><strong>Personal Data</strong> - has the meaning given in the UK GDPR.</li>
 </ul>
 
 <h2>3. Scope of Service</h2>
@@ -230,15 +230,15 @@ export const DEFAULT_SLA_BODY = `<h1>ChurchConnect — Service Level Agreement</
     <tr><th>Severity</th><th>Definition</th><th>Response Target</th></tr>
   </thead>
   <tbody>
-    <tr><td><strong>P1 — Critical</strong></td><td>The Service is unavailable or a core module is unusable for the whole tenant with no workaround.</td><td>Within 4 business hours</td></tr>
-    <tr><td><strong>P2 — Major</strong></td><td>A significant feature is materially impaired for many users, or a workaround exists but is costly.</td><td>Within 1 business day</td></tr>
-    <tr><td><strong>P3 — Minor</strong></td><td>Cosmetic issue, question, minor bug, feature request or single-user issue.</td><td>Within 3 business days</td></tr>
+    <tr><td><strong>P1 - Critical</strong></td><td>The Service is unavailable or a core module is unusable for the whole tenant with no workaround.</td><td>Within 4 business hours</td></tr>
+    <tr><td><strong>P2 - Major</strong></td><td>A significant feature is materially impaired for many users, or a workaround exists but is costly.</td><td>Within 1 business day</td></tr>
+    <tr><td><strong>P3 - Minor</strong></td><td>Cosmetic issue, question, minor bug, feature request or single-user issue.</td><td>Within 3 business days</td></tr>
   </tbody>
 </table>
 <h3>6.3 Support Hours</h3>
 <p>Support is provided during Support Hours (Monday to Friday, 09:00–17:30 UK time, excluding UK public holidays). Requests received outside Support Hours are treated as received at the start of the next business day.</p>
 
-<h2>7. Remedies — No Service Credits</h2>
+<h2>7. Remedies - No Service Credits</h2>
 <p>The remedies available to the Customer for failure to meet the Uptime target or the response targets in section 6 are limited to (a) corrective action by the Service Provider, (b) prioritised support, and (c) where a persistent and material failure continues for two or more consecutive months, the Customer's right to terminate as set out in section 14.</p>
 <p><strong>The Service Provider does not offer financial service credits or refunds under this SLA.</strong> This clause represents the Customer's sole and exclusive remedy in relation to Uptime and response-time performance.</p>
 
@@ -293,4 +293,4 @@ export const DEFAULT_SLA_BODY = `<h1>ChurchConnect — Service Level Agreement</
 <p><strong>For the Customer (Church / Tenant):</strong> {{tenant_name}}, by {{owner_name}} ({{owner_email}})</p>
 <p>Countersignature is captured electronically via the in-app type-to-sign flow; the signed date, IP address and template version are recorded in the signature ledger.</p>
 
-<p><em>End of Service Level Agreement — ChurchConnect v1.0</em></p>`;
+<p><em>End of Service Level Agreement - ChurchConnect v1.0</em></p>`;

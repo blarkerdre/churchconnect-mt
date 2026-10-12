@@ -37,7 +37,7 @@ const ORIGIN_LABEL = {
   admin: "Admin",
 };
 
-const fmt = (d) => (d ? new Date(d).toLocaleDateString() : "—");
+const fmt = (d) => (d ? new Date(d).toLocaleDateString() : "-");
 
 export default function StudentsReportTab() {
   const { tenantId, scopeQuery } = useTenantQuery();
@@ -183,7 +183,7 @@ export default function StudentsReportTab() {
         key,
         member_id: a.member_id || null,
         course_id: a.course_id || null,
-        course_name: a.course?.name || "—",
+        course_name: a.course?.name || "-",
         edition_name: a.edition?.name || null,
         session_id: a.edition?.id || null,
         first_name: a.member?.first_name || a.first_name || "",
@@ -203,7 +203,7 @@ export default function StudentsReportTab() {
         key,
         member_id: r.member_id || null,
         course_id: r.course_id || null,
-        course_name: r.course?.name || byKey.get(key)?.course_name || "—",
+        course_name: r.course?.name || byKey.get(key)?.course_name || "-",
         edition_name: r.edition?.name || byKey.get(key)?.edition_name || null,
         session_id: r.edition?.id || byKey.get(key)?.session_id || null,
         first_name: r.members?.first_name || byKey.get(key)?.first_name || "",
@@ -452,19 +452,19 @@ export default function StudentsReportTab() {
                       <TableCell><Checkbox checked={selectedIds.has(r.key)} onCheckedChange={() => toggleOne(r.key)} /></TableCell>
                       <TableCell>
                         <p className="font-medium text-sm">{r.name}</p>
-                        <p className="text-xs text-muted-foreground truncate max-w-[180px]">{r.email || r.phone || "—"}</p>
+                        <p className="text-xs text-muted-foreground truncate max-w-[180px]">{r.email || r.phone || "-"}</p>
                         <p className="text-[11px] text-muted-foreground md:hidden">{r.course_name}</p>
                       </TableCell>
                       <TableCell className="hidden md:table-cell text-sm">
                         {r.course_name}
                         {r.edition_name && <span className="block text-[11px] text-muted-foreground">{r.edition_name}</span>}
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell text-sm">{r.student_number || "—"}</TableCell>
+                      <TableCell className="hidden lg:table-cell text-sm">{r.student_number || "-"}</TableCell>
                       <TableCell>
                         <Badge className={`border-0 text-[11px] ${STAGE_STYLE[r.stage]}`}>{STAGE_LABEL[r.stage]}</Badge>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell text-sm">
-                        {r.subjects_taken ? `${r.percentage}% · ${r.subjects_taken}/${r.total_subjects}` : "—"}
+                        {r.subjects_taken ? `${r.percentage}% · ${r.subjects_taken}/${r.total_subjects}` : "-"}
                       </TableCell>
                       <TableCell className="hidden xl:table-cell text-xs text-muted-foreground">
                         <div>Applied {fmt(r.applied_at)}</div>
@@ -496,7 +496,7 @@ export default function StudentsReportTab() {
         onOpenChange={(v) => { if (!v) setMsgTargets(null); }}
         members={msgTargets || []}
         source="bible_school"
-        audienceLabel={`Bible School — ${audienceLabel || "students"}`}
+        audienceLabel={`Bible School - ${audienceLabel || "students"}`}
         filterContext={{ stage, course_id: courseFilter, source: sourceFilter, session_id: sessionId, date_from: dateFrom, date_to: dateTo }}
       />
     </div>

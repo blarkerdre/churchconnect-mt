@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
       role: "owner",
     });
 
-    // 5. Create user_roles entry (tenant-scoped admin only — never platform super_admin)
+    // 5. Create user_roles entry (tenant-scoped admin only - never platform super_admin)
     await admin.from("user_roles").insert({
       user_id: userId,
       role: "admin",

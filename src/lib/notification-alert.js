@@ -14,7 +14,7 @@ function getAudio() {
 // Unlock audio via a zero-gain WebAudio oscillator. Using a silent WebAudio
 // node (instead of playing the notification <audio> element) satisfies mobile
 // autoplay unlock requirements WITHOUT hijacking the phone's media volume
-// stream — so refreshing the page no longer flips the volume rocker from
+// stream - so refreshing the page no longer flips the volume rocker from
 // Ring to Media on Android/iOS.
 export function unlockAudio() {
   if (audioUnlocked) return Promise.resolve(true);
@@ -75,7 +75,7 @@ export function playNotificationSound({ repeat = false } = {}) {
   }
 }
 
-// Plays the chime at full volume from a user gesture — used by the
+// Plays the chime at full volume from a user gesture - used by the
 // Enable / Test sound buttons so the user can verify audio works.
 export async function testNotificationSound() {
   await unlockAudio();

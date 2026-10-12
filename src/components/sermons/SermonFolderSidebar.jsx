@@ -213,7 +213,7 @@ export default function SermonFolderSidebar({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete folder "{deleteFolder?.name}"?</AlertDialogTitle>
             <AlertDialogDescription>
-              The folder will be removed. Any notes inside will be moved to <strong>Unfiled</strong> — your notes are not deleted.
+              The folder will be removed. Any notes inside will be moved to <strong>Unfiled</strong> - your notes are not deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

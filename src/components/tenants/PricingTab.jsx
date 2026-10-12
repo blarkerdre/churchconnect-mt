@@ -470,7 +470,7 @@ function UsageSubTab() {
             ) : rows.map(({ tenant, plan, usage, pendingOverage }) => {
               const cell = (key) => {
                 const u = usage[key];
-                if (!u) return <span className="text-muted-foreground text-xs">—</span>;
+                if (!u) return <span className="text-muted-foreground text-xs">-</span>;
                 const pct = u.included > 0 ? (u.used / u.included) * 100 : 0;
                 return <span className={pct > 100 ? "text-destructive font-medium" : ""}>{Number(u.used).toLocaleString()} / {Number(u.included).toLocaleString()}</span>;
               };
@@ -482,7 +482,7 @@ function UsageSubTab() {
                   <TableCell>{cell("storage_gb")}</TableCell>
                   <TableCell>{cell("sms")}</TableCell>
                   <TableCell>{cell("email")}</TableCell>
-                  <TableCell>{pendingOverage > 0 ? <Badge variant="destructive">{(plan?.currency || "GBP")} {pendingOverage.toFixed(2)}</Badge> : <span className="text-xs text-muted-foreground">—</span>}</TableCell>
+                  <TableCell>{pendingOverage > 0 ? <Badge variant="destructive">{(plan?.currency || "GBP")} {pendingOverage.toFixed(2)}</Badge> : <span className="text-xs text-muted-foreground">-</span>}</TableCell>
                 </TableRow>
               );
             })}

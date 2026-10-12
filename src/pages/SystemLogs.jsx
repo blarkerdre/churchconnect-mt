@@ -199,7 +199,7 @@ function EmailLogsPanel() {
                   </TableCell>
                   <TableCell><Badge className={cfg.color}>{row.status === "dlq" ? "failed (given up)" : row.status}</Badge></TableCell>
                   <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">{format(new Date(row.created_at), "MMM d, HH:mm")}</TableCell>
-                  <TableCell className="hidden md:table-cell text-xs text-destructive max-w-[240px]" title={row.error_message || ""}>{explainEmailError(row.error_message) || "—"}</TableCell>
+                  <TableCell className="hidden md:table-cell text-xs text-destructive max-w-[240px]" title={row.error_message || ""}>{explainEmailError(row.error_message) || "-"}</TableCell>
                 </TableRow>
 
               );
@@ -391,7 +391,7 @@ function WhatsAppLogsPanel() {
 
 /* ── Call Logs Tab ── */
 function formatDuration(seconds) {
-  if (seconds == null || seconds === 0) return "—";
+  if (seconds == null || seconds === 0) return "-";
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   if (m === 0) return `${s}s`;
@@ -651,7 +651,7 @@ function diffFields(details) {
   if (!before || !after || typeof before !== "object" || typeof after !== "object") return [];
   const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])];
   const fmt = (v) => {
-    if (v === null || v === undefined || v === "") return "—";
+    if (v === null || v === undefined || v === "") return "-";
     if (typeof v === "object") return JSON.stringify(v);
     if (typeof v === "string" && ISO_TS.test(v)) {
       const d = new Date(v);
@@ -720,7 +720,7 @@ function AuditEntry({ log, actor }) {
 
           {details.content_hidden && changes.length === 0 && (
             <p className="mt-2 text-xs text-muted-foreground italic">
-              Content hidden for privacy — only the action and record are logged.
+              Content hidden for privacy - only the action and record are logged.
             </p>
           )}
 

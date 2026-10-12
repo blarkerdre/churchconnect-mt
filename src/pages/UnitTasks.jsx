@@ -276,7 +276,7 @@ export default function UnitTasks() {
                           <Users className="h-4 w-4 text-primary" />
                           <div className="min-w-0 flex-1">
                             <div className="font-semibold text-sm truncate">
-                              {g.sample.service_type || "Service"} — {g.sample.service_date || ""}
+                              {g.sample.service_type || "Service"} - {g.sample.service_date || ""}
                             </div>
                             <div className="text-xs text-muted-foreground truncate">
                               {g.sample.unit_name} · {g.tasks.length} member{g.tasks.length === 1 ? "" : "s"} · {totalDone}/{g.tasks.length} done

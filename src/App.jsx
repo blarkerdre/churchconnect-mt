@@ -17,7 +17,7 @@ import Layout from "@/components/AppLayout";
 import Auth from "@/pages/Auth";
 import PageViewTracker from "@/hooks/usePageViewTracker";
 
-// Lazy-loaded pages — keeps initial bundle small
+// Lazy-loaded pages - keeps initial bundle small
 const Dashboard = lazyRetry(() => import("@/pages/Dashboard"));
 const Members = lazyRetry(() => import("@/pages/Members"));
 const Events = lazyRetry(() => import("@/pages/Events"));
@@ -191,7 +191,7 @@ function FeatureGate({ path, children }) {
   return children;
 }
 
-/** Shared set of authenticated app routes — used both at root and under /t/:tenantSlug */
+/** Shared set of authenticated app routes - used both at root and under /t/:tenantSlug */
 function AppPages() {
   return (
     <Suspense fallback={<PageFallback />}>
@@ -317,7 +317,7 @@ function AppRoutes() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/t/:tenantSlug/reset-password" element={<ResetPassword />} />
 
-        {/* Authenticated routes — current paths */}
+        {/* Authenticated routes - current paths */}
         <Route path="/*" element={<AuthRoutes />} />
       </Routes>
     </Suspense>

@@ -13,7 +13,7 @@ function pct(n, d) { return d > 0 ? Math.round((n / d) * 1000) / 10 : 0; }
 function groupCount(items, keyFn) {
   const map = new Map();
   items.forEach(i => {
-    const k = keyFn(i) || "—";
+    const k = keyFn(i) || "-";
     map.set(k, (map.get(k) || 0) + 1);
   });
   return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
@@ -71,7 +71,7 @@ export default function TransportReportDialog({ open, onOpenChange, bookings, as
     };
   }, [bookings, assigneeMap]);
 
-  const fmtMin = (n) => n == null ? "—" : (n < 60 ? `${Math.round(n)} min` : `${(n / 60).toFixed(1)} h`);
+  const fmtMin = (n) => n == null ? "-" : (n < 60 ? `${Math.round(n)} min` : `${(n / 60).toFixed(1)} h`);
 
   const rangeLabel = (dateFrom || dateTo) ? `${dateFrom || "…"} → ${dateTo || "…"}` : "All time";
 
@@ -136,7 +136,7 @@ export default function TransportReportDialog({ open, onOpenChange, bookings, as
     push("Assignee", stats.byAssignee);
     push("Driver", stats.byDriver);
     return {
-      title: `Transportation Report — ${rangeLabel}`,
+      title: `Transportation Report - ${rangeLabel}`,
       headers: ["Metric", "Value"],
       rows,
     };
@@ -179,7 +179,7 @@ export default function TransportReportDialog({ open, onOpenChange, bookings, as
             Transportation Report
           </DialogTitle>
           <DialogDescription>
-            Comprehensive breakdown of bookings — {rangeLabel}. Reflects current filters.
+            Comprehensive breakdown of bookings - {rangeLabel}. Reflects current filters.
           </DialogDescription>
         </DialogHeader>
 

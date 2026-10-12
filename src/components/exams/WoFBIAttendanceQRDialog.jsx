@@ -17,7 +17,7 @@ export default function WoFBIAttendanceQRDialog({ open, onOpenChange, session, o
 
   const url = session ? `${window.location.origin}/wofbi/checkin/${session.qr_token}` : "";
   const churchName = currentTenant?.name || "Church";
-  const label = `${churchName} — ${session?.title || "Bible School Attendance"}`;
+  const label = `${churchName} - ${session?.title || "Bible School Attendance"}`;
 
   useEffect(() => {
     if (!open || !session?.id) return;

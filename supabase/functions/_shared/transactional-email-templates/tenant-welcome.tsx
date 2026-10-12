@@ -16,7 +16,7 @@ interface TenantWelcomeProps {
 const TenantWelcomeEmail = ({ name, churchName, slug, loginUrl }: TenantWelcomeProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Welcome to {SITE_NAME} — your church is ready!</Preview>
+    <Preview>Welcome to {SITE_NAME} - your church is ready!</Preview>
     <Body style={main}>
       <Container style={container}>
         <Heading style={h1}>
@@ -40,13 +40,13 @@ const TenantWelcomeEmail = ({ name, churchName, slug, loginUrl }: TenantWelcomeP
         <Heading as="h2" style={h2}>Quick Start Guide</Heading>
 
         <Text style={stepText}>
-          <strong>1. Add Members</strong> — Import or manually add your congregation members from the Members page.
+          <strong>1. Add Members</strong> - Import or manually add your congregation members from the Members page.
         </Text>
         <Text style={stepText}>
-          <strong>2. Set Up Registration</strong> — Share your public registration link so new members can sign up themselves.
+          <strong>2. Set Up Registration</strong> - Share your public registration link so new members can sign up themselves.
         </Text>
         <Text style={stepText}>
-          <strong>3. Configure Settings</strong> — Customise your church units, features, and branding in Settings.
+          <strong>3. Configure Settings</strong> - Customise your church units, features, and branding in Settings.
         </Text>
 
         <Hr style={hr} />
@@ -65,7 +65,7 @@ const TenantWelcomeEmail = ({ name, churchName, slug, loginUrl }: TenantWelcomeP
 export const template = {
   component: TenantWelcomeEmail,
   subject: ({ churchName }: Record<string, any>) =>
-    churchName ? `Welcome to ${SITE_NAME} — ${churchName} is ready!` : `Welcome to ${SITE_NAME}!`,
+    churchName ? `Welcome to ${SITE_NAME} - ${churchName} is ready!` : `Welcome to ${SITE_NAME}!`,
   displayName: 'Tenant welcome',
   previewData: {
     name: 'Pastor John',

@@ -67,7 +67,7 @@ export default function useMessageAlerts() {
           const sender = await getDisplayName(row.sender_id, tenantId);
           triggerNotificationAlert(
             `New message from ${sender}`,
-            preview(row.subject ? `${row.subject} — ${row.content}` : row.content)
+            preview(row.subject ? `${row.subject} - ${row.content}` : row.content)
           );
           queryClient.invalidateQueries({ queryKey: ["messages"] });
         }
@@ -93,7 +93,7 @@ export default function useMessageAlerts() {
           const sender = await getDisplayName(row.created_by, tenantId);
           triggerNotificationAlert(
             `New announcement: ${row.title || "Untitled"}`,
-            preview(`${row.content || ""}${sender ? ` — ${sender}` : ""}`)
+            preview(`${row.content || ""}${sender ? ` - ${sender}` : ""}`)
           );
           queryClient.invalidateQueries({ queryKey: ["announcements"] });
         }

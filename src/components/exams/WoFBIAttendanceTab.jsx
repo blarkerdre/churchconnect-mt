@@ -33,7 +33,7 @@ function pct(num, den) {
 }
 
 function fmtDuration(mins) {
-  if (mins == null || mins <= 0) return "—";
+  if (mins == null || mins <= 0) return "-";
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   if (h && m) return `${h}h ${m}m`;
@@ -42,11 +42,11 @@ function fmtDuration(mins) {
 }
 
 function fmtTime(iso) {
-  if (!iso) return "—";
+  if (!iso) return "-";
   try {
     return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   } catch {
-    return "—";
+    return "-";
   }
 }
 
@@ -717,9 +717,9 @@ export default function WoFBIAttendanceTab() {
       return [
         i + 1,
         `${reg.members?.first_name || ""} ${reg.members?.last_name || ""}`.trim(),
-        reg.student_number || "—",
+        reg.student_number || "-",
         status,
-        rec && positionByRecord.get(rec.id) ? ordinal(positionByRecord.get(rec.id)) : "—",
+        rec && positionByRecord.get(rec.id) ? ordinal(positionByRecord.get(rec.id)) : "-",
         fmtTime(rec?.checked_in_at),
         fmtTime(rec?.checked_out_at),
         fmtDuration(rec?.duration_minutes),
@@ -730,11 +730,11 @@ export default function WoFBIAttendanceTab() {
     const late = rows.filter((r) => r[3] === "Late").length;
     const subject = subjects.find((s) => s.id === session.subject_id);
     return {
-      title: `Attendance Roster — ${session.title || "Session"}`,
+      title: `Attendance Roster - ${session.title || "Session"}`,
       orgName: currentTenant?.name || "",
       logoUrl: currentTenant?.logo_url || null,
       meta: [
-        ["Course", courseForExport?.name || "—"],
+        ["Course", courseForExport?.name || "-"],
         session.edition?.name ? ["Edition", session.edition.name] : (!isAllEditions ? ["Edition", editionName] : null),
         subject ? ["Subject", subject.name] : null,
         ["Date", session.session_date],
@@ -758,26 +758,26 @@ export default function WoFBIAttendanceTab() {
     const rows = perStudent.map((s, i) => [
       i + 1,
       `${s.registration.members?.first_name || ""} ${s.registration.members?.last_name || ""}`.trim(),
-      s.registration.student_number || "—",
+      s.registration.student_number || "-",
       s.present,
       s.late,
       s.absent,
       s.totalSessions,
       `${s.percent}%`,
       `${s.punctualityScore}% (${punctualityGrade(s.punctualityScore).label})`,
-      s.avgPosition != null ? s.avgPosition : "—",
-      s.punctualityRank ? ordinal(s.punctualityRank) : "—",
+      s.avgPosition != null ? s.avgPosition : "-",
+      s.punctualityRank ? ordinal(s.punctualityRank) : "-",
       (s.totalMinutes / 60).toFixed(2),
       s.missingCheckouts,
     ]);
 
     const fullyPresent = perStudent.filter((s) => s.absent === 0).length;
     return {
-      title: `Attendance Roster — ${courseForExport?.name || "Course"}${isAllEditions ? " (all sessions)" : ` — ${editionName}`}`,
+      title: `Attendance Roster - ${courseForExport?.name || "Course"}${isAllEditions ? " (all sessions)" : ` - ${editionName}`}`,
       orgName: currentTenant?.name || "",
       logoUrl: currentTenant?.logo_url || null,
       meta: [
-        ["Course", courseForExport?.name || "—"],
+        ["Course", courseForExport?.name || "-"],
         courseForExport?.course_code ? ["Code", courseForExport.course_code] : null,
         !isAllEditions ? ["Edition", editionName] : null,
         ["Sessions", sessions.length],
@@ -1011,7 +1011,7 @@ export default function WoFBIAttendanceTab() {
                         <TableCell>
                           {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                         </TableCell>
-                        <TableCell>{s.registration.student_number || "—"}</TableCell>
+                        <TableCell>{s.registration.student_number || "-"}</TableCell>
                         <TableCell className="font-medium">
                           {`${s.registration.members?.first_name || ""} ${s.registration.members?.last_name || ""}`.trim() || "Unknown"}
                           {isAllEditions && (
@@ -1028,7 +1028,7 @@ export default function WoFBIAttendanceTab() {
                         <TableCell>
                           {s.missingCheckouts > 0 ? (
                             <Badge variant="secondary" className="bg-amber-100 text-amber-800">{s.missingCheckouts}</Badge>
-                          ) : "—"}
+                          ) : "-"}
                         </TableCell>
                         <TableCell>
                           <Badge className={s.percent >= 75 ? "bg-green-100 text-green-800" : s.percent >= 50 ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"}>
@@ -1048,7 +1048,7 @@ export default function WoFBIAttendanceTab() {
                           </div>
                         </TableCell>
                         <TableCell className="whitespace-nowrap text-sm">
-                          {s.avgPosition != null ? s.avgPosition : <span className="text-muted-foreground">—</span>}
+                          {s.avgPosition != null ? s.avgPosition : <span className="text-muted-foreground">-</span>}
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           <PositionBadge pos={s.punctualityRank} />
@@ -1100,7 +1100,7 @@ export default function WoFBIAttendanceTab() {
                                             <span className="inline-flex items-center gap-1" title={rec.punctuality_note || ""}>
                                               <Star className="h-3 w-3 fill-amber-400 text-amber-400" /> {rec.punctuality_rating}/5
                                             </span>
-                                          ) : "—"}
+                                          ) : "-"}
                                         </TableCell>
                                         <TableCell className="text-right space-x-1 whitespace-nowrap">
                                           <Button size="sm" variant="outline" className="gap-1" onClick={() => openEdit(sess, s.registration, rec)}>
@@ -1286,7 +1286,7 @@ export default function WoFBIAttendanceTab() {
                         <div className="font-medium">
                           {`${r.members?.first_name || ""} ${r.members?.last_name || ""}`.trim() || "Unknown"}
                         </div>
-                        <div className="text-xs text-muted-foreground">{r.student_number || "—"}</div>
+                        <div className="text-xs text-muted-foreground">{r.student_number || "-"}</div>
                       </TableCell>
                       <TableCell>
                         {status === "present" && <Badge className="bg-green-100 text-green-800 gap-1"><CheckCircle2 className="h-3 w-3" /> Present</Badge>}
@@ -1472,7 +1472,7 @@ export default function WoFBIAttendanceTab() {
                   <SelectItem value="summary">Course summary (all sessions)</SelectItem>
                   {sessions.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
-                      {s.title || "Session"} — {s.session_date}
+                      {s.title || "Session"} - {s.session_date}
                     </SelectItem>
                   ))}
                 </SelectContent>

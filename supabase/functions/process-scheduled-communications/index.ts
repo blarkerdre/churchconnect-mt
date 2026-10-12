@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
           .update({ status: 'sent', sent_at: new Date().toISOString() })
           .eq('id', item.id)
       } else {
-        // SMS or WhatsApp — query members then invoke send-sms
+        // SMS or WhatsApp - query members then invoke send-sms
         const filters = (item.filters || {}) as Record<string, unknown>
         let query = client
           .from('members')

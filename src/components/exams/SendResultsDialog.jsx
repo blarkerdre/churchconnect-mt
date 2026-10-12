@@ -223,7 +223,7 @@ export default function SendResultsDialog({
       if (sendStatement) parts.push(`Statements: ${stmtSent} sent${stmtFailed ? `, ${stmtFailed} failed` : ""}`);
       if (sendCertificate) {
         parts.push(
-          `Certificates: ${certSent} sent${certFailed ? `, ${certFailed} failed` : ""}${skipped ? ` (${skipped} skipped — not passed)` : ""}`
+          `Certificates: ${certSent} sent${certFailed ? `, ${certFailed} failed` : ""}${skipped ? ` (${skipped} skipped - not passed)` : ""}`
         );
       }
       const anyFail = stmtFailed > 0 || certFailed > 0;
@@ -346,7 +346,7 @@ export default function SendResultsDialog({
                     <div className="border rounded p-3 bg-muted/30 flex items-center justify-center min-h-[240px]">
                       {!activeMember.passed ? (
                         <p className="text-sm text-muted-foreground italic">
-                          {activeMember.name} did not pass — no certificate will be issued.
+                          {activeMember.name} did not pass - no certificate will be issued.
                         </p>
                       ) : certPreviews[activeMemberId]?.loading ? (
                         <div className="flex flex-col items-center gap-2 text-muted-foreground text-xs">

@@ -134,7 +134,7 @@ export default function Inventory() {
 
   const buildPrintRows = () => {
     const catName = (id) => categories.find((c) => c.id === id)?.name || "Uncategorised";
-    const fmt = (d) => (d ? format(new Date(d), "dd MMM yyyy") : "—");
+    const fmt = (d) => (d ? format(new Date(d), "dd MMM yyyy") : "-");
     const sorted = [...items].sort((a, b) => {
       const ca = catName(a.category_id).localeCompare(catName(b.category_id));
       return ca !== 0 ? ca : (a.name || "").localeCompare(b.name || "");
@@ -142,8 +142,8 @@ export default function Inventory() {
     const rows = sorted.map((i) => [
       catName(i.category_id),
       i.name,
-      i.location || "—",
-      i.serial_number || "—",
+      i.location || "-",
+      i.serial_number || "-",
       (i.condition || "").replace("_", " "),
       i.requires_inspection ? "Yes" : "No",
       fmt(i.last_inspected_at),
@@ -279,7 +279,7 @@ export default function Inventory() {
                         <div className="min-w-0">
                           <div className="font-medium truncate">{item.name}</div>
                           <div className="text-xs text-muted-foreground">
-                            {item.location || "—"} {due ? `· ${due.label}` : ""}
+                            {item.location || "-"} {due ? `· ${due.label}` : ""}
                           </div>
                         </div>
                       </div>
@@ -316,7 +316,7 @@ export default function Inventory() {
                     <div className="min-w-0">
                       <div className="font-medium flex items-center gap-2"><Tag className="h-4 w-4" /> {c.name}</div>
                       <div className="text-xs text-muted-foreground">
-                        Default frequency: {c.default_frequency_days ? `${c.default_frequency_days} days` : "—"}
+                        Default frequency: {c.default_frequency_days ? `${c.default_frequency_days} days` : "-"}
                       </div>
                       {c.description && <div className="text-xs text-muted-foreground mt-1">{c.description}</div>}
                     </div>

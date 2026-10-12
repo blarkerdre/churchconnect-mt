@@ -98,7 +98,7 @@ export default function FollowupFormDialog({ open, onOpenChange, followup, onSav
             </div>
           </div>
 
-          {/* Assigned To — pick from members list */}
+          {/* Assigned To - pick from members list */}
           <div className="space-y-1.5">
             <Label>Assigned To *</Label>
             {assignees.length > 0 ? (

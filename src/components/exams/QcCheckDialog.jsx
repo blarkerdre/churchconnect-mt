@@ -341,7 +341,7 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null, i
         action: editRecord?.id ? "wofbi_qc_check_updated" : "wofbi_qc_check_recorded",
         entityType: "lecturer_qc_checks",
         entityId: editRecord?.id || form.exam_subject_id,
-        title: `QC check recorded — ${subjectName}`,
+        title: `QC check recorded - ${subjectName}`,
         message: `${lecturerName} · ${courseName} · total ${total}`,
         details: { course: courseName, subject: subjectName, lecturer: lecturerName, target_name: subjectName, total_score: total },
       });
@@ -368,7 +368,7 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null, i
             <ClipboardCheck className="h-5 w-5 text-primary" /> Quality Control Checklist
           </DialogTitle>
           <p className="text-xs text-muted-foreground pt-1">
-            Word of Faith Bible Institute — record class quality against the standard checklist.
+            Word of Faith Bible Institute - record class quality against the standard checklist.
             {" "}Recording under <span className="font-medium text-foreground">{sessionName}</span>.
           </p>
 
@@ -408,7 +408,7 @@ export default function QcCheckDialog({ open, onOpenChange, editRecord = null, i
                     const ed = isAll && s.exam_sessions?.name ? ` · ${s.exam_sessions.name}` : "";
                     return (
                       <SelectItem key={s.id} value={s.id} disabled={done}>
-                        {done ? "✓ " : ""}{s.code ? `${s.code} — ${s.name}` : s.name}{ed}{done ? " (QC done)" : ""}
+                        {done ? "✓ " : ""}{s.code ? `${s.code} - ${s.name}` : s.name}{ed}{done ? " (QC done)" : ""}
                       </SelectItem>
                     );
                   })}

@@ -97,7 +97,7 @@ async function sendForMember(
 <div style="max-width:640px;margin:0 auto;padding:20px 0 48px;">
   <div style="padding:24px 32px;background:#1a2d4d;border-radius:8px 8px 0 0;text-align:center;">
     <p style="color:#fff;font-size:20px;font-weight:700;margin:0;">Statement of Result</p>
-    <p style="color:#c9a961;font-size:14px;margin:6px 0 0;">${escHtml(course.name)} — ${escHtml(sessionLabel)}</p>
+    <p style="color:#c9a961;font-size:14px;margin:6px 0 0;">${escHtml(course.name)} - ${escHtml(sessionLabel)}</p>
   </div>
   <div style="padding:28px 32px;background:#f8f9fa;">
     <h1 style="color:#1a2d4d;font-size:20px;font-weight:700;margin:0 0 8px;">${escHtml(memberName)}</h1>
@@ -110,7 +110,7 @@ async function sendForMember(
       </tr>
       <tr>
         <td style="padding:6px 0;color:#4a5568;">Overall Result</td>
-        <td style="padding:6px 0;text-align:right;font-weight:700;">${escHtml(overallClassification || "—")}</td>
+        <td style="padding:6px 0;text-align:right;font-weight:700;">${escHtml(overallClassification || "-")}</td>
       </tr>
       <tr>
         <td style="padding:6px 0;color:#4a5568;">Status</td>
@@ -137,15 +137,15 @@ async function sendForMember(
     </div>
   </div>
   <div style="padding:20px 32px;text-align:center;">
-    <p style="color:#a0aec0;font-size:12px;margin:0;">${escHtml(tenant.name)} — Statement of Result</p>
+    <p style="color:#a0aec0;font-size:12px;margin:0;">${escHtml(tenant.name)} - Statement of Result</p>
   </div>
 </div></body></html>`;
 
-  const text = `Statement of Result — ${course.name} (${sessionLabel})
+  const text = `Statement of Result - ${course.name} (${sessionLabel})
 
 Student: ${memberName}
 Student Number: ${pdfResult.student_number}
-Overall Result: ${overallClassification || "—"}
+Overall Result: ${overallClassification || "-"}
 Status: ${statusText}
 Pass mark: ${passMark}%
 

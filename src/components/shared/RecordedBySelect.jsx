@@ -46,7 +46,7 @@ export function useRecorderOptions(enabled = true) {
 
   const nameFor = useMemo(() => {
     const map = new Map(options.map((o) => [o.user_id, o.name]));
-    return (id) => (id ? map.get(id) || "—" : "—");
+    return (id) => (id ? map.get(id) || "-" : "-");
   }, [options]);
 
   return { options, nameFor };

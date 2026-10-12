@@ -171,11 +171,11 @@ export default function StatusConversionReport() {
     headers: ["Name", "Previous", "New", "Changed On", "Days to Convert", "Phone"],
     rows: rows.map((r) => [
       `${r.member.first_name} ${r.member.last_name}`,
-      r.previous_status || "—",
-      r.new_status || "—",
+      r.previous_status || "-",
+      r.new_status || "-",
       format(new Date(r.changed_at), "dd MMM yyyy"),
-      r.days_since_join ?? "—",
-      r.member.phone || "—",
+      r.days_since_join ?? "-",
+      r.member.phone || "-",
     ]),
   });
 
@@ -189,7 +189,7 @@ export default function StatusConversionReport() {
           <TrendingUp className="h-4 w-4 text-primary" /> Status Conversion Report
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Track when First Timers, New Converts, and Visitors become full members — and message them.
+          Track when First Timers, New Converts, and Visitors become full members - and message them.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -307,11 +307,11 @@ export default function StatusConversionReport() {
                   <TableRow key={r.id}>
                     <TableCell className="text-xs font-medium">
                       {r.member.first_name} {r.member.last_name}
-                      <p className="text-[10px] text-muted-foreground">{r.member.church_unit || "—"}</p>
+                      <p className="text-[10px] text-muted-foreground">{r.member.church_unit || "-"}</p>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
                       <div className="flex items-center gap-1 text-[11px]">
-                        <Badge variant="outline" className="text-[10px]">{r.previous_status || "—"}</Badge>
+                        <Badge variant="outline" className="text-[10px]">{r.previous_status || "-"}</Badge>
                         <ArrowRight className="h-3 w-3 text-muted-foreground" />
                         <Badge className="text-[10px] bg-emerald-100 text-emerald-700 border-0">{r.new_status}</Badge>
                       </div>
@@ -319,9 +319,9 @@ export default function StatusConversionReport() {
                     <TableCell className="hidden md:table-cell text-xs">
                       {format(new Date(r.changed_at), "dd MMM yyyy")}
                     </TableCell>
-                    <TableCell className="hidden md:table-cell text-xs">{r.days_since_join ?? "—"}</TableCell>
+                    <TableCell className="hidden md:table-cell text-xs">{r.days_since_join ?? "-"}</TableCell>
                     <TableCell className="text-[11px] text-muted-foreground">
-                      {r.member.email || r.member.phone || "—"}
+                      {r.member.email || r.member.phone || "-"}
                     </TableCell>
                   </TableRow>
                 ))}

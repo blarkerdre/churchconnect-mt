@@ -199,7 +199,7 @@ export default function PublicRegistration() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Honeypot — hidden from real users */}
+            {/* Honeypot - hidden from real users */}
             <div className="absolute opacity-0 pointer-events-none" aria-hidden="true" tabIndex={-1}>
               <label htmlFor="website">Website</label>
               <input id="website" name="website" type="text" value={form.website} onChange={e => set("website", e.target.value)} tabIndex={-1} autoComplete="off" />
@@ -255,7 +255,7 @@ export default function PublicRegistration() {
               </div>
             </div>
 
-            {/* Church Units — only for Active/Inactive */}
+            {/* Church Units - only for Active/Inactive */}
             {showChurchUnits && (
               <div>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Church Units</h3>
@@ -296,7 +296,7 @@ export default function PublicRegistration() {
               </div>
             )}
 
-            {/* Baptism — only for First Timer / New Convert */}
+            {/* Baptism - only for First Timer / New Convert */}
             {showBaptism && (
               <div>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Baptism</h3>
@@ -307,7 +307,7 @@ export default function PublicRegistration() {
               </div>
             )}
 
-            {/* Spiritual Development — only for Active/Inactive */}
+            {/* Spiritual Development - only for Active/Inactive */}
             {showSpiritualDev && (
               <div>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Spiritual Development</h3>
@@ -326,7 +326,7 @@ export default function PublicRegistration() {
                        <Label>Home Cell Centre {form.wsf_centre_id && wsfCentres.find(c => c.id === form.wsf_centre_id) ? <span className="text-xs text-muted-foreground font-normal ml-1">(auto-suggested by location)</span> : null}</Label>
                        <Select value={form.wsf_centre_id || ""} onValueChange={v => set("wsf_centre_id", v)}>
                          <SelectTrigger><SelectValue placeholder="Select Home Cell Centre" /></SelectTrigger>
-                        <SelectContent>{wsfCentres.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` — ${c.location}` : ""}</SelectItem>)}</SelectContent>
+                        <SelectContent>{wsfCentres.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.location ? ` - ${c.location}` : ""}</SelectItem>)}</SelectContent>
                       </Select>
                       {form.wsf_centre_id && (
                         <div className="flex items-start gap-2 p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60">
@@ -361,12 +361,12 @@ export default function PublicRegistration() {
               </div>
             )}
 
-            {/* Welcome Questions — First Timer / New Convert only */}
+            {/* Welcome Questions - First Timer / New Convert only */}
             {isFirstTimerOrNewConvert && (
               <WelcomeQuestions form={form} set={set} tenantName={tenantName} />
             )}
 
-            {/* Emergency Contact — hidden for First Timer / New Convert */}
+            {/* Emergency Contact - hidden for First Timer / New Convert */}
             {!isFirstTimerOrNewConvert && (
               <div>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact (Optional)</h3>

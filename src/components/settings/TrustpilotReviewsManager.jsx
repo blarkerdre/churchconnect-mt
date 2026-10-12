@@ -218,7 +218,7 @@ export default function TrustpilotReviewsManager() {
                   <p className="mt-1 text-xs text-muted-foreground">
                     {r.reviewer_name}
                     {r.reviewer_location ? `, ${r.reviewer_location}` : ""}
-                    {r.review_date ? ` — ${new Date(r.review_date).toLocaleDateString()}` : ""}
+                    {r.review_date ? ` - ${new Date(r.review_date).toLocaleDateString()}` : ""}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">

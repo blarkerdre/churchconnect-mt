@@ -101,12 +101,12 @@ export default function SessionFormDialog({ open, onOpenChange, onSave, isAdmin 
     if (isUnitMeeting) {
       return form.unit
         ? `Visible to members of ${form.unit} unit`
-        : "Pick a unit — only members of that unit will see this meeting";
+        : "Pick a unit - only members of that unit will see this meeting";
     }
     if (isHomeCellMeeting) {
       return form.unit
         ? `Visible to members of ${form.unit} Home Cell`
-        : "Pick a Home Cell — only members of that centre will see this meeting";
+        : "Pick a Home Cell - only members of that centre will see this meeting";
     }
     return "Visible to all members in this church";
   }, [isUnitMeeting, isHomeCellMeeting, form.unit]);

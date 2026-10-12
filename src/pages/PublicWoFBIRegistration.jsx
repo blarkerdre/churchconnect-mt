@@ -231,7 +231,7 @@ export default function PublicWoFBIRegistration() {
             </div>
           )}
           <CardTitle className="text-2xl">
-            {useDetailed ? (appForm?.title || "Bible School — Application Form") : "Bible School Course Registration"}
+            {useDetailed ? (appForm?.title || "Bible School - Application Form") : "Bible School Course Registration"}
           </CardTitle>
           <p className="text-sm text-muted-foreground mt-1">
             {tenantName ? `${tenantName}` : ""}

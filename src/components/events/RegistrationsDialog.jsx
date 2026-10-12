@@ -81,7 +81,7 @@ export default function RegistrationsDialog({ open, onOpenChange, event }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
-        <TenantDialogHeader>Registrations — {event?.title}</TenantDialogHeader>
+        <TenantDialogHeader>Registrations - {event?.title}</TenantDialogHeader>
         <div className="space-y-5 py-2">
           <div className="grid grid-cols-3 gap-3">
             <div className="text-center p-3 bg-muted/50 rounded-xl">

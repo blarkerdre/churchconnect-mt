@@ -96,7 +96,7 @@ function NotificationPreferencesSection() {
         <p className="text-xs text-muted-foreground mt-1">Control how automated notifications are sent for follow-ups and pastoral care assignments</p>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Email — always on */}
+        {/* Email - always on */}
         <div className="flex items-center justify-between p-3 sm:p-4 bg-muted/50 rounded-lg">
           <div className="min-w-0 mr-2">
             <p className="text-sm font-medium text-foreground">Email Notifications</p>
@@ -311,8 +311,8 @@ function BillingSection() {
                               {p.status || "completed"}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-xs text-muted-foreground truncate max-w-[100px]" title={p.reference || p.stripe_payment_intent_id || "—"}>
-                            {p.reference || p.stripe_payment_intent_id || "—"}
+                          <TableCell className="text-xs text-muted-foreground truncate max-w-[100px]" title={p.reference || p.stripe_payment_intent_id || "-"}>
+                            {p.reference || p.stripe_payment_intent_id || "-"}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -911,11 +911,11 @@ function FaviconOgImageSection() {
           <Globe className="h-4 w-4 text-accent" /> Branding Images
         </CardTitle>
         <p className="text-xs text-muted-foreground mt-1">
-          Your church logo is used automatically for the favicon, app icon, and social/link preview image — fitted to the right size for each.
+          Your church logo is used automatically for the favicon, app icon, and social/link preview image - fitted to the right size for each.
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* PWA App Icon — auto-derived from tenant logo */}
+        {/* PWA App Icon - auto-derived from tenant logo */}
         <div className="space-y-1 rounded-md border border-dashed border-border bg-muted/30 p-3">
           <Label className="text-sm font-medium">App Icon (PWA)</Label>
           <p className="text-[11px] text-muted-foreground">
@@ -931,7 +931,7 @@ function FaviconOgImageSection() {
             >
               <span className="flex items-center gap-2">
                 <SettingsIcon className="h-4 w-4 text-muted-foreground" />
-                Advanced branding — custom favicon & social image
+                Advanced branding - custom favicon & social image
               </span>
               <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
             </button>

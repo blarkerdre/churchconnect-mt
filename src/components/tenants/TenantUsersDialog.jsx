@@ -225,7 +225,7 @@ export default function TenantUsersDialog({ tenant, open, onOpenChange }) {
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto w-[calc(100vw-1rem)] sm:w-auto">
         <TooltipProvider>
         <TenantDialogHeader>
-            Users — {tenant.name}
+            Users - {tenant.name}
             {isSuperAdmin && (
               <Badge variant="outline" className="text-xs text-violet-600 border-violet-200 bg-violet-50 ml-2">
                 <ShieldCheck className="h-3 w-3 mr-1" />Super Admin Mode

@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
       .eq('role', 'super_admin')
       .maybeSingle()
     if (!roleRow) {
-      return new Response(JSON.stringify({ error: 'Forbidden — super_admin only' }), {
+      return new Response(JSON.stringify({ error: 'Forbidden - super_admin only' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
     if (!Array.isArray(lineItems) || lineItems.length === 0) {
       if (document_type === 'receipt' && payment) {
         lineItems = [{
-          description: `Subscription payment — ${payment.payment_date}`,
+          description: `Subscription payment - ${payment.payment_date}`,
           quantity: 1,
           unit_price: Number(payment.amount) || 0,
           amount: Number(payment.amount) || 0,
@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
           .eq('status', 'pending')
         for (const o of overages || []) {
           items.push({
-            description: `Overage — ${o.metric} (${o.period_start}): ${o.quantity}`,
+            description: `Overage - ${o.metric} (${o.period_start}): ${o.quantity}`,
             quantity: Number(o.quantity) || 0,
             unit_price: Number(o.unit_price) || 0,
             amount: Number(o.amount) || 0,
