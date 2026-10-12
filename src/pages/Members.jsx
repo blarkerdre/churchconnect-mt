@@ -22,6 +22,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import ModuleTour from "@/components/tour/ModuleTour";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 import UserChurchBadges, { useUserChurches } from "@/components/tenants/UserChurchBadges";
+import { filterMembers, getMemberSummary } from "@/lib/member-filters";
 
 const statusColors = {
   "Active": "bg-chart-3/10 text-chart-3",
@@ -41,7 +42,7 @@ export default function Members() {
   const unitLeaderReadOnly = (isUnitLeader || unitMemberOnly) && !isAdmin;
 
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState({ status: "all", unit: "all", dateFrom: null, dateTo: null, account: "all", wsfCentreId: "all" });
+  const [filters, setFilters] = useState({ status: "all", unit: "all", dateFrom: null, dateTo: null, account: "all", gender: "all", wsfCentreId: "all" });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
   const [qrOpen, setQrOpen] = useState(false);
@@ -196,16 +197,8 @@ export default function Members() {
     : members;
 
 
-  const filtered = unitFilteredMembers.filter((m) => {
-    const matchSearch = `${m.first_name} ${m.last_name} ${m.email || ""} ${m.phone || ""}`.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = filters.status === "all" || m.membership_status === filters.status;
-    const matchUnit = filters.unit === "all" || (m.church_unit || "").toLowerCase().includes(filters.unit.toLowerCase());
-    const matchDateFrom = !filters.dateFrom || new Date(m.created_at) >= filters.dateFrom;
-    const matchDateTo = !filters.dateTo || new Date(m.created_at) <= new Date(new Date(filters.dateTo).setHours(23, 59, 59, 999));
-    const matchAccount = filters.account === "all" || (filters.account === "linked" ? !!m.user_id : !m.user_id);
-    const matchWsfCentre = !filters.wsfCentreId || filters.wsfCentreId === "all" || m.wsf_centre_id === filters.wsfCentreId;
-    return matchSearch && matchStatus && matchUnit && matchDateFrom && matchDateTo && matchAccount && matchWsfCentre;
-  });
+  const filtered = filterMembers(unitFilteredMembers, { search, filters });
+  const memberSummary = getMemberSummary(filtered);
 
   // Super admins can see every church a linked member belongs to
   const { data: churchesByUser = {} } = useUserChurches(
@@ -428,10 +421,10 @@ export default function Members() {
       {/* Stats row - admins and leaders */}
       {(isAdmin || viewOnly) && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-foreground">{unitFilteredMembers.length}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
-          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-3">{unitFilteredMembers.filter(m => m.membership_status === "Active").length}</p><p className="text-xs text-muted-foreground">Active</p></CardContent></Card>
-          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-accent">{unitFilteredMembers.filter(m => m.membership_status === "New Convert").length}</p><p className="text-xs text-muted-foreground">New Converts</p></CardContent></Card>
-          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-4">{unitFilteredMembers.filter(m => m.membership_status === "First Timer").length}</p><p className="text-xs text-muted-foreground">First Timers</p></CardContent></Card>
+          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-foreground">{memberSummary.total}</p><p className="text-xs text-muted-foreground">Total</p></CardContent></Card>
+          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-3">{memberSummary.active}</p><p className="text-xs text-muted-foreground">Active</p></CardContent></Card>
+          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-accent">{memberSummary.newConverts}</p><p className="text-xs text-muted-foreground">New Converts</p></CardContent></Card>
+          <Card className="border-0 shadow-sm"><CardContent className="p-4 text-center"><p className="text-xl sm:text-2xl font-display font-bold text-chart-4">{memberSummary.firstTimers}</p><p className="text-xs text-muted-foreground">First Timers</p></CardContent></Card>
         </div>
       )}
 
