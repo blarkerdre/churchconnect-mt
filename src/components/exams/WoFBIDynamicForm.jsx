@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import NationalitySelect from "@/components/shared/NationalitySelect";
 
 /**
  * Renders a dynamic form from a field schema.
@@ -148,6 +149,15 @@ export default function WoFBIDynamicForm({ fields = [], values = {}, onChange, d
                   {f.label} {f.required && <span className="text-destructive">*</span>}
                 </Label>
               </div>
+              {help}
+            </div>
+          );
+        }
+        if (f.id === "nationality") {
+          return (
+            <div key={f.id} className="space-y-1">
+              {labelEl}
+              <NationalitySelect value={val || ""} onChange={(v) => set(f.id, v)} disabled={disabled} />
               {help}
             </div>
           );

@@ -18,7 +18,7 @@ export const DEFAULT_WOFBI_FIELDS = [
   { id: "personal", type: "section_heading", label: "Personal Details" },
   { id: "gender", type: "radio", label: "Gender", required: true, options: ["M", "F"] },
   { id: "date_of_birth", type: "date", label: "Date of Birth", required: true },
-  { id: "nationality", type: "text", label: "Nationality" },
+  { id: "nationality", type: "text", label: "Nationality", required: true },
   { id: "marital_status", type: "radio", label: "Marital Status", options: ["Married", "Single", "Other"] },
   { id: "address", type: "textarea", label: "Address", required: true },
   { id: "post_code", type: "text", label: "Post Code" },
