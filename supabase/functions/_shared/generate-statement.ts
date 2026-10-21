@@ -27,6 +27,31 @@ export interface StatementSharedContext {
  * Loads everything that is identical for every student of a course exactly once
  * (course, subjects, template, tenant, encoded logo/signature images).
  */
+/**
+ * Keeps only the subjects of the student's edition (falling back to the
+ * unassigned syllabus), then removes same-name duplicates, preferring the
+ * copy the student actually has a score for.
+ */
+export function scopeSubjectsForStudent(
+  all: any[],
+  sessionId: string | null | undefined,
+  memberSubjects: Record<string, unknown>,
+) {
+  const own = sessionId ? all.filter((s) => s.session_id === sessionId) : [];
+  const unassigned = all.filter((s) => !s.session_id);
+  let pool = own.length > 0 ? own : unassigned.length > 0 ? unassigned : all;
+  // Include any other copy the student was scored on, then dedupe by name.
+  const scoredElsewhere = all.filter((s) => !pool.includes(s) && memberSubjects[s.id]);
+  pool = [...pool, ...scoredElsewhere];
+  const byName = new Map<string, any>();
+  for (const s of pool) {
+    const key = String(s.name || "").trim().toLowerCase();
+    const cur = byName.get(key);
+    if (!cur || (!memberSubjects[cur.id] && memberSubjects[s.id])) byName.set(key, s);
+  }
+  return Array.from(byName.values()).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+}
+
 export async function buildStatementSharedContext(
   admin: any,
   tenantId: string,
@@ -44,7 +69,7 @@ export async function buildStatementSharedContext(
 
   const { data: subjects } = await admin
     .from("exam_subjects")
-    .select("id, name, sort_order")
+    .select("id, name, sort_order, session_id")
     .eq("course_id", courseId)
     .eq("is_active", true)
     .order("sort_order");
@@ -183,7 +208,7 @@ export async function collectStatementInputsBulk(
       statementInput: {
         member: { id: mid, name: memberName },
         course: ctx.course,
-        subjects: ctx.subjects,
+        subjects: scopeSubjectsForStudent(ctx.subjects, sid, attemptsByMember.get(mid) || {}),
         memberSubjects: attemptsByMember.get(mid) || {},
         session,
         studentNumber,
@@ -226,7 +251,7 @@ export async function collectStatementInput(
 
   const { data: subjects } = await admin
     .from("exam_subjects")
-    .select("id, name, sort_order")
+    .select("id, name, sort_order, session_id")
     .eq("course_id", courseId)
     .eq("is_active", true)
     .order("sort_order");
@@ -325,7 +350,7 @@ export async function collectStatementInput(
     statementInput: {
       member: { id: member.id, name: memberName },
       course,
-      subjects: subjects || [],
+      subjects: scopeSubjectsForStudent(subjects || [], session?.id, memberSubjects),
       memberSubjects,
       session,
       studentNumber,
