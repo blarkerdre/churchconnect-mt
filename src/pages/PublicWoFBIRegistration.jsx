@@ -13,12 +13,14 @@ import { toast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import WoFBIDynamicForm from "@/components/exams/WoFBIDynamicForm";
 import { useAuth } from "@/hooks/useAuth";
+import NationalitySelect from "@/components/shared/NationalitySelect";
 
 const emptyForm = {
   first_name: "",
   last_name: "",
   email: "",
   phone: "",
+  nationality: "",
   course_id: "",
   gdpr_consent: false,
   website: "", // honeypot
@@ -52,7 +54,11 @@ export default function PublicWoFBIRegistration() {
         last_name: f.last_name || myMember.last_name || "",
         email: f.email || myMember.email || user?.email || "",
         phone: f.phone || myMember.phone || "",
+        nationality: f.nationality || myMember.nationality || "",
       }));
+      if (myMember.nationality) {
+        setAnswers((a) => ({ ...a, nationality: a.nationality || myMember.nationality }));
+      }
     } else if (user?.email) {
       setForm((f) => ({ ...f, email: f.email || user.email }));
     }
@@ -97,7 +103,11 @@ export default function PublicWoFBIRegistration() {
   const setAnswer = (id, v) => setAnswers((a) => ({ ...a, [id]: v }));
 
   const useDetailed = !!appForm?.enabled;
-  const detailedFields = appForm?.fields || [];
+  const detailedFields = (appForm?.fields || []).map((f) =>
+    f?.id === "nationality" ? { ...f, required: true } : f
+  );
+  const formHasNationality = useDetailed && detailedFields.some((f) => f?.id === "nationality");
+  const nationalityValue = String((formHasNationality ? answers.nationality : form.nationality) || "").trim();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -111,6 +121,10 @@ export default function PublicWoFBIRegistration() {
     }
     if (!form.course_id) {
       toast({ title: "Please select a course", variant: "destructive" });
+      return;
+    }
+    if (!nationalityValue) {
+      toast({ title: "Please complete: Nationality", variant: "destructive" });
       return;
     }
     if (!form.gdpr_consent) {
@@ -145,9 +159,10 @@ export default function PublicWoFBIRegistration() {
           headers,
           body: JSON.stringify({
             ...form,
+            nationality: nationalityValue,
             tenant_id: resolvedTenantId,
             tenant_slug: tenantSlug || null,
-            answers: useDetailed ? answers : {},
+            answers: useDetailed ? { ...answers, nationality: nationalityValue } : { nationality: nationalityValue },
           }),
         }
       );
@@ -327,6 +342,13 @@ export default function PublicWoFBIRegistration() {
                 </Select>
               )}
             </div>
+
+            {!formHasNationality && (
+              <div className="space-y-1">
+                <Label>Nationality *</Label>
+                <NationalitySelect value={form.nationality} onChange={(v) => set("nationality", v)} />
+              </div>
+            )}
 
             {useDetailed && (
               <WoFBIDynamicForm fields={detailedFields} values={answers} onChange={setAnswer} />
