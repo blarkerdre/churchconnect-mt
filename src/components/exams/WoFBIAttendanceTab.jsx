@@ -857,7 +857,7 @@ export default function WoFBIAttendanceTab() {
               </SelectContent>
             </Select>
             <Button variant="outline" onClick={() => setQrOpen(true)} className="gap-2 flex-1 sm:flex-none">
-              <QrCode className="h-4 w-4" /> Session QR
+              <QrCode className="h-4 w-4" /> Attendance QR
             </Button>
             <Button onClick={() => { setForm(emptySessionForm()); setNewOpen(true); }} disabled={!selectedCourseId} className="gap-2 flex-1 sm:flex-none">
               <Plus className="h-4 w-4" /> New session
@@ -1271,7 +1271,7 @@ export default function WoFBIAttendanceTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Persistent Session QR */}
+      {/* Persistent Attendance QR */}
       <WoFBIPersistentQRDialog open={qrOpen} onOpenChange={setQrOpen} />
 
       {/* Roster override dialog */}
