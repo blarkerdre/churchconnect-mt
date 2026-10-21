@@ -745,7 +745,7 @@ export default function WoFBIAttendanceTab() {
     });
     const present = rows.filter((r) => r[3] === "Present").length;
     const late = rows.filter((r) => r[3] === "Late").length;
-    const subject = subjects.find((s) => s.id === session.subject_id);
+    const subject = allSubjects.find((s) => s.id === session.subject_id);
     return {
       title: `Attendance Roster - ${session.title || "Session"}`,
       orgName: currentTenant?.name || "",
@@ -1196,7 +1196,7 @@ export default function WoFBIAttendanceTab() {
                   <SelectTrigger><SelectValue placeholder="No subject" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">No subject</SelectItem>
-                    {subjects.map((s) => (
+                    {[...subjects, ...allSubjects.filter((s) => s.id === form.subject_id && !subjects.some((x) => x.id === s.id))].map((s) => (
                       <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                     ))}
                   </SelectContent>
