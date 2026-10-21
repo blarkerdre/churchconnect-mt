@@ -217,6 +217,10 @@ Deno.serve(async (req) => {
     }
 
 
+    let nationality = sanitize(
+      body.nationality ?? (body.answers && typeof body.answers === "object" ? body.answers.nationality : null),
+      100,
+    );
     let memberId: string | null = null;
     let isNewMember = false;
 
@@ -268,6 +272,21 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Nationality is compulsory. Fall back to the signed-in member's saved profile.
+    if (!nationality && memberId && authUserId) {
+      const { data: m } = await supabase.from("members").select("nationality").eq("id", memberId).eq("tenant_id", tenantId).maybeSingle();
+      nationality = sanitize(m?.nationality, 100);
+    }
+    if (!nationality) {
+      return new Response(JSON.stringify({ error: "Nationality is required. Please add it to your application (or your profile)." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (memberId) {
+      await supabase.from("members").update({ nationality }).eq("id", memberId).eq("tenant_id", tenantId).is("nationality", null);
+    }
+
     // Guard against duplicate applications for the same tenant/course/email.
     const { data: existingApp } = await supabase
       .from("wofbi_applications")
@@ -305,6 +324,7 @@ Deno.serve(async (req) => {
         else if (typeof v === "boolean") cleanAnswers[f.id] = v;
         else cleanAnswers[f.id] = String(v).slice(0, 2000);
       }
+      cleanAnswers.nationality = nationality;
 
       const { error: appInsErr } = await supabase.from("wofbi_applications").insert({
         tenant_id: tenantId,
