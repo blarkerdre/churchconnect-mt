@@ -169,12 +169,12 @@ export default function WoFBIAttendanceTab() {
     if (!selectedCourseId && courses.length) setSelectedCourseId(courses[0].id);
   }, [courses, selectedCourseId]);
 
-  const { data: subjects = [] } = useQuery({
+  const { data: allSubjects = [] } = useQuery({
     queryKey: ["wofbi-att-subjects", tenantId, selectedCourseId],
     enabled: !!tenantId && !!selectedCourseId,
     queryFn: async () => {
       const { data, error } = await scopeQuery(
-        supabase.from("exam_subjects").select("id, name").eq("course_id", selectedCourseId).order("name")
+        supabase.from("exam_subjects").select("id, name, session_id").eq("course_id", selectedCourseId).order("name")
       );
       if (error) throw error;
       return data || [];
@@ -184,6 +184,23 @@ export default function WoFBIAttendanceTab() {
   const { sessionId: editionId, sessionName: editionName, sessionMap, applySession, isAll: isAllEditions, isUnassigned, setSessionId: setEditionId } = useExamSessionFilter();
   const pinnedEditionId = !isAllEditions && !isUnassigned ? editionId : null;
   const pinnedEdition = pinnedEditionId ? sessionMap[pinnedEditionId] : null;
+
+  // Subjects available for the selected edition (used in the session form)
+  const subjects = React.useMemo(() => {
+    const unassigned = allSubjects.filter((s) => !s.session_id);
+    if (pinnedEditionId) {
+      const own = allSubjects.filter((s) => s.session_id === pinnedEditionId);
+      return own.length ? own : unassigned;
+    }
+    if (isUnassigned) return unassigned;
+    const seen = new Set();
+    return allSubjects.filter((s) => {
+      const k = (s.name || "").trim().toLowerCase();
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  }, [allSubjects, pinnedEditionId, isUnassigned]);
 
   const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
     queryKey: ["wofbi-att-sessions", tenantId, selectedCourseId, editionId],
