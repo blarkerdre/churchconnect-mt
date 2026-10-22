@@ -138,7 +138,7 @@ export async function collectStatementInputsBulk(
   if (ctx.subjectIds.length > 0) {
     const { data: attempts } = await admin
       .from("exam_attempts")
-      .select("member_id, subject_id, score, total_points, session_id, submitted_at")
+      .select("member_id, subject_id, score, total_points, session_id, completed_at")
       .in("member_id", memberIds)
       .in("subject_id", ctx.subjectIds);
     (attempts || []).forEach((a: any) => {
@@ -166,7 +166,7 @@ export async function collectStatementInputsBulk(
   if (sessionIds.size > 0) {
     const { data: sessions } = await admin
       .from("exam_sessions")
-      .select("id, name, starts_at, starts_on, ended_at, created_at")
+      .select("id, name, started_at, starts_on, ended_at, created_at")
       .in("id", Array.from(sessionIds));
     (sessions || []).forEach((s: any) => sessionById.set(s.id, s));
   }
@@ -288,7 +288,7 @@ export async function collectStatementInput(
   if (reg?.session_id) {
     const { data } = await admin
       .from("exam_sessions")
-      .select("id, name, starts_at, starts_on, ended_at, created_at")
+      .select("id, name, started_at, starts_on, ended_at, created_at")
       .eq("id", reg.session_id)
       .maybeSingle();
     session = data;
@@ -296,16 +296,16 @@ export async function collectStatementInput(
   if (!session && subjectIds.length > 0) {
     const { data: atts } = await admin
       .from("exam_attempts")
-      .select("session_id, submitted_at")
+      .select("session_id, completed_at")
       .eq("member_id", memberId)
       .in("subject_id", subjectIds)
       .not("session_id", "is", null)
-      .order("submitted_at", { ascending: false, nullsFirst: false });
+      .order("completed_at", { ascending: false, nullsFirst: false });
     const sid = atts?.find((a: any) => a.session_id)?.session_id;
     if (sid) {
       const { data } = await admin
         .from("exam_sessions")
-        .select("id, name, starts_at, starts_on, ended_at, created_at")
+        .select("id, name, started_at, starts_on, ended_at, created_at")
         .eq("id", sid)
         .maybeSingle();
       session = data;

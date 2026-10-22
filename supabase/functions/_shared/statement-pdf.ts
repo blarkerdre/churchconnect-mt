@@ -68,7 +68,7 @@ function deriveTenantCode(tenant: any) {
 }
 
 function formatSessionLabel(session: any) {
-  const dateStr = session?.starts_at || session?.starts_on || session?.created_at;
+  const dateStr = session?.started_at || session?.starts_on || session?.created_at;
   if (dateStr) {
     const d = new Date(dateStr);
     if (!isNaN(d.getTime())) {
