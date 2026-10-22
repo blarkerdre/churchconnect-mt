@@ -42,7 +42,7 @@ function deriveTenantCode(tenant) {
 }
 
 function formatSessionLabel(session) {
-  const dateStr = session?.starts_at || session?.starts_on || session?.created_at;
+  const dateStr = session?.started_at || session?.starts_on || session?.created_at;
   if (dateStr) {
     const d = new Date(dateStr);
     if (!isNaN(d.getTime())) {
@@ -81,7 +81,7 @@ function useStatementData({ enabled, member, course, subjects }) {
       if (reg?.session_id) {
         const { data } = await supabase
           .from("exam_sessions")
-          .select("id, name, starts_at, starts_on, ended_at, created_at")
+          .select("id, name, started_at, starts_on, ended_at, created_at")
           .eq("id", reg.session_id)
           .eq("tenant_id", currentTenant.id)
           .maybeSingle();
@@ -92,17 +92,17 @@ function useStatementData({ enabled, member, course, subjects }) {
         if (subjectIds.length) {
           const { data: attempts } = await supabase
             .from("exam_attempts")
-            .select("session_id, submitted_at, created_at")
+            .select("session_id, completed_at, created_at")
             .eq("member_id", member.id)
             .eq("tenant_id", currentTenant.id)
             .in("subject_id", subjectIds)
             .not("session_id", "is", null)
-            .order("submitted_at", { ascending: false, nullsFirst: false });
+            .order("completed_at", { ascending: false, nullsFirst: false });
           const sid = attempts?.find((a) => a.session_id)?.session_id;
           if (sid) {
             const { data } = await supabase
               .from("exam_sessions")
-              .select("id, name, starts_at, starts_on, ended_at, created_at")
+              .select("id, name, started_at, starts_on, ended_at, created_at")
               .eq("id", sid)
               .eq("tenant_id", currentTenant.id)
               .maybeSingle();
