@@ -6,7 +6,7 @@ USING (
     SELECT 1 FROM public.members m
     JOIN public.unit_leader_assignments ula
       ON ula.tenant_id = m.tenant_id AND ula.user_id = auth.uid()
-     AND lower(trim(ula.unit_name)) = ANY (SELECT lower(trim(u)) FROM unnest(string_to_array(coalesce(m.church_unit,''), ',')) u)
+     AND lower(trim(ula.unit_name)) IN (SELECT lower(trim(u)) FROM unnest(string_to_array(coalesce(m.church_unit,''), ',')) u)
     WHERE m.user_id = profiles.user_id AND public.has_role(auth.uid(), 'unit_leader'::app_role, m.tenant_id)
   )
 );
