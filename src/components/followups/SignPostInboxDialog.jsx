@@ -28,8 +28,8 @@ function statusGroup(s) {
 
 export default function SignPostInboxDialog({ open, onOpenChange, onCreateFollowup }) {
   const { tenantId, scopeQuery } = useTenantQuery();
-  const { user, isAdmin, isFollowupUnit } = useAuth();
-  const canViewAll = !!(isAdmin || isFollowupUnit);
+  const { user, isAdmin, leaderUnits = [] } = useAuth();
+  const canViewAll = !!(isAdmin || leaderUnits.some(u => /follow/i.test(u)));
   const [showAll, setShowAll] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
 
