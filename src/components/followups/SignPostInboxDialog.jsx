@@ -28,24 +28,25 @@ function statusGroup(s) {
 
 export default function SignPostInboxDialog({ open, onOpenChange, onCreateFollowup }) {
   const { tenantId, scopeQuery } = useTenantQuery();
-  const { user } = useAuth();
+  const { user, isAdmin, leaderUnits = [] } = useAuth();
+  const canViewAll = !!(isAdmin || leaderUnits.some(u => /follow/i.test(u)));
+  const [showAll, setShowAll] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
 
   const { data: referrals = [], isLoading } = useQuery({
-    queryKey: ["signpost-inbox", tenantId, user?.id],
+    queryKey: ["signpost-inbox", tenantId, user?.id, showAll && canViewAll],
     enabled: !!tenantId && !!user?.id && open,
     queryFn: async () => {
-      const { data, error } = await scopeQuery(
-        supabase
-          .from("followup_referrals")
-          .select(`
-            id, status, referral_type, target_unit_name, created_at, notes, tenant_id, referred_by,
-            wsf_centres(name),
-            members(first_name, last_name, phone, email)
-          `)
-          .eq("assigned_leader_id", user.id)
-          .order("created_at", { ascending: false })
-      );
+      let q = supabase
+        .from("followup_referrals")
+        .select(`
+          id, status, referral_type, target_unit_name, created_at, notes, tenant_id, referred_by,
+          wsf_centres(name),
+          members(first_name, last_name, phone, email)
+        `)
+        .order("created_at", { ascending: false });
+      if (!(showAll && canViewAll)) q = q.eq("assigned_leader_id", user.id);
+      const { data, error } = await scopeQuery(q);
       if (error) throw error;
       const refIds = [...new Set((data || []).map(r => r.referred_by).filter(Boolean))];
       let pmap = {};
@@ -117,6 +118,12 @@ export default function SignPostInboxDialog({ open, onOpenChange, onCreateFollow
           </TenantDialogHeader>
 
           <div className="px-6 pb-2 -mt-2">
+            {canViewAll && (
+              <div className="flex gap-2 mb-2">
+                <button type="button" onClick={() => setShowAll(false)} className={`text-xs px-3 py-1 rounded-full border ${!showAll ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>Assigned to me</button>
+                <button type="button" onClick={() => setShowAll(true)} className={`text-xs px-3 py-1 rounded-full border ${showAll ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground"}`}>All team referrals</button>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
               Members signposted to you for unit or home cell follow-up.
             </p>

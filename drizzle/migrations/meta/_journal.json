@@ -57,6 +57,13 @@
       "when": 1791802103855,
       "tag": "0007_remove_generated_demo_members",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794594952696,
+      "tag": "0008_profiles_unit_leader_multi_unit",
+      "breakpoints": true
     }
   ]
 }
