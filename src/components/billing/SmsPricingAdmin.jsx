@@ -63,7 +63,9 @@ export default function SmsPricingAdmin({ tenantId }) {
         </div>
         <Button size="sm" onClick={save} disabled={saving}>Save</Button>
       </div>
-      {data && !data.planMatches && <p className="text-xs text-destructive">The plan is priced in {data.plan?.currency || "GBP"}. Set a Cost per SMS in {data.currency} so this church can buy texts.</p>}
+      {data && !data.planMatches && (data.tenant?.sms_unit_price_override == null
+        ? <p className="text-xs text-destructive">The plan is priced in {data.plan?.currency || "GBP"}. Set a Cost per SMS in {data.currency} so this church can buy texts.</p>
+        : <p className="text-xs text-muted-foreground">Using this church's own price in {data.currency} (the plan's {data.plan?.currency || "GBP"} price is ignored).</p>)}
       <p className="text-xs text-muted-foreground">Leave blank to use the plan's price. Used for top-ups and extra texts after the monthly quota.</p>
       <SmsTopUpCard tenantId={tenantId} canBuy={false} />
     </div>
