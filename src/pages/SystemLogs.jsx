@@ -757,8 +757,10 @@ function AuditLogsPanel() {
   const [fromDate, setFromDate] = useState(() => subDays(new Date(), 30));
   const [toDate, setToDate] = useState(() => new Date());
   const { tenantId, scopeQuery } = useTenantQuery();
+  const { roles } = useAuth();
+  const isSuper = roles.includes("super_admin");
 
-  const { data: logs = [], isLoading } = useQuery({
+  const { data: rawLogs = [], isLoading } = useQuery({
     queryKey: ["audit-log", fromDate?.toISOString(), toDate?.toISOString(), tenantId],
     queryFn: async () => {
       let q = supabase.from("audit_log").select("*").order("created_at", { ascending: false }).limit(500);
@@ -769,6 +771,8 @@ function AuditLogsPanel() {
       return data;
     },
   });
+
+  const logs = isSuper ? rawLogs : rawLogs.filter(l => l.user_id && (l.details || {}).module);
 
   const { data: profiles = [] } = useQuery({
     queryKey: ["all-profiles", tenantId],

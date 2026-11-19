@@ -99,6 +99,13 @@
       "when": 1795129210192,
       "tag": "0013_tenant_billing_currency",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1795129836091,
+      "tag": "0014_audit_log_hide_system_entries",
+      "breakpoints": true
     }
   ]
 }
