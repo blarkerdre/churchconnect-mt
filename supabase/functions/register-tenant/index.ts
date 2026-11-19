@@ -105,6 +105,7 @@ Deno.serve(async (req) => {
       password: admin_password,
       email_confirm: true,
       user_metadata: { full_name: admin_full_name || admin_email },
+      app_metadata: { tenant_owner_provisioning: "true" },
     });
 
     if (userError) {

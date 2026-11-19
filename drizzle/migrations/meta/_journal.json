@@ -64,6 +64,13 @@
       "when": 1794594952696,
       "tag": "0008_profiles_unit_leader_multi_unit",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795118069012,
+      "tag": "0009_allow_tenant_owner_provisioning_signup",
+      "breakpoints": true
     }
   ]
 }
