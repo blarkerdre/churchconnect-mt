@@ -292,7 +292,7 @@ Deno.serve(async (req) => {
             }
 
             if (response.ok) {
-              console.log("Follow-up assignment SMS sent to", cleaned);
+              console.log("Follow-up assignment SMS sent");
             } else {
               console.error("SMS send failed:", data);
             }

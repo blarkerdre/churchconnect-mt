@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
             }
 
             if (response.ok) {
-              console.log("WSF leader SMS sent to", cleaned);
+              console.log("WSF leader SMS sent");
             } else {
               console.error("WSF leader SMS failed:", data);
             }

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { csvSafeCell } from "@/lib/csv-safe";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -30,8 +31,7 @@ function slug(s) {
 }
 
 function csvEscape(v) {
-  const s = v == null ? "" : String(v);
-  return `"${s.replace(/"/g, '""')}"`;
+  return csvSafeCell(v);
 }
 
 export default function WoFBIFeedbackFormEditor() {

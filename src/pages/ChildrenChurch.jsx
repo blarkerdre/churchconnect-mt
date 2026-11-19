@@ -606,7 +606,7 @@ function CheckInPanel({ tenantId, tenantSlug }) {
       if (!selectedFamily?.parent?.id) throw new Error("Select a family first");
       if (selectedChildIds.length === 0) throw new Error("Select at least one child");
       if (!broughtById) throw new Error("Select who brought the child");
-      const pin = Math.floor(100000 + Math.random() * 900000).toString();
+      const pin = (100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000)).toString();
       const snapshot = (selectedFamily.children || []).filter(c => selectedChildIds.includes(c.id));
       const missingConsent = snapshot.filter(c => !c.parental_consent_given);
       if (missingConsent.length) {

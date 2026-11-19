@@ -35,6 +35,17 @@ export default function QuizPlayer({ tenantId, quiz, player, onFinished, onClose
     setResult(null);
   }, [quiz?.id]);
 
+  // Record the start time on the server so speed bonuses can't be faked.
+  useEffect(() => {
+    if (!quiz?.id || !tenantId) return;
+    supabase.rpc("start_trivia_attempt", {
+      _tenant_id: tenantId,
+      _quiz_id: quiz.id,
+      _player_kind: player?.kind || "member",
+      _child_id: player?.childId || null,
+    }).then(() => {}, () => {});
+  }, [quiz?.id, tenantId, player?.kind, player?.childId]);
+
   const current = questions[index];
   const total = questions.length;
   const answeredCount = Object.keys(answers).length;

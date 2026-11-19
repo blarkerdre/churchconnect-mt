@@ -6460,6 +6460,33 @@ export type Database = {
           },
         ]
       }
+      trivia_attempt_starts: {
+        Row: {
+          id: string
+          player_key: string
+          quiz_id: string
+          started_at: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          player_key: string
+          quiz_id: string
+          started_at?: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          player_key?: string
+          quiz_id?: string
+          started_at?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       trivia_attempts: {
         Row: {
           completed_at: string
@@ -8601,6 +8628,15 @@ export type Database = {
           id: string
           last_name: string
         }[]
+      }
+      start_trivia_attempt: {
+        Args: {
+          _child_id?: string
+          _player_kind?: string
+          _quiz_id: string
+          _tenant_id: string
+        }
+        Returns: undefined
       }
       submit_trivia_attempt: {
         Args: {

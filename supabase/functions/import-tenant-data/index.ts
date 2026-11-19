@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { writeAudit } from "../_shared/audit.ts";;
+import { writeAudit } from "../_shared/audit.ts";
+import { IMPORT_COLUMNS } from "./columns.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,11 +43,13 @@ const IMPORT_ORDER = [
 const BLOCKED_COLUMNS = new Set(["tenant_id", "user_id", "role", "is_super_admin"]);
 const COLUMN_RE = /^[a-z_][a-z0-9_]{0,62}$/;
 
-function sanitizeRow(row: unknown, tenantId: string): Record<string, unknown> | null {
+function sanitizeRow(table: string, row: unknown, tenantId: string): Record<string, unknown> | null {
   if (!row || typeof row !== "object" || Array.isArray(row)) return null;
+  const allowed = new Set(IMPORT_COLUMNS[table] ?? []);
+  if (allowed.size === 0) return null;
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(row as Record<string, unknown>)) {
-    if (!COLUMN_RE.test(k) || BLOCKED_COLUMNS.has(k)) continue;
+    if (!COLUMN_RE.test(k) || BLOCKED_COLUMNS.has(k) || !allowed.has(k)) continue;
     out[k] = v;
   }
   out.tenant_id = tenantId; // always the target tenant
@@ -128,7 +131,7 @@ Deno.serve(async (req) => {
       if (!Array.isArray(rows) || rows.length === 0) continue;
 
       const rowsWithTenant = rows
-        .map((row: unknown) => sanitizeRow(row, tenant_id))
+        .map((row: unknown) => sanitizeRow(table, row, tenant_id))
         .filter(Boolean) as Record<string, unknown>[];
       if (rowsWithTenant.length === 0) continue;
 

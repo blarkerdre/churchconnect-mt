@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
             }
 
             if (response.ok) {
-              console.log("Unit leader SMS sent to", cleaned);
+              console.log("Unit leader SMS sent");
             } else {
               console.error("Unit leader SMS failed:", data);
             }

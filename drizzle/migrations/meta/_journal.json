@@ -106,6 +106,13 @@
       "when": 1795129836091,
       "tag": "0014_audit_log_hide_system_entries",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1795132188048,
+      "tag": "0015_security_hardening_batch_nov19",
+      "breakpoints": true
     }
   ]
 }

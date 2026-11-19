@@ -64,6 +64,13 @@ Deno.serve(async (req) => {
     })
   }
 
+  if (typeof subject !== 'string' || typeof body !== 'string' || subject.length > 200 || body.length > 10000) {
+    return new Response(JSON.stringify({ error: 'Subject must be under 200 characters and message under 10,000 characters' }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
   if (!tenant_id) {
     return new Response(JSON.stringify({ error: 'tenant_id is required' }), {
       status: 400,
@@ -97,6 +104,23 @@ Deno.serve(async (req) => {
     })
   }
 
+  // Unit leaders (non-admins) may only email members of the units they lead.
+  let leaderUnits: string[] | null = null
+  if (!isAdmin) {
+    const { data: assignments } = await serviceClient
+      .from('unit_leader_assignments')
+      .select('unit_name')
+      .eq('user_id', user.id)
+      .eq('tenant_id', tenant_id)
+    leaderUnits = (assignments || []).map((a: { unit_name: string }) => String(a.unit_name || '').trim().toLowerCase()).filter(Boolean)
+    if (leaderUnits.length === 0) {
+      return new Response(JSON.stringify({ error: 'Forbidden: you are not assigned to lead any unit' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+  }
+
   // Fetch tenant settings for sender name
   let tenantSenderName = 'Winners Chapel International Cardiff'
   if (tenant_id) {
@@ -112,7 +136,7 @@ Deno.serve(async (req) => {
   }
 
   // Build member query based on explicit IDs, filters, or legacy audience
-  let query = serviceClient.from('members').select('email, first_name, last_name')
+  let query = serviceClient.from('members').select('email, first_name, last_name, church_unit')
     .not('email', 'is', null)
     .neq('email', '')
     .eq('tenant_id', tenant_id)
@@ -151,7 +175,13 @@ Deno.serve(async (req) => {
     }
   }
 
-  const { data: members, error: membersError } = await query
+  const { data: fetchedMembers, error: membersError } = await query
+  const members = leaderUnits
+    ? (fetchedMembers || []).filter((m: { church_unit: string | null }) => {
+        const units = String(m.church_unit || '').toLowerCase().split(',').map((u) => u.trim())
+        return units.some((u) => leaderUnits!.includes(u))
+      })
+    : fetchedMembers
   if (membersError) {
     console.error('Failed to fetch members', membersError)
     return new Response(JSON.stringify({ error: 'Failed to fetch member emails' }), {

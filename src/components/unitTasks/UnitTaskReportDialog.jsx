@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { csvSafeCell } from "@/lib/csv-safe";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
@@ -119,7 +120,7 @@ export default function UnitTaskReportDialog({ open, onOpenChange, unitOptions =
       if (groupBy !== "none") lines.push([`- ${g.key} (${g.rows.length}) -`]);
       g.rows.forEach((it) => lines.push(toCells(it).map((c) => String(c ?? "").replace(/[\r\n,]+/g, " "))));
     });
-    const csv = lines.map((r) => r.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csv = lines.map((r) => r.map((c) => csvSafeCell(c)).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
