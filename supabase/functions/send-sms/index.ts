@@ -1,3 +1,4 @@
+import { senderNameFrom } from "../_shared/sms-sender.ts";
 import { loadTenantPhoneSet, isTenantPhone } from "../_shared/tenant-phones.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkSmsQuota, QuotaExceededError } from "../_shared/sms-quota.ts";
@@ -386,23 +387,22 @@ Deno.serve(async (req) => {
           if (msgChannel === "sms" && normalized.startsWith("+1") && naFrom && /^\+1\d{10}$/.test(naFrom)) {
             fromForThis = naFrom;
           }
-          const params = new URLSearchParams({
-            To: toNumber,
-            From: fromForThis,
-            Body: message,
-            StatusCallback: webhookUrl,
-          });
-
-          response = await fetch(`${TWILIO_GATEWAY_URL}/Messages.json`, {
+          const senderName = msgChannel === "sms" && !normalized.startsWith("+1") ? senderNameFrom(tenantSettings) : null;
+          const sendOnce = async (from: string) => fetch(`${TWILIO_GATEWAY_URL}/Messages.json`, {
             method: "POST",
             headers: {
               Authorization: `Bearer ${LOVABLE_API_KEY}`,
               "X-Connection-Api-Key": TWILIO_API_KEY,
               "Content-Type": "application/x-www-form-urlencoded",
             },
-            body: params,
+            body: new URLSearchParams({ To: toNumber, From: from, Body: message, StatusCallback: webhookUrl }),
           });
+          response = await sendOnce(senderName || fromForThis);
           data = await response.json();
+          if (!response.ok && senderName && [21212, 21612, 21408, 21606, 21659].includes(data?.code)) {
+            response = await sendOnce(fromForThis);
+            data = await response.json();
+          }
           if (!response.ok) {
             if (data?.code === 21612 || data?.code === 21408) {
               throw new Error(`Your sending number can't reach this country (${normalized.slice(0, 3)}...). Add a local sending number for this country in Messaging settings.`);

@@ -8,6 +8,10 @@ export function pickSmsFromSettings(settings: Record<string, unknown> | null | u
   const s = settings || {};
   const na = clean(s.twilio_sms_from_na);
   if (to.startsWith("+1") && /^\+1\d{10}$/.test(na)) return na;
+  if (!to.startsWith("+1")) {
+    const name = senderNameFrom(s);
+    if (name) return name;
+  }
   const own = clean(s.twilio_sms_from);
   if (/^\+[1-9]\d{6,14}$/.test(own)) return own;
   return fallback;
@@ -23,4 +27,12 @@ export async function resolveSmsFrom(client: any, tenantId: string | null | unde
     cache.set(tenantId, settings);
   }
   return pickSmsFromSettings(settings, to, fallback);
+}
+
+// Alphanumeric sender name (e.g. church name). Not allowed for +1 destinations.
+export function senderNameFrom(settings: Record<string, unknown> | null | undefined): string | null {
+  const v = settings?.twilio_sender_name;
+  if (typeof v !== "string") return null;
+  const t = v.trim();
+  return /^(?=.*[A-Za-z])[A-Za-z0-9 ]{1,11}$/.test(t) ? t : null;
 }

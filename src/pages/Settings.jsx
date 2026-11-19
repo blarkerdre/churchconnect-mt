@@ -1019,6 +1019,7 @@ function CommunicationsSection() {
   const [emailSenderName, setEmailSenderName] = useState("");
   const [smsFrom, setSmsFrom] = useState("");
   const [smsFromNa, setSmsFromNa] = useState("");
+  const [senderName, setSenderName] = useState("");
   const [whatsappFrom, setWhatsappFrom] = useState("");
   const [smsProvider, setSmsProvider] = useState("twilio");
   const [voiceProvider, setVoiceProvider] = useState("twilio");
@@ -1100,6 +1101,7 @@ function CommunicationsSection() {
       setEmailSenderName(s.email_sender_name || "");
       setSmsFrom(s.twilio_sms_from || "");
       setSmsFromNa(s.twilio_sms_from_na || "");
+      setSenderName(s.twilio_sender_name || "");
       setWhatsappFrom(s.twilio_whatsapp_from || "");
       setSmsProvider(s.sms_provider || "twilio");
       setVoiceProvider(s.voice_provider || "twilio");
@@ -1146,6 +1148,10 @@ function CommunicationsSection() {
   const e164Regex = /^\+[1-9]\d{6,14}$/;
 
   const handleSave = async () => {
+    if (senderName.trim() && !/^(?=.*[A-Za-z])[A-Za-z0-9 ]{1,11}$/.test(senderName.trim())) {
+      toast({ title: "Invalid sender name", description: "Use up to 11 letters, numbers or spaces, with at least one letter.", variant: "destructive" });
+      return;
+    }
     if (smsProvider === "twilio" && smsFromNa && !/^\+1\d{10}$/.test(smsFromNa.trim())) {
       toast({ title: "Invalid number", description: "Canada/US sending number must look like +1XXXXXXXXXX", variant: "destructive" });
       return;
@@ -1175,6 +1181,7 @@ function CommunicationsSection() {
         email_sender_name: emailSenderName.trim() || null,
         twilio_sms_from: smsFrom.trim() || null,
         twilio_sms_from_na: smsFromNa.trim() || null,
+        twilio_sender_name: senderName.trim() || null,
         twilio_whatsapp_from: whatsappFrom.trim() || null,
         sms_provider: smsProvider,
         voice_provider: voiceProvider,
@@ -1333,6 +1340,16 @@ function CommunicationsSection() {
                 maxLength={20}
               />
               <p className="text-xs text-muted-foreground">UK numbers cannot text Canada or the US. Add a Twilio +1 number here to reach them.</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">SMS Sender Name</Label>
+              <Input
+                value={senderName}
+                onChange={(e) => setSenderName(e.target.value)}
+                placeholder={(currentTenant?.name || "MyChurch").replace(/[^A-Za-z0-9 ]/g, "").slice(0, 11)}
+                maxLength={11}
+              />
+              <p className="text-xs text-muted-foreground">Shown instead of your number (max 11 letters/numbers). Not supported for Canada/US, which still see the number. Recipients can't reply to a name.</p>
             </div>
             <div className="space-y-2">
               <Label className="text-sm flex items-center gap-1.5">
