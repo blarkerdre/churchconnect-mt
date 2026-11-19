@@ -1,3 +1,4 @@
+import { resolveSmsFrom } from "../_shared/sms-sender.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkSmsQuota } from "../_shared/sms-quota.ts";
 import { sendRawManagedEmail } from "../_shared/managed-email.ts";
@@ -218,7 +219,7 @@ ${task.description ? `<p style="margin:8px 0 0;color:#555;font-size:14px;">${esc
                   "Content-Type": "application/x-www-form-urlencoded",
                 },
                 body: new URLSearchParams({
-                  To: cleaned, From: TWILIO_FROM, Body: body,
+                  To: cleaned, From: await resolveSmsFrom(supabase, task.tenant_id, cleaned, TWILIO_FROM), Body: body,
                   StatusCallback: `${supabaseUrl}/functions/v1/twilio-webhook`,
                 }),
               });

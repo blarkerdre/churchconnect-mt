@@ -1,3 +1,4 @@
+import { pickSmsFromSettings } from "../_shared/sms-sender.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendLoggedTemplateEmail } from "../_shared/managed-email.ts";
 import { assertSmsQuota, QuotaExceededError } from "../_shared/sms-quota.ts";
@@ -297,10 +298,7 @@ async function sendSms(
     const TWILIO_FROM = Deno.env.get("TWILIO_FROM_NUMBER");
     if (!TWILIO_FROM) throw new Error("TWILIO_FROM_NUMBER not configured");
 
-    let fromNumber = TWILIO_FROM;
-    if (tenantSettings.twilio_sms_from) {
-      fromNumber = tenantSettings.twilio_sms_from as string;
-    }
+    const fromNumber = pickSmsFromSettings(tenantSettings, phone, TWILIO_FROM);
 
     const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
     const params = new URLSearchParams({

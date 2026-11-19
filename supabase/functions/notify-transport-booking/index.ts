@@ -1,3 +1,4 @@
+import { resolveSmsFrom } from "../_shared/sms-sender.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkSmsQuota } from "../_shared/sms-quota.ts";
 import { sendRawManagedEmail } from "../_shared/managed-email.ts";
@@ -588,7 +589,7 @@ Deno.serve(async (req) => {
                 "Content-Type": "application/x-www-form-urlencoded",
               },
               body: new URLSearchParams({
-                To: cleaned, From: TWILIO_FROM, Body: smsBody, StatusCallback: webhookUrl,
+                To: cleaned, From: await resolveSmsFrom(supabase, bodyTenantId, cleaned, TWILIO_FROM), Body: smsBody, StatusCallback: webhookUrl,
               }),
             });
             const data = await response.json();
