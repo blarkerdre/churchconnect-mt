@@ -13,6 +13,23 @@ export interface QuotaResult {
   remaining: number; // limit - usage when limit > 0; Infinity otherwise
 }
 
+// Decide how a send is covered once the monthly quota is used up.
+// Order: monthly quota -> bought top-up texts -> billed extras (if plan allows) -> block.
+export function planSmsCoverage(opts: { limit: number; usage: number; requested: number; credits: number; allowOverage: boolean }) {
+  const req = Math.max(opts.requested, 1);
+  const freeLeft = Math.max(opts.limit - opts.usage, 0);
+  const beyond = Math.max(req - freeLeft, 0);
+  const fromCredits = Math.min(beyond, Math.max(opts.credits, 0));
+  const overage = beyond - fromCredits;
+  return { allowed: overage === 0 || opts.allowOverage, fromCredits, overage };
+}
+
+// Price per text: the church's own price if set, otherwise the plan's price.
+export function resolveSmsUnitPrice(override: unknown, planPrice: unknown): number {
+  if (override !== null && override !== undefined && override !== "" && Number.isFinite(Number(override)) && Number(override) >= 0) return Number(override);
+  return Number(planPrice || 0);
+}
+
 export async function checkSmsQuota(
   client: any,
   tenantId: string | null | undefined,
@@ -27,7 +44,7 @@ export async function checkSmsQuota(
 
   const { data: tenant, error: tenantErr } = await client
     .from("tenants")
-    .select(limitField)
+    .select(`${limitField}, sms_credit_balance, pricing_plan_id`)
     .eq("id", tenantId)
     .single();
 
@@ -57,8 +74,21 @@ export async function checkSmsQuota(
 
   const usage = count || 0;
   const remaining = Math.max(limit - usage, 0);
-  const allowed = usage + Math.max(requested, 1) <= limit;
-  return { allowed, limit, usage, remaining };
+  if (usage + Math.max(requested, 1) <= limit || channel !== "sms") {
+    return { allowed: usage + Math.max(requested, 1) <= limit, limit, usage, remaining };
+  }
+  let allowOverage = false;
+  if (tenant?.pricing_plan_id) {
+    const { data: plan } = await client.from("pricing_plans").select("allow_overage_sms").eq("id", tenant.pricing_plan_id).maybeSingle();
+    allowOverage = Boolean(plan?.allow_overage_sms);
+  }
+  const cov = planSmsCoverage({ limit, usage, requested, credits: Number(tenant?.sms_credit_balance || 0), allowOverage });
+  if (!cov.allowed) return { allowed: false, limit, usage, remaining };
+  if (cov.fromCredits > 0) {
+    const { error } = await client.rpc("consume_sms_credits", { _tenant_id: tenantId, _n: cov.fromCredits });
+    if (error) console.warn("[sms-quota] consume credits failed:", error);
+  }
+  return { allowed: true, limit, usage, remaining };
 }
 
 export class QuotaExceededError extends Error {
@@ -68,8 +98,9 @@ export class QuotaExceededError extends Error {
   remaining: number;
   constructor(result: QuotaResult, channel: SmsChannel) {
     super(
-      `${channel === "whatsapp" ? "WhatsApp" : "SMS"} quota exceeded. ` +
-        `${result.remaining} messages remaining this month (limit: ${result.limit}).`,
+      channel === "whatsapp"
+        ? `WhatsApp quota exceeded. ${result.remaining} messages remaining this month (limit: ${result.limit}).`
+        : `Your monthly texts are used up (${result.remaining} left of ${result.limit}). Buy more texts in Billing.`,
     );
     this.name = "QuotaExceededError";
     this.channel = channel;

@@ -1,3 +1,4 @@
+import SmsTopUpCard from "@/components/billing/SmsTopUpCard";
 import React, { useState, useEffect, useRef } from "react";
 
 const DEFAULT_SERVICE_TYPES = ["Sunday Service", "Midweek Service", "Special Program", "Thanksgiving Service", "Other"];
@@ -223,6 +224,7 @@ function BillingSection() {
         <p className="text-xs text-muted-foreground mt-1">View your subscription status and make payments</p>
       </CardHeader>
       <CardContent className="space-y-4">
+        <SmsTopUpCard tenantId={tenantId} canBuy={isTenantOwner || isTAdmin} />
         {subLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading...</div>
         ) : !subscription ? (

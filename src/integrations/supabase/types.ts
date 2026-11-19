@@ -4948,6 +4948,38 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_credit_ledger: {
+        Row: {
+          created_at: string
+          delta: number
+          id: string
+          reason: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          delta: number
+          id?: string
+          reason: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          delta?: number
+          id?: string
+          reason?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_credit_ledger_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sms_log: {
         Row: {
           channel: string
@@ -5010,6 +5042,56 @@ export type Database = {
           },
           {
             foreignKeyName: "sms_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_topups: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          paid_at: string | null
+          quantity: number
+          status: string
+          stripe_session_id: string | null
+          tenant_id: string
+          unit_price: number
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          paid_at?: string | null
+          quantity: number
+          status?: string
+          stripe_session_id?: string | null
+          tenant_id: string
+          unit_price: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          paid_at?: string | null
+          quantity?: number
+          status?: string
+          stripe_session_id?: string | null
+          tenant_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_topups_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -5877,7 +5959,9 @@ export type Database = {
           settings: Json | null
           setup_complete: boolean
           slug: string
+          sms_credit_balance: number
           sms_limit_monthly: number
+          sms_unit_price_override: number | null
           storage_limit_mb: number
           subscription_status: string
           timezone: string
@@ -5900,7 +5984,9 @@ export type Database = {
           settings?: Json | null
           setup_complete?: boolean
           slug: string
+          sms_credit_balance?: number
           sms_limit_monthly?: number
+          sms_unit_price_override?: number | null
           storage_limit_mb?: number
           subscription_status?: string
           timezone?: string
@@ -5923,7 +6009,9 @@ export type Database = {
           settings?: Json | null
           setup_complete?: boolean
           slug?: string
+          sms_credit_balance?: number
           sms_limit_monthly?: number
+          sms_unit_price_override?: number | null
           storage_limit_mb?: number
           subscription_status?: string
           timezone?: string
@@ -7769,6 +7857,10 @@ export type Database = {
         Args: { _member: string; _unit: string }
         Returns: undefined
       }
+      add_sms_credits_for_topup: {
+        Args: { _session_id: string }
+        Returns: number
+      }
       approve_course_registration: {
         Args: { _registration_id: string }
         Returns: {
@@ -7860,6 +7952,10 @@ export type Database = {
           p_to_session: string
         }
         Returns: Json
+      }
+      consume_sms_credits: {
+        Args: { _n: number; _tenant_id: string }
+        Returns: number
       }
       count_pending_join_requests_for_user: {
         Args: { _tenant_id: string; _user_id: string }

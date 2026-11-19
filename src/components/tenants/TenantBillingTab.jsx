@@ -1,3 +1,4 @@
+import SmsPricingAdmin from "@/components/billing/SmsPricingAdmin";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -119,6 +120,8 @@ export default function TenantBillingTab({ tenant }) {
 
   return (
     <div className="space-y-4">
+      <SmsPricingAdmin tenantId={tenantId} />
+      <Separator />
       {/* Subscription Config */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">

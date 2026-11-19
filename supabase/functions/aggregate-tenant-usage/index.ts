@@ -1,3 +1,4 @@
+import { resolveSmsUnitPrice } from "../_shared/sms-quota.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -33,7 +34,7 @@ Deno.serve(async (req) => {
     const ps = periodStart.toISOString().split("T")[0];
     const pe = periodEnd.toISOString().split("T")[0];
 
-    const { data: tenants } = await admin.from("tenants").select("id, name, pricing_plan_id");
+    const { data: tenants } = await admin.from("tenants").select("id, name, pricing_plan_id, sms_unit_price_override");
     const { data: plans } = await admin.from("pricing_plans").select("*");
     const planMap = Object.fromEntries((plans || []).map((p: any) => [p.id, p]));
 
@@ -89,11 +90,19 @@ Deno.serve(async (req) => {
       for (const m of metrics) {
         const used = await m.count(t.id);
         const included = plan ? Number(plan[m.includedField] || 0) : 0;
-        const unitPrice = plan ? Number(plan[m.overagePriceField] || 0) : 0;
+        const unitPrice = m.key === "sms"
+          ? resolveSmsUnitPrice(t.sms_unit_price_override, plan?.[m.overagePriceField])
+          : (plan ? Number(plan[m.overagePriceField] || 0) : 0);
+        let creditsUsed = 0;
+        if (m.key === "sms") {
+          const { data: led } = await admin.from("sms_credit_ledger").select("delta")
+            .eq("tenant_id", t.id).eq("reason", "send").gte("created_at", ps).lte("created_at", pe + "T23:59:59Z");
+          creditsUsed = (led || []).reduce((a: number, r: any) => a - Number(r.delta || 0), 0);
+        }
         const allowOverage = plan ? Boolean(plan[m.allowField]) : false;
         const currency = plan?.currency || "GBP";
 
-        const overageUnits = Math.max(0, used - included);
+        const overageUnits = Math.max(0, used - included - creditsUsed);
         const overageAmount = allowOverage ? overageUnits * unitPrice : 0;
 
         await admin.from("tenant_usage_counters").upsert(

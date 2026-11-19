@@ -68,6 +68,13 @@ serve(async (req) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
+        if (session.metadata?.type === "sms_topup") {
+          if (session.payment_status === "paid") {
+            const { data: added, error } = await supabaseAdmin.rpc("add_sms_credits_for_topup", { _session_id: session.id });
+            logStep("SMS top-up credited", { added, error: error?.message });
+          }
+          break;
+        }
         const stripeSubscriptionId = session.subscription as string;
 
         if (!stripeSubscriptionId) {
