@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
         const used = await m.count(t.id);
         const included = plan ? Number(plan[m.includedField] || 0) : 0;
         const unitPrice = m.key === "sms"
-          ? resolveSmsUnitPrice(t.sms_unit_price_override, plan?.[m.overagePriceField])
+          ? resolveSmsUnitPrice(t.sms_unit_price_override, plan?.[m.overagePriceField], plan?.currency, t.billing_currency)
           : (plan ? Number(plan[m.overagePriceField] || 0) : 0);
         let creditsUsed = 0;
         if (m.key === "sms") {
@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
           creditsUsed = (led || []).reduce((a: number, r: any) => a - Number(r.delta || 0), 0);
         }
         const allowOverage = plan ? Boolean(plan[m.allowField]) : false;
-        const currency = plan?.currency || "GBP";
+        const currency = t.billing_currency || plan?.currency || "GBP";
 
         const overageUnits = Math.max(0, used - included - creditsUsed);
         const overageAmount = allowOverage ? overageUnits * unitPrice : 0;

@@ -109,7 +109,7 @@ export default function TenantBillingTab({ tenant }) {
     setSubForm({
       billing_cycle: subscription?.billing_cycle || "monthly",
       amount: subscription?.amount || "",
-      currency: subscription?.currency || "GBP",
+      currency: tenant?.billing_currency || subscription?.currency || "GBP",
       next_due_date: subscription?.next_due_date || new Date().toISOString().split("T")[0],
       grace_period_days: subscription?.grace_period_days || 7,
       setup_fee_amount: subscription?.setup_fee_amount || 0,
@@ -183,15 +183,7 @@ export default function TenantBillingTab({ tenant }) {
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Currency</Label>
-                <Select value={subForm.currency} onValueChange={(v) => setSubForm({ ...subForm, currency: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="GBP">GBP</SelectItem>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="EUR">EUR</SelectItem>
-                    <SelectItem value="NGN">NGN</SelectItem>
-                  </SelectContent>
-                </Select>
+                <p className="text-sm py-2">{subForm.currency} <span className="text-xs text-muted-foreground">(change under Billing currency)</span></p>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -27,13 +27,13 @@ Deno.serve(async (req) => {
     const { data: m } = await admin.from("tenant_memberships").select("role").eq("tenant_id", tenantId).eq("user_id", u.user.id).maybeSingle();
     if (!m || !["owner", "admin"].includes(m.role)) return json({ error: "Only church owners or admins can buy texts" }, 403);
 
-    const { data: tenant } = await admin.from("tenants").select("name, pricing_plan_id, sms_unit_price_override").eq("id", tenantId).single();
-    let planPrice = 0, currency = "GBP";
+    const { data: tenant } = await admin.from("tenants").select("name, pricing_plan_id, sms_unit_price_override, billing_currency").eq("id", tenantId).single();
+    let planPrice = 0, planCurrency = "GBP"; const currency = tenant?.billing_currency || "GBP";
     if (tenant?.pricing_plan_id) {
       const { data: plan } = await admin.from("pricing_plans").select("overage_price_sms, currency").eq("id", tenant.pricing_plan_id).maybeSingle();
-      planPrice = Number(plan?.overage_price_sms || 0); currency = plan?.currency || "GBP";
+      planPrice = Number(plan?.overage_price_sms || 0); planCurrency = plan?.currency || "GBP";
     }
-    const unitPrice = resolveSmsUnitPrice(tenant?.sms_unit_price_override, planPrice);
+    const unitPrice = resolveSmsUnitPrice(tenant?.sms_unit_price_override, planPrice, planCurrency, currency);
     if (unitPrice <= 0) return json({ error: "No price per text is set for your church yet. Please contact support." }, 400);
     const amountMinor = Math.round(unitPrice * quantity * 100);
     if (amountMinor < 50) return json({ error: "Top-up total is too small. Choose more texts." }, 400);

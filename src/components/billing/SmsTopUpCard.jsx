@@ -15,7 +15,7 @@ export function useSmsBilling(tenantId) {
     queryKey: ["sms-billing", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data: t } = await supabase.from("tenants").select("sms_limit_monthly, sms_credit_balance, sms_unit_price_override, pricing_plan_id").eq("id", tenantId).single();
+      const { data: t } = await supabase.from("tenants").select("sms_limit_monthly, sms_credit_balance, sms_unit_price_override, pricing_plan_id, billing_currency").eq("id", tenantId).single();
       let plan = null;
       if (t?.pricing_plan_id) {
         const { data } = await supabase.from("pricing_plans").select("overage_price_sms, currency, allow_overage_sms").eq("id", t.pricing_plan_id).maybeSingle();
@@ -26,8 +26,10 @@ export function useSmsBilling(tenantId) {
         .eq("tenant_id", tenantId).eq("channel", "sms").neq("status", "failed").gte("created_at", start.toISOString());
       const { data: topups } = await supabase.from("sms_topups").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(10);
       const override = t?.sms_unit_price_override;
-      const unitPrice = override !== null && override !== undefined ? Number(override) : Number(plan?.overage_price_sms || 0);
-      return { tenant: t, plan, used: count || 0, topups: topups || [], unitPrice, currency: plan?.currency || "GBP" };
+      const currency = t?.billing_currency || "GBP";
+      const planMatches = (plan?.currency || "GBP").toUpperCase() === currency;
+      const unitPrice = override !== null && override !== undefined ? Number(override) : (planMatches ? Number(plan?.overage_price_sms || 0) : 0);
+      return { tenant: t, plan, used: count || 0, topups: topups || [], unitPrice, currency, planMatches };
     },
   });
 }

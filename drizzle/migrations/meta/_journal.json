@@ -92,6 +92,13 @@
       "when": 1795127351534,
       "tag": "0012_sms_topups_and_price_override",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1795129210192,
+      "tag": "0013_tenant_billing_currency",
+      "breakpoints": true
     }
   ]
 }

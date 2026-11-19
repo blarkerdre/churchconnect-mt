@@ -25,8 +25,10 @@ export function planSmsCoverage(opts: { limit: number; usage: number; requested:
 }
 
 // Price per text: the church's own price if set, otherwise the plan's price.
-export function resolveSmsUnitPrice(override: unknown, planPrice: unknown): number {
+// The plan price is only used when the plan is in the church's billing currency.
+export function resolveSmsUnitPrice(override: unknown, planPrice: unknown, planCurrency?: string | null, tenantCurrency?: string | null): number {
   if (override !== null && override !== undefined && override !== "" && Number.isFinite(Number(override)) && Number(override) >= 0) return Number(override);
+  if (tenantCurrency && (planCurrency || "GBP").toUpperCase() !== tenantCurrency.toUpperCase()) return 0;
   return Number(planPrice || 0);
 }
 
