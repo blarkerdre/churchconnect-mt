@@ -100,13 +100,18 @@ Deno.serve(async (req) => {
 
     // 1. Create auth user or reuse existing
     let userId: string;
+    await admin.from("tenant_owner_provisioning").upsert({
+      email: String(admin_email).toLowerCase(),
+      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+    });
     const { data: newUser, error: userError } = await admin.auth.admin.createUser({
       email: admin_email,
       password: admin_password,
       email_confirm: true,
       user_metadata: { full_name: admin_full_name || admin_email },
-      app_metadata: { tenant_owner_provisioning: "true" },
     });
+
+    await admin.from("tenant_owner_provisioning").delete().eq("email", String(admin_email).toLowerCase());
 
     if (userError) {
       if (userError.message?.includes("already been registered")) {

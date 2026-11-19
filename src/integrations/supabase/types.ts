@@ -5598,6 +5598,21 @@ export type Database = {
           },
         ]
       }
+      tenant_owner_provisioning: {
+        Row: {
+          email: string
+          expires_at: string
+        }
+        Insert: {
+          email: string
+          expires_at?: string
+        }
+        Update: {
+          email?: string
+          expires_at?: string
+        }
+        Relationships: []
+      }
       tenant_payments: {
         Row: {
           amount: number

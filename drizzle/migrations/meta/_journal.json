@@ -71,6 +71,13 @@
       "when": 1795118069012,
       "tag": "0009_allow_tenant_owner_provisioning_signup",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795118905092,
+      "tag": "0010_tenant_owner_provisioning_list",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,73 @@
+CREATE TABLE IF NOT EXISTS public.tenant_owner_provisioning (email text PRIMARY KEY, expires_at timestamptz NOT NULL DEFAULT now() + interval '10 minutes');
+REVOKE ALL ON public.tenant_owner_provisioning FROM anon, authenticated;
+GRANT ALL ON public.tenant_owner_provisioning TO service_role;
+ALTER TABLE public.tenant_owner_provisioning ENABLE ROW LEVEL SECURITY;
+
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+ RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
+AS $function$
+DECLARE
+  _tenant_id uuid; _inv_tenant_id uuid; _inv_id uuid; _inv_role text; _slug text; _prov text;
+BEGIN
+  DELETE FROM public.tenant_owner_provisioning
+   WHERE lower(email) = lower(NEW.email) AND expires_at > now()
+   RETURNING email INTO _prov;
+  IF _prov IS NOT NULL THEN
+    INSERT INTO public.profiles (user_id, full_name, email, tenant_id)
+    VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email), NEW.email, NULL)
+    ON CONFLICT (user_id) DO NOTHING;
+    RETURN NEW;
+  END IF;
+
+  _slug := NEW.raw_user_meta_data->>'tenant_slug';
+  IF _slug IS NOT NULL AND _slug != '' THEN
+    SELECT id INTO _tenant_id FROM public.tenants WHERE slug = _slug AND is_archived IS NOT TRUE LIMIT 1;
+  END IF;
+
+  SELECT ti.tenant_id, ti.id, ti.role INTO _inv_tenant_id, _inv_id, _inv_role
+  FROM public.tenant_invitations ti
+  WHERE lower(ti.email) = lower(NEW.email) AND ti.status = 'pending'
+    AND (_tenant_id IS NULL OR ti.tenant_id = _tenant_id)
+  ORDER BY ti.created_at DESC LIMIT 1;
+  IF _inv_tenant_id IS NOT NULL THEN _tenant_id := _inv_tenant_id; END IF;
+
+  IF _tenant_id IS NULL AND (_slug IS NULL OR _slug = '') THEN
+    SELECT ti.tenant_id, ti.id, ti.role INTO _inv_tenant_id, _inv_id, _inv_role
+    FROM public.tenant_invitations ti
+    WHERE lower(ti.email) = lower(NEW.email) AND ti.status = 'pending'
+    ORDER BY ti.created_at DESC LIMIT 1;
+    IF _inv_tenant_id IS NOT NULL THEN _tenant_id := _inv_tenant_id; END IF;
+  END IF;
+
+  IF _tenant_id IS NULL THEN
+    RAISE EXCEPTION 'No tenant could be resolved for this signup. Please use your church-specific registration link.';
+  END IF;
+
+  INSERT INTO public.profiles (user_id, full_name, email, tenant_id)
+  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email), NEW.email, _tenant_id)
+  ON CONFLICT (user_id) DO UPDATE
+    SET email = EXCLUDED.email, full_name = EXCLUDED.full_name,
+        tenant_id = COALESCE(profiles.tenant_id, EXCLUDED.tenant_id);
+
+  INSERT INTO public.tenant_memberships (user_id, tenant_id, role)
+  VALUES (NEW.id, _tenant_id, COALESCE(_inv_role, 'member')::tenant_role)
+  ON CONFLICT (user_id, tenant_id) DO NOTHING;
+
+  INSERT INTO public.user_roles (user_id, role, tenant_id)
+  VALUES (NEW.id, 'member', _tenant_id)
+  ON CONFLICT (user_id, role, tenant_id) DO NOTHING;
+
+  IF _inv_id IS NOT NULL THEN
+    UPDATE public.tenant_invitations SET status = 'accepted' WHERE id = _inv_id;
+  END IF;
+
+  UPDATE public.members SET user_id = NEW.id
+  WHERE id = (
+    SELECT id FROM public.members
+    WHERE lower(email) = lower(NEW.email) AND tenant_id = _tenant_id AND user_id IS NULL
+    ORDER BY created_at DESC LIMIT 1
+  );
+
+  RETURN NEW;
+END;
+$function$;
