@@ -18,14 +18,11 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import PrintReportButton from "@/components/PrintReportButton";
 import { toast } from "@/components/ui/use-toast";
 import { bulkDownloadCertificates } from "@/lib/bulk-certificates";
+import { csvSafeCell } from "@/lib/csv-safe";
 
 
 function downloadCSV(filename, headers, rows) {
-  const esc = (v) => {
-    if (v == null) return "";
-    const s = String(v).replace(/"/g, '""');
-    return /[",\n]/.test(s) ? `"${s}"` : s;
-  };
+  const esc = (v) => csvSafeCell(v);
   const csv = [headers.join(","), ...rows.map((r) => r.map(esc).join(","))].join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);

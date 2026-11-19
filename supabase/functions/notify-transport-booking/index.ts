@@ -72,6 +72,81 @@ Deno.serve(async (req) => {
       }
     }
 
+    // For signed-in (browser) callers, never trust caller-supplied notice
+    // content or recipients: load the real record and enforce role checks.
+    const TRANSPORT_UNITS = ["Transportation", "Kingdom Chariot"];
+    const forbidden = () => new Response(JSON.stringify({ error: "Forbidden" }), {
+      status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+    let transportLeaderIds: string[] | null = null;
+    const loadTransportLeaderIds = async (tid: string) => {
+      if (transportLeaderIds) return transportLeaderIds;
+      const { data } = await supabase.from("unit_leader_assignments")
+        .select("user_id").eq("tenant_id", tid).in("unit_name", TRANSPORT_UNITS);
+      transportLeaderIds = [...new Set((data || []).map((r: any) => r.user_id).filter(Boolean))] as string[];
+      return transportLeaderIds;
+    };
+    if (callerUserId) {
+      const nt = body.notification_type;
+      const [{ data: isSuper }, { data: isAdminFlag }] = await Promise.all([
+        supabase.rpc("has_role", { _user_id: callerUserId, _role: "super_admin" }),
+        supabase.rpc("is_admin", { _user_id: callerUserId, _tenant_id: bodyTenantId }),
+      ]);
+      const leaders = await loadTransportLeaderIds(bodyTenantId!);
+      const isStaff = isSuper === true || isAdminFlag === true || leaders.includes(callerUserId);
+
+      if (nt === "driver_availability") {
+        const availId = typeof body.availability_id === "string" ? body.availability_id : "";
+        if (!availId) return forbidden();
+        const { data: av } = await supabase.from("driver_availability")
+          .select("id, tenant_id, driver_user_id, driver_unit, available_date, service_type, pickup_area_address, pickup_area_postcode, seats_available, notes")
+          .eq("id", availId).eq("tenant_id", bodyTenantId).maybeSingle();
+        if (!av || av.driver_user_id !== callerUserId) return forbidden();
+        const { data: prof } = await supabase.from("profiles").select("full_name")
+          .eq("user_id", callerUserId).maybeSingle();
+        body.driver_name = prof?.full_name || "A driver";
+        body.driver_unit = TRANSPORT_UNITS.includes(av.driver_unit) ? av.driver_unit : "Transportation";
+        body.available_date = av.available_date || "";
+        body.service_type = av.service_type || "";
+        body.pickup_area = `${av.pickup_area_address || ""}${av.pickup_area_postcode ? ` [${av.pickup_area_postcode}]` : ""}`;
+        body.seats = av.seats_available || 1;
+        body.notes = av.notes || "";
+        body.leader_user_ids = leaders;
+      } else if (nt === "passenger_status") {
+        const bookingId = typeof body.booking_id === "string" ? body.booking_id : "";
+        if (!bookingId) return forbidden();
+        const { data: bk } = await supabase.from("transportation")
+          .select("id, tenant_id, member_id, pickup_address, pickup_location_description, destination, request_date, pickup_time, journey_type, return_date, return_time, assigned_driver, driver_phone, driver_user_id, assigned_to, status, members(first_name, last_name)")
+          .eq("id", bookingId).eq("tenant_id", bodyTenantId).maybeSingle();
+        if (!bk) return forbidden();
+        const isDriver = bk.driver_user_id === callerUserId || bk.assigned_to === callerUserId;
+        if (!isStaff && !isDriver) return forbidden();
+        const m: any = Array.isArray((bk as any).members) ? (bk as any).members[0] : (bk as any).members;
+        const allowedStatuses = ["Pickup Scheduled", "Confirmed", "Notified", "Checked In", "Picked Up", "Completed", "No-Show", "Cancelled"];
+        const reqStatus = typeof body.status === "string" ? body.status : "";
+        body.status = reqStatus === "Pickup Scheduled" && isStaff ? reqStatus : bk.status;
+        if (!allowedStatuses.includes(body.status)) body.status = bk.status;
+        body.member_id = bk.member_id;
+        body.member_name = m ? `${m.first_name || ""} ${m.last_name || ""}`.trim() || "Passenger" : "Passenger";
+        body.pickup = bk.pickup_address || "";
+        body.pickup_location_description = bk.pickup_location_description || "";
+        body.destination = bk.destination || "Church";
+        body.request_date = bk.request_date;
+        body.pickup_time = bk.pickup_time;
+        body.journey_type = bk.journey_type || "Single";
+        body.return_date = bk.return_date;
+        body.return_time = bk.return_time;
+        body.driver_name = bk.assigned_driver || "";
+        body.driver_phone = bk.driver_phone || "";
+        body.stop_number = typeof body.stop_number === "number" && body.stop_number > 0 && body.stop_number < 1000 ? Math.floor(body.stop_number) : undefined;
+      } else if (nt === "driver_route") {
+        if (!isStaff) return forbidden();
+      } else {
+        // new_booking / assignment notices are only sent by internal services.
+        return forbidden();
+      }
+    }
+
     // Only ever notify users who belong to the referenced tenant.
     const filterTenantUsers = async (ids: unknown[], tid: string): Promise<string[]> => {
       const clean = [...new Set(ids.filter((x): x is string => typeof x === "string" && /^[0-9a-f-]{36}$/i.test(x)))].slice(0, 100);

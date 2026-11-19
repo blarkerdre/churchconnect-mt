@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, Search, Download, Send, Users, X } from "lucide-react";
 import MessageFilteredMembersDialog from "@/components/analytics/MessageFilteredMembersDialog";
+import { csvSafeCell } from "@/lib/csv-safe";
 
 const STAGE_LABEL = {
   applied: "Applied",
@@ -330,7 +331,7 @@ export default function StudentsReportTab() {
       fmt(r.applied_at), fmt(r.registered_at), fmt(r.registration_email_sent_at), fmt(r.exam_link_sent_at),
     ]);
     const csv = [header, ...lines]
-      .map((row) => row.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","))
+      .map((row) => row.map((c) => csvSafeCell(c)).join(","))
       .join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
     const a = document.createElement("a");

@@ -70,14 +70,22 @@ Deno.serve(async (req) => {
     // Resolve members within tenant only
     const { data: members, error: mErr } = await admin
       .from("members")
-      .select("id, user_id, tenant_id")
+      .select("id, user_id, tenant_id, church_unit")
       .eq("tenant_id", tenant_id)
-      .in("id", member_ids);
+      .in("id", member_ids.filter((x: unknown) => typeof x === "string").slice(0, 500));
     if (mErr) {
       console.error("[create-unit-task] member lookup failed", mErr);
       return json({ error: "Failed to resolve members" }, 500);
     }
-    if (!members || members.length === 0) {
+    // Unit leaders (who are not admins) may only assign members of their own unit.
+    const wanted = unit_name.trim().toLowerCase();
+    const inUnit = (cu: string | null) =>
+      String(cu || "").split(",").map((u) => u.trim().toLowerCase()).includes(wanted);
+    const eligible = (isSuper || isAdminFlag) ? (members || []) : (members || []).filter((m: any) => inUnit(m.church_unit));
+    if (!isSuper && !isAdminFlag && eligible.length !== (members || []).length) {
+      return json({ error: "You can only assign tasks to members of your unit." }, 403);
+    }
+    if (eligible.length === 0) {
       return json({ error: "No valid members for this tenant" }, 400);
     }
 
@@ -103,7 +111,7 @@ Deno.serve(async (req) => {
     console.log("[create-unit-task] task created", task.id);
 
     // Insert assignments
-    const rows = members.map((m) => ({
+    const rows = eligible.map((m: any) => ({
       tenant_id,
       task_id: task.id,
       member_id: m.id,

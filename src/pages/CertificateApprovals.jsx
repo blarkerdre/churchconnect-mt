@@ -16,6 +16,7 @@ import { toast } from "@/components/ui/use-toast";
 import { format, parseISO } from "date-fns";
 import { Loader2, Check, X, Award, Download, RefreshCw, AlertTriangle } from "lucide-react";
 import PrintReportButton from "@/components/PrintReportButton";
+import { csvSafeCell } from "@/lib/csv-safe";
 
 const STATUS_VARIANT = {
   pending: "secondary",
@@ -186,7 +187,7 @@ export default function CertificateApprovals() {
   ]);
 
   const handleCSV = () => {
-    const csv = [headers.join(","), ...buildRows().map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n");
+    const csv = [headers.join(","), ...buildRows().map(r => r.map(c => csvSafeCell(c)).join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -406,7 +407,7 @@ function ReportView({ rows, trainingTypes, profileMap }) {
   const buildRows = () => byType.map(g => [g.type, g.total, g.pending, g.approved, g.declined, g.issued]);
 
   const handleCSV = () => {
-    const csv = [headers.join(","), ...buildRows().map(r => r.map(c => `"${c}"`).join(","))].join("\n");
+    const csv = [headers.join(","), ...buildRows().map(r => r.map(c => csvSafeCell(c)).join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

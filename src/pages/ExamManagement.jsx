@@ -46,6 +46,7 @@ import SessionFilterBar from "@/components/exams/SessionFilterBar";
 import { ExamSessionFilterProvider, useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
 import ModuleTour from "@/components/tour/ModuleTour";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { csvSafeCell } from "@/lib/csv-safe";
 
 const OPTION_LETTERS = ["a", "b", "c", "d"];
 const QUESTION_TYPES = [
@@ -1257,7 +1258,7 @@ function CourseRegistrationsView({ course }) {
       new Date(r.registered_at).toLocaleDateString(),
       r.approved_at ? new Date(r.approved_at).toLocaleDateString() : "",
     ]);
-    const csv = [headers, ...rows].map(row => row.map(c => `"${(c || "").replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csv = [headers, ...rows].map(row => row.map(c => csvSafeCell(c)).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

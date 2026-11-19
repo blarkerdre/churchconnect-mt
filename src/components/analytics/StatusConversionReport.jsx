@@ -27,6 +27,7 @@ import { useAuth } from "@/hooks/useAuth";
 import PrintReportButton from "@/components/PrintReportButton";
 import MessageFilteredMembersDialog from "./MessageFilteredMembersDialog";
 import { format, subMonths, differenceInDays } from "date-fns";
+import { csvSafeCell } from "@/lib/csv-safe";
 
 const STATUS_VALUES = ["any", "Active", "First Timer", "New Convert", "Visitor", "Inactive"];
 const PRESETS = [
@@ -135,7 +136,7 @@ export default function StatusConversionReport() {
   }, [rows, uniqueMembers.length]);
 
   const exportCsv = () => {
-    const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const esc = (v) => csvSafeCell(v);
     const headers = [
       "First Name",
       "Last Name",

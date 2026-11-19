@@ -20,13 +20,14 @@ import { ordinal, PositionBadge, buildRankMap } from "@/lib/rank-utils";
 import { bulkDownloadCertificates } from "@/lib/bulk-certificates";
 import { matchesTrainingType } from "@/lib/certificate-template-lookup";
 import { useExamSessionFilter } from "@/contexts/ExamSessionFilterContext";
+import { csvSafeCell } from "@/lib/csv-safe";
 
 
 
 
 
 function downloadCSV(filename, headers, rows) {
-  const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const escape = (v) => csvSafeCell(v);
   const csv = [headers.map(escape).join(","), ...rows.map(r => r.map(escape).join(","))].join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);

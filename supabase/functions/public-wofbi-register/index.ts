@@ -100,12 +100,16 @@ Deno.serve(async (req) => {
 
     // Optional: identify signed-in caller via Bearer token
     let authUserId: string | null = null;
+    let authEmail: string | null = null;
     const authHeader = req.headers.get("Authorization") || req.headers.get("authorization");
     if (authHeader?.toLowerCase().startsWith("bearer ")) {
       const token = authHeader.slice(7).trim();
       if (token) {
         const { data: userRes } = await supabase.auth.getUser(token);
-        if (userRes?.user?.id) authUserId = userRes.user.id;
+        if (userRes?.user?.id) {
+          authUserId = userRes.user.id;
+          authEmail = userRes.user.email_confirmed_at ? (userRes.user.email || "").toLowerCase() : null;
+        }
       }
     }
 
@@ -238,7 +242,7 @@ Deno.serve(async (req) => {
     if (!memberId) {
       const { data: existingMember } = await supabase
         .from("members")
-        .select("id")
+        .select("id, user_id")
         .eq("email", email)
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false })
@@ -248,7 +252,11 @@ Deno.serve(async (req) => {
       if (existingMember) {
         // Only link an existing member record when the caller is signed in.
         // Anonymous submissions stay unlinked; an admin links them on review.
-        memberId = authUserId ? existingMember.id : null;
+        // Only link when the signed-in caller's verified email matches the
+        // form email and the record isn't already owned by someone else.
+        const ownsRecord = !!authUserId && !!authEmail && authEmail === email &&
+          (!existingMember.user_id || existingMember.user_id === authUserId);
+        memberId = ownsRecord ? existingMember.id : null;
       } else {
         const { data: newMember, error: insertError } = await supabase
           .from("members")

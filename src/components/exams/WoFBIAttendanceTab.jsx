@@ -26,6 +26,7 @@ import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
 import { useTenant } from "@/contexts/TenantContext";
 import { downloadRosterCsv, printRosterPdf } from "@/lib/attendance-roster";
 import { useExamSessionFilter, EXAM_SESSION_ALL } from "@/contexts/ExamSessionFilterContext";
+import { csvSafeCell } from "@/lib/csv-safe";
 
 function pct(num, den) {
   if (!den) return "0%";
@@ -713,7 +714,7 @@ export default function WoFBIAttendanceTab() {
       s.missingCheckouts,
     ]);
 
-    const csv = [header, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csv = [header, ...rows].map((r) => r.map((v) => csvSafeCell(v)).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
