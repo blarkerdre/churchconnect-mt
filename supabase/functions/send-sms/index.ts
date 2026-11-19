@@ -381,9 +381,14 @@ Deno.serve(async (req) => {
         } else {
           // Twilio (default)
           const toNumber = msgChannel === "whatsapp" ? `whatsapp:${normalized}` : normalized;
+          let fromForThis = fromNumber;
+          const naFrom = (tenantSettings.twilio_sms_from_na as string | undefined)?.replace(/[\s\-\(\)\.]/g, "");
+          if (msgChannel === "sms" && normalized.startsWith("+1") && naFrom && /^\+1\d{10}$/.test(naFrom)) {
+            fromForThis = naFrom;
+          }
           const params = new URLSearchParams({
             To: toNumber,
-            From: fromNumber,
+            From: fromForThis,
             Body: message,
             StatusCallback: webhookUrl,
           });
@@ -399,6 +404,9 @@ Deno.serve(async (req) => {
           });
           data = await response.json();
           if (!response.ok) {
+            if (data?.code === 21612 || data?.code === 21408) {
+              throw new Error(`Your sending number can't reach this country (${normalized.slice(0, 3)}...). Add a local sending number for this country in Messaging settings.`);
+            }
             throw new Error(data.message || JSON.stringify(data));
           }
         }

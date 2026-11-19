@@ -1018,6 +1018,7 @@ function CommunicationsSection() {
   const [saving, setSaving] = useState(false);
   const [emailSenderName, setEmailSenderName] = useState("");
   const [smsFrom, setSmsFrom] = useState("");
+  const [smsFromNa, setSmsFromNa] = useState("");
   const [whatsappFrom, setWhatsappFrom] = useState("");
   const [smsProvider, setSmsProvider] = useState("twilio");
   const [voiceProvider, setVoiceProvider] = useState("twilio");
@@ -1098,6 +1099,7 @@ function CommunicationsSection() {
       const s = currentTenant.settings;
       setEmailSenderName(s.email_sender_name || "");
       setSmsFrom(s.twilio_sms_from || "");
+      setSmsFromNa(s.twilio_sms_from_na || "");
       setWhatsappFrom(s.twilio_whatsapp_from || "");
       setSmsProvider(s.sms_provider || "twilio");
       setVoiceProvider(s.voice_provider || "twilio");
@@ -1144,6 +1146,10 @@ function CommunicationsSection() {
   const e164Regex = /^\+[1-9]\d{6,14}$/;
 
   const handleSave = async () => {
+    if (smsProvider === "twilio" && smsFromNa && !/^\+1\d{10}$/.test(smsFromNa.trim())) {
+      toast({ title: "Invalid number", description: "Canada/US sending number must look like +1XXXXXXXXXX", variant: "destructive" });
+      return;
+    }
     if (smsProvider === "twilio" && smsFrom && !e164Regex.test(smsFrom.trim())) {
       toast({ title: "Invalid SMS number", description: "Must be E.164 format (e.g. +447123456789)", variant: "destructive" });
       return;
@@ -1168,6 +1174,7 @@ function CommunicationsSection() {
         ...(currentTenant?.settings || {}),
         email_sender_name: emailSenderName.trim() || null,
         twilio_sms_from: smsFrom.trim() || null,
+        twilio_sms_from_na: smsFromNa.trim() || null,
         twilio_whatsapp_from: whatsappFrom.trim() || null,
         sms_provider: smsProvider,
         voice_provider: voiceProvider,
@@ -1314,6 +1321,18 @@ function CommunicationsSection() {
                 placeholder="+44... (uses system default if empty)"
                 maxLength={20}
               />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm flex items-center gap-1.5">
+                <Phone className="h-3.5 w-3.5" /> Canada/US SMS From Number
+              </Label>
+              <Input
+                value={smsFromNa}
+                onChange={(e) => setSmsFromNa(e.target.value)}
+                placeholder="+1... (used for +1 numbers only)"
+                maxLength={20}
+              />
+              <p className="text-xs text-muted-foreground">UK numbers cannot text Canada or the US. Add a Twilio +1 number here to reach them.</p>
             </div>
             <div className="space-y-2">
               <Label className="text-sm flex items-center gap-1.5">
