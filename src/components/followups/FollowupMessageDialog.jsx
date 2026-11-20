@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks/useAuth";
+import SmsCharCounter from "@/components/sms/SmsCharCounter";
 
 const MESSAGE_TEMPLATES = {
   "First Timer": (name, church) =>
@@ -271,6 +272,7 @@ export default function FollowupMessageDialog({
                 placeholder="Type your message..."
                 maxLength={channel === "sms" ? 1600 : undefined}
               />
+              {channel === "sms" && <SmsCharCounter text={message} />}
             </div>
           )}
 

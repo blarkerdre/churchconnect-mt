@@ -14,6 +14,8 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks/useAuth";
 import { normalizePhone } from "@/lib/phone-utils";
 import { logAudit } from "@/lib/audit";
+import SmsCharCounter from "@/components/sms/SmsCharCounter";
+import SmsAvailability, { useSmsSendCheck } from "@/components/sms/SmsAvailability";
 import InvalidRecipientsPreview from "@/components/sms/InvalidRecipientsPreview";
 
 /**
@@ -57,6 +59,7 @@ export default function MessageFilteredMembersDialog({
     const linkedAccounts = members.filter((m) => m.user_id);
     return { withEmail, phoneList, invalidPhone, linkedAccounts };
   }, [members]);
+  const smsCheck = useSmsSendCheck(tenantId, message, channel === "sms" ? summary.phoneList.length : 0);
 
   const reset = () => {
     setSubject("");
@@ -278,12 +281,13 @@ export default function MessageFilteredMembersDialog({
               rows={4}
               maxLength={1600}
             />
-            <p className="text-[11px] text-muted-foreground text-right">{message.length} chars</p>
+            <SmsCharCounter text={message} />
+            <SmsAvailability check={smsCheck} />
             <InvalidRecipientsPreview invalidRecipients={summary.invalidPhone} />
             <Button
               className="w-full"
               onClick={() => sendSmsLike("sms")}
-              disabled={sending || summary.phoneList.length === 0}
+              disabled={sending || summary.phoneList.length === 0 || smsCheck.blocked}
             >
               {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
               Send SMS to {summary.phoneList.length}
