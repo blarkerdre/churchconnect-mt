@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { writeAudit } from '../_shared/audit.ts';
 import { sendRawManagedEmail } from '../_shared/managed-email.ts';
+import { callerMfaSatisfied, cleanMessageText } from '../_shared/sender-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -53,9 +54,20 @@ Deno.serve(async (req) => {
     })
   }
 
+  if (!(await callerMfaSatisfied(supabaseUrl, supabaseAnonKey, authHeader))) {
+    return new Response(JSON.stringify({ error: 'Two-step verification is required to send messages' }), {
+      status: 403,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
   const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
 
-  const { subject, body, audience, filters, tenant_id, member_ids, audience_label } = await req.json()
+  const payload = await req.json()
+  const { audience, filters, tenant_id, member_ids, audience_label } = payload
+  // Plain text only: strip HTML and control characters (no newlines in subject).
+  const subject = typeof payload.subject === 'string' ? cleanMessageText(payload.subject, false) : payload.subject
+  const body = typeof payload.body === 'string' ? cleanMessageText(payload.body, true) : payload.body
 
   if (!subject?.trim() || !body?.trim()) {
     return new Response(JSON.stringify({ error: 'subject and body are required' }), {
@@ -205,7 +217,7 @@ Deno.serve(async (req) => {
   const suppressedSet = new Set((suppressed || []).map(s => s.email.toLowerCase()))
 
   const audienceLabel = (typeof audience_label === 'string' && audience_label.trim())
-    ? audience_label.trim()
+    ? cleanMessageText(audience_label, false).slice(0, 120)
     : buildAudienceLabel(filters, audience)
 
   // Build and enqueue emails

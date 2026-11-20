@@ -4,6 +4,7 @@
 // admin rights in the target tenant.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { sendLoggedTemplateEmail } from '../_shared/managed-email.ts'
+import { callerMfaSatisfied } from '../_shared/sender-guard.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -52,6 +53,9 @@ Deno.serve(async (req) => {
     const { data, error } = await admin.auth.getUser(bearer)
     if (error || !data?.user) return json({ error: 'Unauthorized' }, 401)
     userId = data.user.id
+    if (!(await callerMfaSatisfied(supabaseUrl, anonKey, authHeader))) {
+      return json({ error: 'Two-step verification is required to send messages' }, 403)
+    }
   }
 
   let body: Record<string, any>

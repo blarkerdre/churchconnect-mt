@@ -1,4 +1,5 @@
 import { senderNameFrom } from "../_shared/sms-sender.ts";
+import { callerMfaSatisfied, cleanMessageText, phoneKey, loadLeaderUnits, memberInUnits } from "../_shared/sender-guard.ts";
 import { loadTenantPhoneSet, isTenantPhone } from "../_shared/tenant-phones.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkSmsQuota, QuotaExceededError } from "../_shared/sms-quota.ts";
@@ -70,10 +71,19 @@ Deno.serve(async (req) => {
         });
       }
       userId = user.id;
+      if (!(await callerMfaSatisfied(supabaseUrl, supabaseKey, authHeader))) {
+        return new Response(JSON.stringify({ error: "Two-step verification is required to send messages" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const body = await req.json();
-    const { recipients, message, sms_type, reference_id, channel, tenant_id } = body;
+    const { recipients, sms_type, reference_id, channel, tenant_id } = body;
+    const message = cleanMessageText(body.message);
+    // When set, the caller may only message these phone keys (non-admins).
+    let restrictedPhoneKeys: Set<string> | null = null;
 
     if (!tenant_id) {
       return new Response(JSON.stringify({ error: "tenant_id is required" }), {
@@ -105,6 +115,51 @@ Deno.serve(async (req) => {
         _role: "unit_leader",
         _tenant_id: tenant_id,
       });
+
+      if (!isAdmin && isLeader) {
+        // Unit leaders may only text members of the units they lead, plus the
+        // person a follow-up is about.
+        const units = await loadLeaderUnits(serviceClient, userId!, tenant_id);
+        restrictedPhoneKeys = new Set<string>();
+        if (units.length > 0) {
+          const { data: unitMembers } = await serviceClient
+            .from("members")
+            .select("phone, church_unit")
+            .eq("tenant_id", tenant_id)
+            .not("phone", "is", null)
+            .limit(20000);
+          for (const m of unitMembers || []) {
+            if (memberInUnits(m.church_unit, units)) {
+              const k = phoneKey(m.phone);
+              if (k.length >= 7) restrictedPhoneKeys.add(k);
+            }
+          }
+        }
+        if ((sms_type === "followup" || (body as any).reference_type === "followup") && reference_id) {
+          const { data: fu } = await serviceClient
+            .from("followups")
+            .select("member_id")
+            .eq("id", reference_id)
+            .eq("tenant_id", tenant_id)
+            .maybeSingle();
+          if (fu?.member_id) {
+            const { data: person } = await serviceClient
+              .from("members")
+              .select("phone")
+              .eq("id", fu.member_id)
+              .eq("tenant_id", tenant_id)
+              .maybeSingle();
+            const k = phoneKey(person?.phone);
+            if (k.length >= 7) restrictedPhoneKeys.add(k);
+          }
+        }
+        if (restrictedPhoneKeys.size === 0) {
+          return new Response(JSON.stringify({ error: "Forbidden: you can only message members of the units you lead" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
 
       if (!isAdmin && !isLeader) {
         // Allow Follow-up unit members to send SMS for their own followups only.
@@ -283,6 +338,7 @@ Deno.serve(async (req) => {
       let normalized = normalizeE164(recipient.phone?.trim() || "");
       // Only message numbers already recorded for this church.
       if (normalized && !isTenantPhone(allowedPhones, normalized)) normalized = null;
+      if (normalized && restrictedPhoneKeys && !restrictedPhoneKeys.has(phoneKey(normalized))) normalized = null;
       if (!normalized) {
         failed++;
         logs.push({
@@ -294,7 +350,7 @@ Deno.serve(async (req) => {
           reference_id: reference_id || null,
           status: "failed",
           channel: msgChannel,
-          error_message: "Invalid phone number format (must be E.164)",
+          error_message: "Invalid number, or not a number you are allowed to message",
           ...(tenant_id ? { tenant_id } : {}),
         });
         continue;
