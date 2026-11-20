@@ -26,6 +26,7 @@ const WhatsAppIcon = ({ className }) => (
 import { logAudit } from "@/lib/audit";
 import DirectSendPanel from "@/components/comms/DirectSendPanel";
 import BulkMembersPanel from "@/components/comms/BulkMembersPanel";
+import MessageSummaryPanel from "@/components/comms/MessageSummaryPanel";
 
 import { useSubFeature } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -548,6 +549,11 @@ export default function Communications() {
                 <UsersRound className="h-3.5 w-3.5" /> Bulk Members
               </TabsTrigger>
             )}
+            {canManageComms && (smsEnabled || whatsappEnabled) && (
+              <TabsTrigger value="summary" className="gap-1.5 text-xs">
+                <MessageSquare className="h-3.5 w-3.5" /> Summary
+              </TabsTrigger>
+            )}
             {canManageComms && (emailEnabled || smsEnabled || whatsappEnabled) && (
               <TabsTrigger data-tour="comms-history" value="history" className="gap-1.5 text-xs">
                 <HistoryIcon className="h-3.5 w-3.5" /> History
@@ -618,6 +624,12 @@ export default function Communications() {
         {isAdmin && (
           <TabsContent value="bulk-members">
             <BulkMembersPanel senderName={user?.email?.split("@")[0] || undefined} />
+          </TabsContent>
+        )}
+
+        {canManageComms && (smsEnabled || whatsappEnabled) && (
+          <TabsContent value="summary">
+            <MessageSummaryPanel tenantId={tenantId} />
           </TabsContent>
         )}
 

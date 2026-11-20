@@ -1,4 +1,5 @@
 import SmsCharCounter from "@/components/sms/SmsCharCounter";
+import SmsAvailability, { useSmsSendCheck } from "@/components/sms/SmsAvailability";
 import React, { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
@@ -95,6 +96,7 @@ export default function SMSDialog({
   }, [directRecipients, members]);
 
   const validCount = validRecipients.length;
+  const smsCheck = useSmsSendCheck(tenantId, message, channel === "sms" ? validCount : 0);
   const segments = Math.ceil((message.length || 1) / 160);
 
   const handleSend = async () => {
@@ -265,7 +267,7 @@ export default function SMSDialog({
                 placeholder={`Type your ${channelLabel} message...`}
                 maxLength={1600}
               />
-              {channel === "sms" && <div className="mt-1"><SmsCharCounter text={message} /></div>}
+              {channel === "sms" && <div className="mt-1"><SmsCharCounter text={message} /><div className="mt-1"><SmsAvailability check={smsCheck} /></div></div>}
             </div>
 
             {/* Schedule toggle */}
@@ -316,7 +318,7 @@ export default function SMSDialog({
 
             <Button
               onClick={handleSend}
-              disabled={sending || (!scheduleMode && validCount === 0) || !message.trim()}
+              disabled={sending || (!scheduleMode && validCount === 0) || !message.trim() || (channel === "sms" && smsCheck.blocked)}
               className={`w-full ${channel === "whatsapp" ? "bg-[#25D366] hover:bg-[#1da851]" : "bg-primary"}`}
             >
               {sending ? (

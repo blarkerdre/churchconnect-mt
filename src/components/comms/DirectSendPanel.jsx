@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import SmsCharCounter from "@/components/sms/SmsCharCounter";
+import SmsAvailability, { useSmsSendCheck } from "@/components/sms/SmsAvailability";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -39,6 +40,7 @@ function IndividualSend({ tenantId, churchName, senderName }) {
   const [channel, setChannel] = useState("email");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
+  const indCheck = useSmsSendCheck(tenantId, message, channel === "sms" ? 1 : 0);
   const [sending, setSending] = useState(false);
 
   const { data: searchResults = [] } = useQuery({
@@ -249,8 +251,9 @@ function IndividualSend({ tenantId, churchName, senderName }) {
       )}
       <Textarea rows={5} placeholder="Message..." value={message} onChange={e => setMessage(e.target.value)} maxLength={channel === "sms" || channel === "whatsapp" ? 1600 : 4000} />
       {channel === "sms" && <SmsCharCounter text={message} />}
+      {channel === "sms" && <SmsAvailability check={indCheck} />}
 
-      <Button onClick={handleSend} disabled={sending || !recipient || channelDisabled(channel)} className="w-full">
+      <Button onClick={handleSend} disabled={sending || !recipient || channelDisabled(channel) || (channel === "sms" && indCheck.blocked)} className="w-full">
         {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
         Send
       </Button>
@@ -318,6 +321,7 @@ function BulkNonMembers({ tenantId, churchName, senderName }) {
   }, [pool]);
 
   const targetCount = channel === "email" ? emailRecipients.length : phoneValid.length;
+  const smsCheck = useSmsSendCheck(tenantId, message, channel === "sms" ? targetCount : 0);
 
   const handleSend = async () => {
     if (!message.trim()) { toast({ title: "Message required", variant: "destructive" }); return; }
@@ -414,6 +418,7 @@ function BulkNonMembers({ tenantId, churchName, senderName }) {
       )}
       <Textarea rows={5} placeholder="Message..." value={message} onChange={e => setMessage(e.target.value)} maxLength={channel === "sms" || channel === "whatsapp" ? 1600 : 4000} />
       {channel === "sms" && <SmsCharCounter text={message} />}
+      {channel === "sms" && <SmsAvailability check={smsCheck} />}
 
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">Recipients ({channel}):</span>
@@ -427,7 +432,7 @@ function BulkNonMembers({ tenantId, churchName, senderName }) {
 
       {channel !== "email" && <InvalidRecipientsPreview invalidRecipients={phoneInvalid} />}
 
-      <Button onClick={handleSend} disabled={sending || targetCount === 0} className="w-full">
+      <Button onClick={handleSend} disabled={sending || targetCount === 0 || (channel === "sms" && smsCheck.blocked)} className="w-full">
         {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
         Send to {targetCount} {targetCount === 1 ? "recipient" : "recipients"}
       </Button>

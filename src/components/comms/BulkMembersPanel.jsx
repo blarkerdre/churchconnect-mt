@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import SmsCharCounter from "@/components/sms/SmsCharCounter";
+import SmsAvailability, { useSmsSendCheck } from "@/components/sms/SmsAvailability";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Send } from "lucide-react";
@@ -68,6 +69,7 @@ export default function BulkMembersPanel({ churchName, senderName }) {
     : channel === "in_app" ? inAppRecipients.length
     : phoneValid.length;
 
+  const smsCheck = useSmsSendCheck(tenantId, message, channel === "sms" ? targetCount : 0);
   const handleSend = async () => {
     if (!message.trim()) { toast({ title: "Message required", variant: "destructive" }); return; }
     if ((channel === "email" || channel === "in_app") && !subject.trim()) {
@@ -159,6 +161,7 @@ export default function BulkMembersPanel({ churchName, senderName }) {
       )}
       <Textarea rows={5} placeholder="Message..." value={message} onChange={e => setMessage(e.target.value)} maxLength={channel === "sms" || channel === "whatsapp" ? 1600 : 4000} />
       {channel === "sms" && <SmsCharCounter text={message} />}
+      {channel === "sms" && <SmsAvailability check={smsCheck} />}
 
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">Recipients ({channel}):</span>
@@ -167,7 +170,7 @@ export default function BulkMembersPanel({ churchName, senderName }) {
 
       {(channel === "sms" || channel === "whatsapp") && <InvalidRecipientsPreview invalidRecipients={phoneInvalid} />}
 
-      <Button onClick={handleSend} disabled={sending || targetCount === 0} className="w-full">
+      <Button onClick={handleSend} disabled={sending || targetCount === 0 || (channel === "sms" && smsCheck.blocked)} className="w-full">
         {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
         Send to {targetCount} {targetCount === 1 ? "recipient" : "recipients"}
       </Button>
