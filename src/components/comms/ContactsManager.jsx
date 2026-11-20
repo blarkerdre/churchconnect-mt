@@ -61,6 +61,15 @@ function parseCsv(text) {
   return rows.filter(r => r.email || r.phone);
 }
 
+export function phoneKey(p) {
+  const d = String(p || "").replace(/\D/g, "");
+  return d.length >= 9 ? d.slice(-9) : d;
+}
+export function emailKey(e) {
+  return String(e || "").trim().toLowerCase();
+}
+const fullName = (c) => [c.first_name, c.last_name].filter(Boolean).join(" ");
+
 export default function ContactsManager() {
   const { user } = useAuth();
   const { tenantId, withTenant } = useTenantQuery();
@@ -87,6 +96,40 @@ export default function ContactsManager() {
     },
     enabled: !!tenantId,
   });
+
+  const { data: memberMatches = [] } = useQuery({
+    queryKey: ["contacts-member-index", tenantId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("members").select("id, first_name, last_name, email, phone")
+        .eq("tenant_id", tenantId).limit(10000);
+      return data || [];
+    },
+    enabled: !!tenantId && editOpen,
+    staleTime: 60000,
+  });
+
+  const duplicates = useMemo(() => {
+    const ek = emailKey(form.email);
+    const pk = phoneKey(form.phone);
+    const out = [];
+    const hit = (r) => {
+      const why = [];
+      if (ek && emailKey(r.email) === ek) why.push("email");
+      if (pk && pk.length >= 9 && phoneKey(r.phone) === pk) why.push("phone");
+      return why;
+    };
+    for (const c of contacts) {
+      if (editing && c.id === editing.id) continue;
+      const why = hit(c);
+      if (why.length) out.push({ kind: "contact", rec: c, why });
+    }
+    for (const m of memberMatches) {
+      const why = hit(m);
+      if (why.length) out.push({ kind: "member", rec: m, why });
+    }
+    return out;
+  }, [form.email, form.phone, contacts, memberMatches, editing]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -137,7 +180,10 @@ export default function ContactsManager() {
       } else {
         const { error } = await supabase
           .from("contacts").insert(withTenant({ ...payload, created_by: user?.id, source: "manual" }));
-        if (error) throw error;
+        if (error) {
+          if (error.code === "23505") throw new Error("A contact with this email already exists.");
+          throw error;
+        }
       }
     },
     onSuccess: () => {
@@ -168,11 +214,32 @@ export default function ContactsManager() {
         toast({ title: "No valid rows found", description: "Need at least email or phone per row.", variant: "destructive" });
         return;
       }
-      const payload = rows.map(r => withTenant({ ...r, created_by: user?.id }));
+      const seenE = new Set(contacts.map(c => emailKey(c.email)).filter(Boolean));
+      const seenP = new Set(contacts.map(c => phoneKey(c.phone)).filter(k => k.length >= 9));
+      const fileE = new Set(), fileP = new Set();
+      let existing = 0, inFile = 0;
+      const fresh = [];
+      for (const r of rows) {
+        const e = emailKey(r.email), ph = phoneKey(r.phone);
+        const okP = ph.length >= 9;
+        if ((e && seenE.has(e)) || (okP && seenP.has(ph))) { existing++; continue; }
+        if ((e && fileE.has(e)) || (okP && fileP.has(ph))) { inFile++; continue; }
+        if (e) fileE.add(e);
+        if (okP) fileP.add(ph);
+        fresh.push({ ...r, email: e || null });
+      }
+      const skipped = existing + inFile;
+      if (fresh.length === 0) {
+        toast({ title: "Nothing imported", description: `All ${rows.length} rows are duplicates (${existing} already in contacts, ${inFile} repeated in file).`, variant: "destructive" });
+        return;
+      }
+      const payload = fresh.map(r => withTenant({ ...r, created_by: user?.id }));
       const { error } = await supabase.from("contacts").upsert(payload, { onConflict: "tenant_id,email", ignoreDuplicates: true });
       if (error) throw error;
       qc.invalidateQueries({ queryKey: ["contacts"] });
-      toast({ title: "Contacts imported", description: `${rows.length} rows processed.` });
+      toast({ title: "Contacts imported", description: skipped
+        ? `${fresh.length} imported, ${skipped} duplicate${skipped === 1 ? "" : "s"} skipped (${existing} already in contacts, ${inFile} repeated in file).`
+        : `${fresh.length} imported.` });
     } catch (e) {
       toast({ title: "Import failed", description: e.message, variant: "destructive" });
     }
@@ -248,6 +315,24 @@ export default function ContactsManager() {
             </div>
             <Input type="email" placeholder="Email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
             <Input placeholder="Phone (E.164, e.g. +44...)" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+            {duplicates.length > 0 && (
+              <div role="alert" className="rounded-md border border-accent bg-accent/10 p-2 text-xs space-y-1">
+                <p className="font-semibold text-foreground">Possible duplicate</p>
+                {duplicates.slice(0, 5).map(d => (
+                  <div key={d.kind + d.rec.id} className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground min-w-0 truncate">
+                      {d.kind === "member" ? "Church member" : "Contact"}: <span className="text-foreground">{fullName(d.rec) || d.rec.email || d.rec.phone}</span> (same {d.why.join(" & ")})
+                    </span>
+                    {d.kind === "contact" && (
+                      <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => openEdit(d.rec)}>Open</Button>
+                    )}
+                  </div>
+                ))}
+                {duplicates.some(d => d.kind === "member") && (
+                  <p className="text-muted-foreground">Members can already be messaged from Bulk Members.</p>
+                )}
+              </div>
+            )}
             <Input placeholder="Tags (comma separated)" value={form.tags} onChange={e => setForm(f => ({ ...f, tags: e.target.value }))} />
             <Textarea placeholder="Notes" rows={3} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} maxLength={2000} />
             <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="w-full">
