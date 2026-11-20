@@ -75,14 +75,14 @@ export async function buildStatementSharedContext(
     .order("sort_order");
 
   const rawTemplate = await fetchCourseTemplate(admin, tenantId, course);
-  const template = await resolveTemplateImages(admin, rawTemplate);
+  const template = await resolveTemplateImages(admin, rawTemplate, tenantId);
 
   const { data: tenantRow } = await admin
     .from("tenants")
     .select("id, name, slug, logo_url")
     .eq("id", tenantId)
     .maybeSingle();
-  const tenantLogo = await signIfPrivate(admin, tenantRow?.logo_url);
+  const tenantLogo = await signIfPrivate(admin, tenantRow?.logo_url, tenantId);
   const tenant = { ...(tenantRow || {}), logo_url: tenantLogo };
 
   const logoUrl = template?.wofbi_logo_url || template?.crest_image_url || template?.logo_url ||
@@ -327,14 +327,14 @@ export async function collectStatementInput(
   }
 
   const rawTemplate = await fetchCourseTemplate(admin, tenantId, course);
-  const template = await resolveTemplateImages(admin, rawTemplate);
+  const template = await resolveTemplateImages(admin, rawTemplate, tenantId);
 
   const { data: tenant } = await admin
     .from("tenants")
     .select("id, name, slug, logo_url")
     .eq("id", tenantId)
     .maybeSingle();
-  const tenantLogo = await signIfPrivate(admin, tenant?.logo_url);
+  const tenantLogo = await signIfPrivate(admin, tenant?.logo_url, tenantId);
 
   const memberName = `${member.first_name || ""} ${member.last_name || ""}`.trim() || "Student";
 

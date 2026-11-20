@@ -4,6 +4,10 @@ import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import { writeAudit } from "../_shared/audit.ts";
 import { sendRawManagedEmail } from "../_shared/managed-email.ts";
 
+// Only accept plain #RRGGBB colours from saved templates; anything else falls back.
+const hexOr = (v: unknown, fallback: string): string =>
+  typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v.trim()) ? v.trim() : fallback;
+
 // Initialise resvg wasm once per cold-start
 let _wasmReady: Promise<void> | null = null;
 async function ensureWasm() {
@@ -228,7 +232,7 @@ Deno.serve(async (req) => {
         completion: comp,
         member: sendMember,
         churchName: tpl?.church_name || "Winners Chapel International Cardiff",
-        bgColor: tpl?.background_color || "#1a2d4d",
+        bgColor: hexOr(tpl?.background_color, "#1a2d4d"),
         sentBy: userId,
       });
 
@@ -332,16 +336,16 @@ Deno.serve(async (req) => {
     const churchName = template?.church_name || "Winners Chapel International Cardiff";
     const signatoryName = template?.signatory_name || "";
     const signatoryTitle = template?.signatory_title || "";
-    const bgColor = template?.background_color || "#1a2d4d";
-    const accentColor = template?.accent_color || "#c5a028";
-    const textColor = template?.text_color || bgColor || "#1a2d4d";
+    const bgColor = hexOr(template?.background_color, "#1a2d4d");
+    const accentColor = hexOr(template?.accent_color, "#c5a028");
+    const textColor = hexOr(template?.text_color, bgColor);
     const customMessage =
       template?.custom_message ||
       "This is to certify that the above named has successfully completed";
     const backgroundImageUrl = template?.background_image_url || null;
     const deanSignatureUrl = template?.dean_signature_url || null;
     const crestImageUrl = template?.crest_image_url || null;
-    const nameColor = template?.name_color || "#5B2E91"; // Bible School purple by default
+    const nameColor = hexOr(template?.name_color, "#5B2E91"); // Bible School purple by default
     const textPositions = template?.text_positions || { name_y: 280, training_y: 340, date_y: 380, signatory_y: 500 };
 
     // Detect Bible School course (matches an exam_titles row for this tenant)

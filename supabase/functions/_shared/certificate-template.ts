@@ -48,13 +48,34 @@ export async function fetchCourseTemplate(
 
 const PRIVATE_BUCKETS = ["church-documents"];
 
-/** Turn a stale public URL for a private bucket into a working signed URL. */
-export async function signIfPrivate(admin: any, url?: string | null): Promise<string> {
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Only allow storage paths that belong to this church: they must start with
+ * the church's own folder (or have no church folder, in which case it is added).
+ * Paths for another church, or with "..", are refused.
+ */
+export function tenantScopedPath(raw: string, tenantId: string): string | null {
+  const p = String(raw || "").trim().replace(/^\/+/, "");
+  if (!p || !tenantId || p.includes("..") || p.includes("\\") || /^[a-z]+:\/\//i.test(p)) return null;
+  if (p.startsWith(`${tenantId}/`)) return p;
+  const first = p.split("/")[0];
+  if (UUID_RE.test(first)) return null;
+  return `${tenantId}/${p}`;
+}
+
+/**
+ * Turn a stale public URL for a private bucket into a working signed URL.
+ * Private files are only signed when they sit in this church's own folder.
+ */
+export async function signIfPrivate(admin: any, url: string | null | undefined, tenantId: string): Promise<string> {
   if (!url || typeof url !== "string") return "";
   // Bare storage object path (e.g. uploaded signatures) in the private bucket.
   if (!/^(https?:|data:|blob:)/i.test(url)) {
+    const safe = tenantScopedPath(url, tenantId);
+    if (!safe) return "";
     try {
-      const { data } = await admin.storage.from("church-documents").createSignedUrl(url.replace(/^\/+/, ""), 60 * 60);
+      const { data } = await admin.storage.from("church-documents").createSignedUrl(safe, 60 * 60);
       if (data?.signedUrl) return data.signedUrl;
     } catch {
       // fall through
@@ -65,25 +86,33 @@ export async function signIfPrivate(admin: any, url?: string | null): Promise<st
     const fragment = `/object/public/${bucket}/`;
     const idx = url.indexOf(fragment);
     if (idx === -1) continue;
-    const path = decodeURIComponent(url.slice(idx + fragment.length).split("?")[0]);
+    let path = "";
     try {
-      const { data } = await admin.storage.from(bucket).createSignedUrl(path, 60 * 60);
+      path = decodeURIComponent(url.slice(idx + fragment.length).split("?")[0]);
+    } catch {
+      return "";
+    }
+    const safe = tenantScopedPath(path, tenantId);
+    if (!safe || !safe.startsWith(`${tenantId}/`) || safe !== path.replace(/^\/+/, "")) return "";
+    try {
+      const { data } = await admin.storage.from(bucket).createSignedUrl(safe, 60 * 60);
       if (data?.signedUrl) return data.signedUrl;
     } catch {
       // fall through
     }
+    return "";
   }
   return url;
 }
 
-/** Replace private-bucket image URLs on a template with signed URLs. */
-export async function resolveTemplateImages(admin: any, template: any) {
+/** Replace private-bucket image URLs on a template with signed URLs (this church's files only). */
+export async function resolveTemplateImages(admin: any, template: any, tenantId: string) {
   if (!template) return template;
   const [logo_url, crest_image_url, wofbi_logo_url, dean_signature_url] = await Promise.all([
-    signIfPrivate(admin, template.logo_url),
-    signIfPrivate(admin, template.crest_image_url),
-    signIfPrivate(admin, template.wofbi_logo_url),
-    signIfPrivate(admin, template.dean_signature_url),
+    signIfPrivate(admin, template.logo_url, tenantId),
+    signIfPrivate(admin, template.crest_image_url, tenantId),
+    signIfPrivate(admin, template.wofbi_logo_url, tenantId),
+    signIfPrivate(admin, template.dean_signature_url, tenantId),
   ]);
   return { ...template, logo_url, crest_image_url, wofbi_logo_url, dean_signature_url };
 }

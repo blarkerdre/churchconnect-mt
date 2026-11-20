@@ -293,6 +293,12 @@ export default function CertificateTemplateSettings() {
       toast({ title: "Training type is required", variant: "destructive" });
       return;
     }
+    const badColour = [form.background_color, form.accent_color, form.text_color || "#1a2d4d"]
+      .some(c => typeof c !== "string" || !HEX_COLOR_RE.test(c.trim()));
+    if (badColour) {
+      toast({ title: "Colours must look like #1a2d4d", description: "Use the colour picker or type a # followed by 6 letters/numbers.", variant: "destructive" });
+      return;
+    }
     saveMutation.mutate({
       training_type: form.training_type.trim(),
       church_name: form.church_name,
@@ -301,9 +307,9 @@ export default function CertificateTemplateSettings() {
       dean_signature_url: form.dean_signature_url || null,
       signatory_name: form.signatory_name,
       signatory_title: form.signatory_title,
-      background_color: form.background_color,
-      accent_color: form.accent_color,
-      text_color: form.text_color || "#1a2d4d",
+      background_color: form.background_color.trim(),
+      accent_color: form.accent_color.trim(),
+      text_color: (form.text_color || "#1a2d4d").trim(),
       custom_message: form.custom_message || null,
       background_image_url: form.background_image_url || null,
       text_positions: form.text_positions,
