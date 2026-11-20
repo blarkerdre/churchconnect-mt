@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import SmsCharCounter from "@/components/sms/SmsCharCounter";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Send } from "lucide-react";
@@ -157,6 +158,7 @@ export default function BulkMembersPanel({ churchName, senderName }) {
         <Input placeholder={channel === "email" ? "Subject" : "Title"} value={subject} onChange={e => setSubject(e.target.value)} maxLength={200} />
       )}
       <Textarea rows={5} placeholder="Message..." value={message} onChange={e => setMessage(e.target.value)} maxLength={channel === "sms" || channel === "whatsapp" ? 1600 : 4000} />
+      {channel === "sms" && <SmsCharCounter text={message} />}
 
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">Recipients ({channel}):</span>

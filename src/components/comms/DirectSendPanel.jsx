@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import SmsCharCounter from "@/components/sms/SmsCharCounter";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -247,6 +248,7 @@ function IndividualSend({ tenantId, churchName, senderName }) {
         <Input placeholder={channel === "email" ? "Subject" : "Title"} value={subject} onChange={e => setSubject(e.target.value)} maxLength={200} />
       )}
       <Textarea rows={5} placeholder="Message..." value={message} onChange={e => setMessage(e.target.value)} maxLength={channel === "sms" || channel === "whatsapp" ? 1600 : 4000} />
+      {channel === "sms" && <SmsCharCounter text={message} />}
 
       <Button onClick={handleSend} disabled={sending || !recipient || channelDisabled(channel)} className="w-full">
         {sending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
@@ -411,6 +413,7 @@ function BulkNonMembers({ tenantId, churchName, senderName }) {
         <Input placeholder="Subject" value={subject} onChange={e => setSubject(e.target.value)} maxLength={200} />
       )}
       <Textarea rows={5} placeholder="Message..." value={message} onChange={e => setMessage(e.target.value)} maxLength={channel === "sms" || channel === "whatsapp" ? 1600 : 4000} />
+      {channel === "sms" && <SmsCharCounter text={message} />}
 
       <div className="flex items-center justify-between text-sm">
         <span className="text-muted-foreground">Recipients ({channel}):</span>

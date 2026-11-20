@@ -1,3 +1,4 @@
+import SmsCharCounter from "@/components/sms/SmsCharCounter";
 import React, { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
@@ -254,11 +255,7 @@ export default function SMSDialog({
                 <label className="text-sm font-medium">Message</label>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span>{message.length} chars</span>
-                  {channel === "sms" && (
-                    <Badge variant="outline" className="text-xs">
-                      {segments} segment{segments !== 1 ? "s" : ""}
-                    </Badge>
-                  )}
+
                 </div>
               </div>
               <Textarea
@@ -268,6 +265,7 @@ export default function SMSDialog({
                 placeholder={`Type your ${channelLabel} message...`}
                 maxLength={1600}
               />
+              {channel === "sms" && <div className="mt-1"><SmsCharCounter text={message} /></div>}
             </div>
 
             {/* Schedule toggle */}
