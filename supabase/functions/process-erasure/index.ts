@@ -63,10 +63,25 @@ Deno.serve(async (req) => {
     const memberId = request.member_id;
     const subjectUserId = request.user_id;
 
+    // The member being erased must belong to the same church as the request,
+    // and (when linked) to the account that asked for erasure.
+    if (memberId) {
+      const { data: target } = await admin.from("members")
+        .select("id, tenant_id, user_id").eq("id", memberId).eq("tenant_id", tenantId).maybeSingle();
+      if (!target) {
+        return new Response(JSON.stringify({ error: "Member does not belong to this church" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (target.user_id && subjectUserId && target.user_id !== subjectUserId) {
+        return new Response(JSON.stringify({ error: "Member record does not match the requester" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
     // Snapshot member row + related for recovery
     const snapshot: Record<string, unknown[]> = {};
     if (memberId) {
-      const { data: m } = await admin.from("members").select("*").eq("id", memberId);
+      const { data: m } = await admin.from("members").select("*").eq("id", memberId).eq("tenant_id", tenantId);
       snapshot["members"] = m || [];
       for (const t of ["sermon_notes", "testimonies", "app_feedback", "push_subscriptions",
                        "life_event_requests", "consent_events"]) {
@@ -107,7 +122,7 @@ Deno.serve(async (req) => {
         consent_photos: false,
         consent_pastoral_contact: false,
         consent_third_party_sharing: false,
-      }).eq("id", memberId);
+      }).eq("id", memberId).eq("tenant_id", tenantId);
     }
 
     // Delete personal artefacts (belong solely to the individual)

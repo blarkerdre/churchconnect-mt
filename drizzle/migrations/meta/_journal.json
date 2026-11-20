@@ -204,6 +204,13 @@
       "when": 1795186937776,
       "tag": "0028_children_same_church_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1795190546352,
+      "tag": "0029_erasure_member_scope_and_invite_email_lock",
+      "breakpoints": true
     }
   ]
 }

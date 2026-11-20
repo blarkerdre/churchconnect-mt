@@ -56,11 +56,10 @@ export default function AcceptInvite() {
     }
   }
 
-  async function handleAccept(allowMismatch = false) {
+  async function handleAccept() {
     setAccepting(true);
     const { data, error } = await supabase.rpc("accept_tenant_invitation_by_token", {
       _token: token,
-      _allow_email_mismatch: allowMismatch,
     });
     setAccepting(false);
     if (error) {
@@ -200,7 +199,7 @@ export default function AcceptInvite() {
                   Signed in as {user.email}. Ready to join {invite.tenant_name}.
                 </AlertDescription>
               </Alert>
-              <Button className="w-full" onClick={() => handleAccept(false)} disabled={accepting}>
+              <Button className="w-full" onClick={() => handleAccept()} disabled={accepting}>
                 {accepting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Accept invitation
               </Button>
@@ -214,10 +213,9 @@ export default function AcceptInvite() {
                   <strong>{user.email}</strong>.
                 </AlertDescription>
               </Alert>
-              <Button className="w-full" onClick={() => handleAccept(true)} disabled={accepting}>
-                {accepting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Accept with {user.email}
-              </Button>
+              <p className="text-sm text-muted-foreground">
+                To accept, sign out and sign in (or create an account) with {invite.email}.
+              </p>
               <Button variant="outline" className="w-full" onClick={handleSignOut}>
                 Sign out & use a different account
               </Button>
