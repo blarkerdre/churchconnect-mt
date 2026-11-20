@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { csvSafeCell } from "@/lib/csv-safe";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -109,10 +110,10 @@ export default function AuditLog() {
         l.entity_id || "",
         l.details?.channel || "",
         l.details?.recipients_count || "",
-        JSON.stringify(l.details || {}).replace(/"/g, '""'),
+        JSON.stringify(l.details || {}),
       ]),
     ];
-    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csv = rows.map((r) => r.map((c) => csvSafeCell(c)).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

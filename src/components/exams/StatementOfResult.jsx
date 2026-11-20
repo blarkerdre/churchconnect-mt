@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { csvSafeCell } from "@/lib/csv-safe";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Button } from "@/components/ui/button";
@@ -484,7 +485,7 @@ export default function StatementOfResult({ open, onOpenChange, member, course, 
   };
 
   const handleDownloadCSV = () => {
-    const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const esc = csvSafeCell;
     const headers = ["Module", "Score", "Total", "%", "Letter"];
     const csvRows = rows.map((r) =>
       [r.name, r.taken ? r.score : "", r.taken ? r.total : "", r.taken ? `${Math.round(r.pct)}%` : "", r.letter]

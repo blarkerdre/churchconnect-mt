@@ -660,7 +660,15 @@ Deno.serve(async (req) => {
           );
         }
 
-        await queueJoinRequests(supabase, existingByEmail.id, tenantId, requestedChurchUnit, requestedWsfCentreId, verifiedUserId);
+        // Only queue unit / Home Cell join requests when the signed-in caller
+        // owns the matched record. Otherwise anyone who knows a member's email
+        // could put that member forward for units they never asked to join.
+        const ownsExisting = !!verifiedUserId && existingByEmail.user_id === verifiedUserId;
+        if (ownsExisting) {
+          await queueJoinRequests(supabase, existingByEmail.id, tenantId, requestedChurchUnit, requestedWsfCentreId, verifiedUserId);
+        } else if (requestedChurchUnit || requestedWsfCentreId) {
+          console.warn("public-register: skipped join requests for unverified email match");
+        }
 
         return new Response(JSON.stringify({ success: true, mode: resultMode }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { csvSafeCell } from "@/lib/csv-safe";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
@@ -37,11 +38,7 @@ function toCSV(rows) {
     "date","edition","course","subject","lecturer","level","student","overall_rating",
     "session_description","delivery","time_keeping","class_atmosphere","test_quality","have_again","comments",
   ];
-  const esc = (v) => {
-    if (v === null || v === undefined) return "";
-    const s = String(v).replace(/"/g, '""');
-    return /[",\n]/.test(s) ? `"${s}"` : s;
-  };
+  const esc = (v) => (v === null || v === undefined ? "" : csvSafeCell(v));
   const lines = [headers.join(",")];
   for (const r of rows) {
     lines.push([

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { csvSafeCell } from "@/lib/csv-safe";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -177,7 +178,7 @@ export default function Analytics() {
   const isLoading = loadingSessions || loadingMembers;
 
   const generateReport = () => {
-    const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const esc = csvSafeCell;
     const rows = [
       ["ANALYTICS REPORT", `${dateFrom} to ${dateTo}`].join(","),
       "",

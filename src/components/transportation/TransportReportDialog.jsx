@@ -96,7 +96,7 @@ export default function TransportReportDialog({ open, onOpenChange, bookings, as
       sections.push("");
       sections.push(title);
       sections.push("Label,Count,%");
-      group.forEach(([k, v]) => sections.push(`"${String(csvSafeCell(k)).replace(/"/g, '""')}",${v},${pct(v, stats.total)}%`));
+      group.forEach(([k, v]) => sections.push(`${csvSafeCell(k)},${v},${pct(v, stats.total)}%`));
     };
     addGroup("By status", stats.byStatus);
     addGroup("By journey type", stats.byJourney);

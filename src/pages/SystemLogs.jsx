@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { csvSafeCell } from "@/lib/csv-safe";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,10 +25,7 @@ import { useTenantQuery } from "@/hooks/useTenantQuery";
 
 /* ── Shared helpers ── */
 function downloadCSV(rows, headers, filename) {
-  const escape = (v) => {
-    const s = String(v ?? "");
-    return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
-  };
+  const escape = csvSafeCell;
   const lines = [headers.map(h => h.label).join(","), ...rows.map(r => headers.map(h => escape(h.fn(r))).join(","))];
   const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
