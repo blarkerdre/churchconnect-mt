@@ -183,6 +183,13 @@
       "when": 1795184564309,
       "tag": "0025_sms_low_threshold",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1795184965758,
+      "tag": "0026_renewal_reminder_days",
+      "breakpoints": true
     }
   ]
 }

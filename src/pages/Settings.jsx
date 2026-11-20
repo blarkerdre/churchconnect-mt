@@ -1,3 +1,4 @@
+import { RenewalReminderSetting } from "@/components/billing/RenewalBanner";
 import SmsTopUpCard from "@/components/billing/SmsTopUpCard";
 import SubscriptionBankTransfer from "@/components/billing/SubscriptionBankTransfer";
 import ChurchInvoicesCard from "@/components/billing/ChurchInvoicesCard";
@@ -226,6 +227,7 @@ function BillingSection() {
         <p className="text-xs text-muted-foreground mt-1">View your subscription status and make payments</p>
       </CardHeader>
       <CardContent className="space-y-4">
+        {(isTenantOwner || isTAdmin) && <RenewalReminderSetting tenantId={tenantId} />}
         <SmsTopUpCard tenantId={tenantId} canBuy={isTenantOwner || isTAdmin} />
         {subLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading...</div>

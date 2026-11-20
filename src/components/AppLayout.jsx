@@ -1,3 +1,4 @@
+import RenewalBanner from "@/components/billing/RenewalBanner";
 import LowSmsBanner from "@/components/billing/LowSmsBanner";
 import React, { useState, useEffect } from "react";
 import InstallAppDialog, { shouldAutoOpenInstall } from "@/components/pwa/InstallAppDialog";
@@ -521,6 +522,7 @@ export default function Layout({ children }) {
           <PaymentWarningBanner />
         )}
         <PWAUpdateBanner />
+        {tenantId && (isTenantAdmin || isTenantOwner) && subscriptionStatus !== "past_due" && <RenewalBanner tenantId={tenantId} tenantSlug={tenantSlug} />}
         {tenantId && (isTenantAdmin || isTenantOwner) && <LowSmsBanner tenantId={tenantId} tenantSlug={tenantSlug} />}
         <main className="flex-1 p-3 lg:p-8 pb-20 lg:pb-8">
           {children}

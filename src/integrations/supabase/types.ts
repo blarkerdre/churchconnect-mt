@@ -5988,6 +5988,7 @@ export type Database = {
           name: string
           plan_tier: string
           pricing_plan_id: string | null
+          renewal_reminder_days: number
           settings: Json | null
           setup_complete: boolean
           slug: string
@@ -6015,6 +6016,7 @@ export type Database = {
           name: string
           plan_tier?: string
           pricing_plan_id?: string | null
+          renewal_reminder_days?: number
           settings?: Json | null
           setup_complete?: boolean
           slug: string
@@ -6042,6 +6044,7 @@ export type Database = {
           name?: string
           plan_tier?: string
           pricing_plan_id?: string | null
+          renewal_reminder_days?: number
           settings?: Json | null
           setup_complete?: boolean
           slug?: string
@@ -8745,6 +8748,7 @@ export type Database = {
           last_name: string
         }[]
       }
+      send_renewal_reminders: { Args: never; Returns: number }
       set_billing_bank_details: { Args: { _text: string }; Returns: undefined }
       sms_unit_price_for_tenant: {
         Args: { _tenant_id: string }
