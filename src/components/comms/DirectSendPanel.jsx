@@ -277,7 +277,7 @@ function BulkNonMembers({ tenantId, churchName, senderName }) {
   const { data: firstTimers = [] } = useQuery({
     queryKey: ["bulk-first-timers", tenantId],
     queryFn: async () => {
-      const { data } = await supabase.from("first_timers").select("id, first_name, last_name, email, phone").eq("tenant_id", tenantId);
+      const { data } = await supabase.from("members").select("id, first_name, last_name, email, phone").eq("tenant_id", tenantId).eq("membership_status", "First Timer");
       return data || [];
     },
     enabled: !!tenantId,
@@ -416,6 +416,11 @@ function BulkNonMembers({ tenantId, churchName, senderName }) {
         <span className="text-muted-foreground">Recipients ({channel}):</span>
         <Badge className="bg-primary/10 text-primary border-0">{targetCount}</Badge>
       </div>
+      {source === "both" && (
+        <p className="text-xs text-muted-foreground">
+          {contacts.filter(c => tag === "all" || (c.tags || []).includes(tag)).length} contacts + {firstTimers.length} first timers
+        </p>
+      )}
 
       {channel !== "email" && <InvalidRecipientsPreview invalidRecipients={phoneInvalid} />}
 
