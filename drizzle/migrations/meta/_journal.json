@@ -162,6 +162,13 @@
       "when": 1795170554010,
       "tag": "0022_usage_lookups_require_tenant_access",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1795171102097,
+      "tag": "0023_lock_down_church_lookups",
+      "breakpoints": true
     }
   ]
 }
