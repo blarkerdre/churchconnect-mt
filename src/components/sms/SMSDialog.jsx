@@ -167,7 +167,7 @@ export default function SMSDialog({
           .select("*", { count: "exact", head: true })
           .eq("tenant_id", tenantId)
           .eq("channel", channel)
-          .eq("status", "sent")
+          .neq("status", "failed")
           .gte("created_at", monthStart.toISOString());
 
         const remaining = quota - (count || 0);
