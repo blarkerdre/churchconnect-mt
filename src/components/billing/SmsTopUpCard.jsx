@@ -15,7 +15,7 @@ export function useSmsBilling(tenantId) {
     queryKey: ["sms-billing", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
-      const { data: t } = await supabase.from("tenants").select("sms_limit_monthly, sms_credit_balance, sms_unit_price_override, pricing_plan_id, billing_currency").eq("id", tenantId).single();
+      const { data: t } = await supabase.from("tenants").select("sms_limit_monthly, sms_credit_balance, sms_low_threshold, sms_unit_price_override, pricing_plan_id, billing_currency").eq("id", tenantId).single();
       let plan = null;
       if (t?.pricing_plan_id) {
         const { data } = await supabase.from("pricing_plans").select("overage_price_sms, currency, allow_overage_sms").eq("id", t.pricing_plan_id).maybeSingle();
@@ -55,6 +55,14 @@ export default function SmsTopUpCard({ tenantId, canBuy, isSuperAdmin = false })
   const requestBank = () => rpc("bank", "request_sms_bank_topup", { _tenant_id: tenantId, _quantity: Number(qty) }, "Bank transfer request created - use the reference shown below");
   const [qty, setQty] = useState(500);
   const [loading, setLoading] = useState(false);
+  const [thr, setThr] = useState(null);
+  const [thrState, setThrState] = useState("idle");
+  const saveThr = async () => {
+    setThrState("saving");
+    const { error } = await supabase.from("tenants").update({ sms_low_threshold: Math.max(0, Math.floor(Number(thr) || 0)) }).eq("id", tenantId);
+    if (error) { setThrState("idle"); toast({ title: "Couldn't save", description: error.message, variant: "destructive" }); return; }
+    setThrState("saved"); refresh(); setTimeout(() => setThrState("idle"), 3000);
+  };
   if (isLoading || !data) return null;
   const limit = Number(data.tenant?.sms_limit_monthly || 0);
 
@@ -86,6 +94,23 @@ export default function SmsTopUpCard({ tenantId, canBuy, isSuperAdmin = false })
         {data.plan?.allow_overage_sms ? " After that, extra texts are added to your next invoice." : " After that, sending stops until you buy more."}
         {" "}Top-up texts carry over to next month.
       </p>
+      {canBuy && limit > 0 && (() => {
+        const current = Number(data.tenant?.sms_low_threshold ?? 20);
+        const val = thr ?? current;
+        const dirty = Number(val) !== current;
+        return (
+          <div className="flex flex-wrap items-end gap-2">
+            <div>
+              <Label className="text-xs">Warn me when texts left fall to</Label>
+              <Input type="number" min={0} value={val} onChange={(e) => { setThr(e.target.value); setThrState("idle"); }} className="w-28 h-9" />
+            </div>
+            <Button size="sm" variant={dirty ? "default" : "secondary"} disabled={!dirty || thrState === "saving"} onClick={saveThr}>
+              {thrState === "saving" ? "Saving..." : thrState === "saved" ? "Saved ✓" : "Save"}
+            </Button>
+            <p className="text-xs text-muted-foreground w-full">Admins see a top-up reminder and get a notification at this level. Set 0 to turn off.</p>
+          </div>
+        );
+      })()}
       {canBuy && data.unitPrice > 0 && (
         <div className="space-y-2">
           <Label className="text-xs">Buy more texts</Label>

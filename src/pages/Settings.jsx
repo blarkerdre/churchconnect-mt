@@ -1648,7 +1648,7 @@ function TestimonyEmailSection() {
 export default function Settings() {
   const { roles } = useAuth();
   const { isTenantOwner, isTenantAdmin } = useTenant();
-  const [activeSection, setActiveSection] = useState("branding");
+  const [activeSection, setActiveSection] = useState(() => new URLSearchParams(window.location.search).get("tab") || "branding");
   const settingsTabsRef = useRef(null);
   const isSuperAdmin = roles.includes("super_admin");
   const canManageTenant = isSuperAdmin || isTenantOwner || isTenantAdmin;

@@ -5993,6 +5993,7 @@ export type Database = {
           slug: string
           sms_credit_balance: number
           sms_limit_monthly: number
+          sms_low_threshold: number
           sms_unit_price_override: number | null
           storage_limit_mb: number
           subscription_status: string
@@ -6019,6 +6020,7 @@ export type Database = {
           slug: string
           sms_credit_balance?: number
           sms_limit_monthly?: number
+          sms_low_threshold?: number
           sms_unit_price_override?: number | null
           storage_limit_mb?: number
           subscription_status?: string
@@ -6045,6 +6047,7 @@ export type Database = {
           slug?: string
           sms_credit_balance?: number
           sms_limit_monthly?: number
+          sms_low_threshold?: number
           sms_unit_price_override?: number | null
           storage_limit_mb?: number
           subscription_status?: string

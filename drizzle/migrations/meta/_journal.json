@@ -176,6 +176,13 @@
       "when": 1795183003090,
       "tag": "0024_fix_message_usage_count",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1795184564309,
+      "tag": "0025_sms_low_threshold",
+      "breakpoints": true
     }
   ]
 }
