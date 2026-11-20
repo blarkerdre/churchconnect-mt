@@ -1,4 +1,6 @@
 import SmsTopUpCard from "@/components/billing/SmsTopUpCard";
+import SubscriptionBankTransfer from "@/components/billing/SubscriptionBankTransfer";
+import ChurchInvoicesCard from "@/components/billing/ChurchInvoicesCard";
 import React, { useState, useEffect, useRef } from "react";
 
 const DEFAULT_SERVICE_TYPES = ["Sunday Service", "Midweek Service", "Special Program", "Thanksgiving Service", "Other"];
@@ -281,6 +283,8 @@ function BillingSection() {
               </div>
             )}
 
+            <SubscriptionBankTransfer tenantId={tenantId} subscription={subscription} canRequest={isTenantOwner || isTAdmin} />
+
             {payments.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -325,6 +329,7 @@ function BillingSection() {
             )}
           </>
         )}
+        <ChurchInvoicesCard tenantId={tenantId} />
       </CardContent>
     </Card>
   );

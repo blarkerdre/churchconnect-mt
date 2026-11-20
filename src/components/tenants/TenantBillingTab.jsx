@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { CreditCard, Plus, Save, Loader2, RefreshCw, Receipt } from "lucide-react";
 import { format } from "date-fns";
 import InvoicesReceiptsList from "./InvoicesReceiptsList";
+import SubscriptionBankTransfer from "@/components/billing/SubscriptionBankTransfer";
 
 export default function TenantBillingTab({ tenant }) {
   const { toast } = useToast();
@@ -358,6 +359,8 @@ export default function TenantBillingTab({ tenant }) {
       </div>
 
       <Separator />
+
+      <SubscriptionBankTransfer tenantId={tenantId} subscription={subscription} isSuperAdmin />
 
       {/* Invoices & Receipts */}
       <InvoicesReceiptsList tenant={tenant} payments={payments} />

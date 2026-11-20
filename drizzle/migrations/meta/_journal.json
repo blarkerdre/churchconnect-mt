@@ -141,6 +141,20 @@
       "when": 1795164078264,
       "tag": "0019_sms_bank_transfer_topups",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1795166976539,
+      "tag": "0020_subscription_bank_transfer_and_auto_invoices",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1795166994654,
+      "tag": "0021_fix_billing_doc_bill_to",
+      "breakpoints": true
     }
   ]
 }

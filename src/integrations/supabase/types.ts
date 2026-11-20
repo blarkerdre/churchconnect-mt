@@ -5508,6 +5508,8 @@ export type Database = {
           pdf_url: string | null
           sent_at: string | null
           sent_to: string | null
+          sms_topup_id: string | null
+          source: string | null
           status: string
           subscription_id: string | null
           subtotal: number
@@ -5533,6 +5535,8 @@ export type Database = {
           pdf_url?: string | null
           sent_at?: string | null
           sent_to?: string | null
+          sms_topup_id?: string | null
+          source?: string | null
           status?: string
           subscription_id?: string | null
           subtotal?: number
@@ -5558,6 +5562,8 @@ export type Database = {
           pdf_url?: string | null
           sent_at?: string | null
           sent_to?: string | null
+          sms_topup_id?: string | null
+          source?: string | null
           status?: string
           subscription_id?: string | null
           subtotal?: number
@@ -5573,6 +5579,13 @@ export type Database = {
             columns: ["payment_id"]
             isOneToOne: false
             referencedRelation: "tenant_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_invoices_sms_topup_id_fkey"
+            columns: ["sms_topup_id"]
+            isOneToOne: false
+            referencedRelation: "sms_topups"
             referencedColumns: ["id"]
           },
           {
@@ -5710,9 +5723,11 @@ export type Database = {
       tenant_payments: {
         Row: {
           amount: number
+          confirmed_by: string | null
           created_at: string
           currency: string
           id: string
+          includes_setup_fee: boolean
           notes: string | null
           payment_date: string
           payment_method: string | null
@@ -5725,9 +5740,11 @@ export type Database = {
         }
         Insert: {
           amount: number
+          confirmed_by?: string | null
           created_at?: string
           currency?: string
           id?: string
+          includes_setup_fee?: boolean
           notes?: string | null
           payment_date?: string
           payment_method?: string | null
@@ -5740,9 +5757,11 @@ export type Database = {
         }
         Update: {
           amount?: number
+          confirmed_by?: string | null
           created_at?: string
           currency?: string
           id?: string
+          includes_setup_fee?: boolean
           notes?: string | null
           payment_date?: string
           payment_method?: string | null
@@ -7885,6 +7904,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _create_billing_doc: {
+        Args: {
+          _currency: string
+          _items: Json
+          _notes: string
+          _payment: string
+          _source: string
+          _status: string
+          _sub: string
+          _tenant: string
+          _topup: string
+          _total: number
+          _type: string
+        }
+        Returns: string
+      }
       accept_tenant_invitation: {
         Args: { _invitation_id: string }
         Returns: undefined
@@ -7939,6 +7974,10 @@ export type Database = {
         Returns: boolean
       }
       cancel_sms_bank_topup: { Args: { _topup_id: string }; Returns: undefined }
+      cancel_subscription_bank_payment: {
+        Args: { _payment_id: string }
+        Returns: boolean
+      }
       cascade_delete_bible_school_records: {
         Args: { _course_id?: string; _member_id: string }
         Returns: Json
@@ -7999,6 +8038,10 @@ export type Database = {
       confirm_sms_bank_topup: {
         Args: { _notes?: string; _topup_id: string }
         Returns: number
+      }
+      confirm_subscription_bank_payment: {
+        Args: { _notes?: string; _payment_id: string }
+        Returns: boolean
       }
       consume_sms_credits: {
         Args: { _n: number; _tenant_id: string }
@@ -8652,6 +8695,32 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "sms_topups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      request_subscription_bank_payment: {
+        Args: { _tenant_id: string }
+        Returns: {
+          amount: number
+          confirmed_by: string | null
+          created_at: string
+          currency: string
+          id: string
+          includes_setup_fee: boolean
+          notes: string | null
+          payment_date: string
+          payment_method: string | null
+          recorded_by: string | null
+          reference: string | null
+          status: string
+          stripe_payment_intent_id: string | null
+          subscription_id: string | null
+          tenant_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tenant_payments"
           isOneToOne: true
           isSetofReturn: false
         }
