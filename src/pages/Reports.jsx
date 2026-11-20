@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import {
   BarChart2, ClipboardList, Users, CalendarDays, HeartHandshake, Heart,
-  Megaphone, Car, TrendingUp, BookOpen, Globe, MessageSquareHeart, ArrowRight, FileText,
+  Megaphone, Car, TrendingUp, BookOpen, Globe, MessageSquareHeart, ArrowRight, FileText, MessageSquare,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import ModuleTour from "@/components/tour/ModuleTour";
@@ -17,6 +17,7 @@ const MODULES = [
   { title: "Follow-ups", description: "Follow-ups, sign-posts and referral history.", icon: HeartHandshake, path: "/followups" },
   { title: "Pastoral Care", description: "Care requests, prayer requests and assignments.", icon: Heart, path: "/pastoral-care" },
   { title: "Events", description: "Event registrations and participation reports.", icon: CalendarDays, path: "/events" },
+  { title: "SMS Usage", description: "Texts used, allowance, top-up balance, cost per text and sent summary.", icon: MessageSquare, path: "/reports/sms" },
   { title: "Communications", description: "Announcements, SMS, email and message history.", icon: Megaphone, path: "/communications" },
   { title: "Transportation", description: "Ride bookings, assignments and trip reports.", icon: Car, path: "/transportation" },
   { title: "Training Reports", description: "BFC, BCC, LCC and LDC training progress.", icon: TrendingUp, path: "/training-reports" },
