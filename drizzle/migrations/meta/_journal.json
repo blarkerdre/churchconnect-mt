@@ -169,6 +169,13 @@
       "when": 1795171102097,
       "tag": "0023_lock_down_church_lookups",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1795183003090,
+      "tag": "0024_fix_message_usage_count",
+      "breakpoints": true
     }
   ]
 }
