@@ -127,6 +127,13 @@
       "when": 1795153964860,
       "tag": "0017_membership_owner_guard_and_clone_tenant_check",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1795162103869,
+      "tag": "0018_upsert_own_member_profile_verified_email_only",
+      "breakpoints": true
     }
   ]
 }
