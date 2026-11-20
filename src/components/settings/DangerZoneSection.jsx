@@ -21,6 +21,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import JSZip from "jszip";
+import { protectFormulaCell, unprotectFormulaCell } from "@/lib/csv-safe";
 
 const CONFIRMATION_PHRASE = "DELETE ALL DATA";
 
@@ -32,7 +33,7 @@ function jsonToCsv(data) {
       .map((h) => {
         const val = row[h];
         if (val === null || val === undefined) return "";
-        const str = typeof val === "object" ? JSON.stringify(val) : String(val);
+        const str = protectFormulaCell(typeof val === "object" ? JSON.stringify(val) : String(val));
         return `"${str.replace(/"/g, '""')}"`;
       })
       .join(",")
@@ -68,7 +69,7 @@ function csvToJson(csvText) {
     values.push(current);
     const obj = {};
     headers.forEach((h, idx) => {
-      let val = values[idx] ?? "";
+      let val = unprotectFormulaCell(values[idx] ?? "");
       if (val === "") {
         obj[h] = null;
       } else if (val === "true") {

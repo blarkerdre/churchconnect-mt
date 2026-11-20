@@ -13,3 +13,18 @@ describe("csvSafeCell", () => {
     expect(csvSafeCell(null)).toBe(`""`);
   });
 });
+
+import { protectFormulaCell, unprotectFormulaCell } from "./csv-safe";
+
+describe("backup formula protection", () => {
+  it("neutralises formula cells", () => {
+    expect(protectFormulaCell("=HYPERLINK(1)")).toBe("'=HYPERLINK(1)");
+    expect(protectFormulaCell("@SUM")).toBe("'@SUM");
+    expect(protectFormulaCell("Jane")).toBe("Jane");
+  });
+  it("round-trips exactly", () => {
+    for (const v of ["=1+1", "-5", "'=x", "''+y", "'plain", "Jane", "", "\tTab"]) {
+      expect(unprotectFormulaCell(protectFormulaCell(v))).toBe(v);
+    }
+  });
+});
