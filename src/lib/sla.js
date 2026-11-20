@@ -29,7 +29,48 @@ export const SLA_TOKENS = [
   "effective_date",
   "plan_name",
   "app_name",
+  "monthly_subscription",
+  "billing_cycle",
+  "setup_fee",
+  "setup_fee_status",
+  "sms_unit_price",
+  "sms_monthly_allowance",
+  "selected_features",
 ];
+
+const NOT_AGREED = "Not agreed";
+
+export function formatMoney(amount, currency) {
+  const n = Number(amount);
+  if (amount === null || amount === undefined || amount === "" || !Number.isFinite(n) || n <= 0) return NOT_AGREED;
+  try {
+    return new Intl.NumberFormat("en-GB", { style: "currency", currency: currency || "GBP", maximumFractionDigits: 4 }).format(n);
+  } catch {
+    return `${currency || ""} ${n.toFixed(2)}`.trim();
+  }
+}
+
+/** Build commercial-term tokens for the SLA from the church's own records. */
+export function buildCommercialTokens({ subscription, tenant, plan, featureModules = [] }) {
+  const currency = tenant?.billing_currency || subscription?.currency || plan?.currency || "GBP";
+  const override = tenant?.sms_unit_price_override;
+  let smsPrice = null;
+  if (override !== null && override !== undefined && Number(override) > 0) smsPrice = override;
+  else if (plan && (!plan.currency || plan.currency === currency) && Number(plan.overage_price_sms) > 0) smsPrice = plan.overage_price_sms;
+  const disabled = tenant?.settings?.disabled_features || [];
+  const features = featureModules.filter((f) => !disabled.includes(`/${f.key}`)).map((f) => f.label);
+  const cycle = subscription?.billing_interval || subscription?.billing_cycle;
+  const allowance = plan?.included_sms ?? tenant?.sms_limit_monthly;
+  return {
+    monthly_subscription: formatMoney(subscription?.amount, subscription?.currency || currency),
+    billing_cycle: cycle ? String(cycle).replace(/^\w/, (c) => c.toUpperCase()) : NOT_AGREED,
+    setup_fee: formatMoney(subscription?.setup_fee_amount, subscription?.currency || currency),
+    setup_fee_status: Number(subscription?.setup_fee_amount) > 0 ? (subscription?.setup_fee_paid ? "Paid" : "Outstanding") : "Not applicable",
+    sms_unit_price: smsPrice === null ? NOT_AGREED : `${formatMoney(smsPrice, currency)} per SMS`,
+    sms_monthly_allowance: allowance !== null && allowance !== undefined ? `${allowance} SMS per month` : NOT_AGREED,
+    selected_features: features.length ? features.join(", ") : NOT_AGREED,
+  };
+}
 
 /** Very small HTML → plain-text with heading/paragraph preservation. */
 function htmlToBlocks(html) {
@@ -201,6 +242,15 @@ export const DEFAULT_SLA_BODY = `<h1>ChurchConnect - Service Level Agreement</h1
 <p>The Service is a comprehensive, multi-tenant church management platform provided as software-as-a-service. It includes the following modules, as enabled for the Customer's {{plan_name}} plan: member directory and lifecycle management, church attendance and self check-in, communications (email, SMS, WhatsApp, voice and in-app announcements), follow-ups and sign-posting, pastoral care and prayer requests, events and registrations, Children Church check-in and pickup, transportation and ride bookings, Bible School (exams and results), Home Cells, unit tasks and rosters, sermon notes, testimonies, reports, and tenant administration.</p>
 <p>The Service is hosted with customer data stored in the United Kingdom region (eu-west-2). Financial accounting is expressly excluded from the scope of the Service.</p>
 
+<h2>3A. Commercial Terms</h2>
+<ul>
+  <li><strong>Monthly subscription</strong> - {{monthly_subscription}} ({{billing_cycle}})</li>
+  <li><strong>One-off setup cost</strong> - {{setup_fee}} ({{setup_fee_status}})</li>
+  <li><strong>SMS cost</strong> - {{sms_unit_price}}; included allowance: {{sms_monthly_allowance}}</li>
+  <li><strong>Selected features</strong> - {{selected_features}}</li>
+</ul>
+<p>SMS sent beyond the included monthly allowance are charged at the SMS cost above or drawn from purchased top-up credit.</p>
+
 <h2>4. Service Availability</h2>
 <h3>4.1 Target</h3>
 <p>The Service Provider targets an <strong>Uptime of 99.5% per calendar month</strong>, equating to no more than approximately 3 hours 40 minutes of unplanned Downtime per month.</p>
@@ -225,16 +275,12 @@ export const DEFAULT_SLA_BODY = `<h1>ChurchConnect - Service Level Agreement</h1
 <p>Support is delivered via in-app feedback, email to the Customer's tenant administrator (who forwards to the Service Provider's development team) and, where enabled, direct email to the Service Provider. The tenant administrator is the primary point of contact for members of the Customer's church.</p>
 <h3>6.2 Severity and Response Targets</h3>
 <p>The Service Provider will use reasonable endeavours to acknowledge and begin work on Incidents within the following response targets during Support Hours. <strong>Response times are targets for acknowledgement and initial engagement; they are not guaranteed resolution times.</strong></p>
-<table>
-  <thead>
-    <tr><th>Severity</th><th>Definition</th><th>Response Target</th></tr>
-  </thead>
-  <tbody>
-    <tr><td><strong>P1 - Critical</strong></td><td>The Service is unavailable or a core module is unusable for the whole tenant with no workaround.</td><td>Within 4 business hours</td></tr>
-    <tr><td><strong>P2 - Major</strong></td><td>A significant feature is materially impaired for many users, or a workaround exists but is costly.</td><td>Within 1 business day</td></tr>
-    <tr><td><strong>P3 - Minor</strong></td><td>Cosmetic issue, question, minor bug, feature request or single-user issue.</td><td>Within 3 business days</td></tr>
-  </tbody>
-</table>
+<ul>
+  <li><strong>Monthly subscription</strong> - {{monthly_subscription}} ({{billing_cycle}})</li>
+  <li><strong>One-off setup cost</strong> - {{setup_fee}} ({{setup_fee_status}})</li>
+  <li><strong>SMS cost</strong> - {{sms_unit_price}}; included allowance: {{sms_monthly_allowance}}</li>
+  <li><strong>Selected features</strong> - {{selected_features}}</li>
+</ul>
 <h3>6.3 Support Hours</h3>
 <p>Support is provided during Support Hours (Monday to Friday, 09:00–17:30 UK time, excluding UK public holidays). Requests received outside Support Hours are treated as received at the start of the next business day.</p>
 

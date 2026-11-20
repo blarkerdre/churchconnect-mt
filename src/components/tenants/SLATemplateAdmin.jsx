@@ -97,6 +97,13 @@ export default function SLATemplateAdmin() {
     effective_date: format(new Date(), "d MMMM yyyy"),
     plan_name: "Standard",
     app_name: "Church Management Suite",
+    monthly_subscription: "£49.00",
+    billing_cycle: "Monthly",
+    setup_fee: "£250.00",
+    setup_fee_status: "Paid",
+    sms_unit_price: "£0.05 per SMS",
+    sms_monthly_allowance: "500 SMS per month",
+    selected_features: "Members, Events, Attendance",
   };
 
   return (

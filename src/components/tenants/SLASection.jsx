@@ -16,7 +16,8 @@ import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
-import { mergeSlaTokens, buildSlaPdf, downloadSlaPdf } from "@/lib/sla";
+import { FEATURE_MODULES } from "@/lib/feature-modules";
+import { buildCommercialTokens, mergeSlaTokens, buildSlaPdf, downloadSlaPdf } from "@/lib/sla";
 
 const APP_NAME = "Church Management Suite";
 
@@ -62,6 +63,23 @@ export default function SLASection() {
     enabled: !!tenantId,
   });
 
+  const { data: commercial } = useQuery({
+    queryKey: ["sla-commercial", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const [{ data: tenant }, { data: subscription }] = await Promise.all([
+        supabase.from("tenants").select("billing_currency, sms_unit_price_override, sms_limit_monthly, settings").eq("id", tenantId).maybeSingle(),
+        supabase.from("tenant_subscriptions").select("*").eq("tenant_id", tenantId).eq("is_active", true).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      ]);
+      let plan = null;
+      if (subscription?.pricing_plan_id) {
+        const { data } = await supabase.from("pricing_plans").select("name, currency, included_sms, overage_price_sms").eq("id", subscription.pricing_plan_id).maybeSingle();
+        plan = data;
+      }
+      return { tenant, subscription, plan };
+    },
+  });
+
   const ownerName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "";
   const tokens = useMemo(
     () => ({
@@ -72,8 +90,9 @@ export default function SLASection() {
       effective_date: format(new Date(), "d MMMM yyyy"),
       plan_name: currentTenant?.plan_tier || "Standard",
       app_name: APP_NAME,
+      ...buildCommercialTokens({ ...(commercial || {}), featureModules: FEATURE_MODULES }),
     }),
-    [currentTenant, user, ownerName]
+    [currentTenant, user, ownerName, commercial]
   );
 
   const mergedBody = useMemo(
