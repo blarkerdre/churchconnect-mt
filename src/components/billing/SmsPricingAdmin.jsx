@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SmsTopUpCard, { useSmsBilling } from "./SmsTopUpCard";
@@ -34,6 +35,14 @@ export default function SmsPricingAdmin({ tenantId }) {
     if (!msg && sub) await supabase.from("tenant_subscriptions").update({ currency: cur }).eq("id", sub.id).eq("tenant_id", tenantId);
     if (msg) { setSaving(null); setErr((e) => ({ ...e, currency: msg })); toast({ title: "Couldn't save", description: msg, variant: "destructive" }); return; }
     await refresh(); setSaving(null); flash("currency"); toast({ title: "Billing currency saved" });
+  };
+  const [bank, setBank] = useState(null);
+  const saveBank = async () => {
+    setSaving("bank");
+    const { error } = await supabase.rpc("set_billing_bank_details", { _text: bank || "" });
+    setSaving(null);
+    if (error) { toast({ title: "Couldn't save", description: error.message, variant: "destructive" }); return; }
+    setBank(null); await refresh(); flash("bank"); toast({ title: "Bank details saved" });
   };
   const savedOverride = data?.tenant?.sms_unit_price_override;
   const savedStr = savedOverride === null || savedOverride === undefined ? "" : String(Number(savedOverride));
@@ -83,7 +92,10 @@ export default function SmsPricingAdmin({ tenantId }) {
         ? <p className="text-xs text-destructive">The plan is priced in {data.plan?.currency || "GBP"}. Set a Cost per SMS in {data.currency} so this church can buy texts.</p>
         : <p className="text-xs text-muted-foreground">Using this church's own price in {data.currency} (the plan's {data.plan?.currency || "GBP"} price is ignored).</p>)}
       <p className="text-xs text-muted-foreground">Leave blank to use the plan's price. Used for top-ups and extra texts after the monthly quota.</p>
-      <SmsTopUpCard tenantId={tenantId} canBuy={false} />
+      <h4 className="text-sm font-medium">Bank details for transfers (all churches)</h4>
+      <Textarea rows={4} value={bank ?? data?.bank ?? ""} onChange={(e) => setBank(e.target.value)} placeholder={"Account name\nSort code\nAccount number / IBAN"} />
+      <Button size="sm" disabled={saving === "bank" || bank === null} onClick={saveBank}>{btnLabel("bank")}</Button>
+      <SmsTopUpCard tenantId={tenantId} canBuy={false} isSuperAdmin />
     </div>
   );
 }

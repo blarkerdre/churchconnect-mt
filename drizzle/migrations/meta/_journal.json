@@ -134,6 +134,13 @@
       "when": 1795162103869,
       "tag": "0018_upsert_own_member_profile_verified_email_only",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795164078264,
+      "tag": "0019_sms_bank_transfer_topups",
+      "breakpoints": true
     }
   ]
 }

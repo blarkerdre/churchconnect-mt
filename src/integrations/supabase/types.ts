@@ -5052,12 +5052,16 @@ export type Database = {
       sms_topups: {
         Row: {
           amount: number
+          confirmed_by: string | null
           created_at: string
           created_by: string | null
           currency: string
           id: string
+          method: string
+          notes: string | null
           paid_at: string | null
           quantity: number
+          reference: string | null
           status: string
           stripe_session_id: string | null
           tenant_id: string
@@ -5065,12 +5069,16 @@ export type Database = {
         }
         Insert: {
           amount: number
+          confirmed_by?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
           id?: string
+          method?: string
+          notes?: string | null
           paid_at?: string | null
           quantity: number
+          reference?: string | null
           status?: string
           stripe_session_id?: string | null
           tenant_id: string
@@ -5078,12 +5086,16 @@ export type Database = {
         }
         Update: {
           amount?: number
+          confirmed_by?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
           id?: string
+          method?: string
+          notes?: string | null
           paid_at?: string | null
           quantity?: number
+          reference?: string | null
           status?: string
           stripe_session_id?: string | null
           tenant_id?: string
@@ -7926,6 +7938,7 @@ export type Database = {
         Args: { _folder: string }
         Returns: boolean
       }
+      cancel_sms_bank_topup: { Args: { _topup_id: string }; Returns: undefined }
       cascade_delete_bible_school_records: {
         Args: { _course_id?: string; _member_id: string }
         Returns: Json
@@ -7983,6 +7996,10 @@ export type Database = {
         }
         Returns: Json
       }
+      confirm_sms_bank_topup: {
+        Args: { _notes?: string; _topup_id: string }
+        Returns: number
+      }
       consume_sms_credits: {
         Args: { _n: number; _tenant_id: string }
         Returns: number
@@ -8031,6 +8048,7 @@ export type Database = {
           name: string
         }[]
       }
+      get_billing_bank_details: { Args: never; Returns: string }
       get_dashboard_stats: { Args: { _tenant_id: string }; Returns: Json }
       get_exam_questions_safe: {
         Args: { _subject_id?: string; _training_type?: string }
@@ -8612,6 +8630,32 @@ export type Database = {
         Args: { _member: string; _unit: string }
         Returns: undefined
       }
+      request_sms_bank_topup: {
+        Args: { _quantity: number; _tenant_id: string }
+        Returns: {
+          amount: number
+          confirmed_by: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          method: string
+          notes: string | null
+          paid_at: string | null
+          quantity: number
+          reference: string | null
+          status: string
+          stripe_session_id: string | null
+          tenant_id: string
+          unit_price: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sms_topups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       reset_checkin_pin: {
         Args: { _checkin_id: string; _pin: string }
         Returns: undefined
@@ -8628,6 +8672,11 @@ export type Database = {
           id: string
           last_name: string
         }[]
+      }
+      set_billing_bank_details: { Args: { _text: string }; Returns: undefined }
+      sms_unit_price_for_tenant: {
+        Args: { _tenant_id: string }
+        Returns: number
       }
       start_trivia_attempt: {
         Args: {

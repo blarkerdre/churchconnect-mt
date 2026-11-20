@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,21 +24,35 @@ export function useSmsBilling(tenantId) {
       const start = new Date(); start.setUTCDate(1); start.setUTCHours(0, 0, 0, 0);
       const { count } = await supabase.from("sms_log").select("*", { count: "exact", head: true })
         .eq("tenant_id", tenantId).eq("channel", "sms").neq("status", "failed").gte("created_at", start.toISOString());
+      const { data: bank } = await supabase.rpc("get_billing_bank_details");
       const { data: topups } = await supabase.from("sms_topups").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(10);
       const override = t?.sms_unit_price_override;
       const currency = t?.billing_currency || "GBP";
       const planMatches = (plan?.currency || "GBP").toUpperCase() === currency;
       const unitPrice = override !== null && override !== undefined ? Number(override) : (planMatches ? Number(plan?.overage_price_sms || 0) : 0);
-      return { tenant: t, plan, used: count || 0, topups: topups || [], unitPrice, currency, planMatches };
+      return { tenant: t, plan, used: count || 0, topups: topups || [], bank: bank || "", unitPrice, currency, planMatches };
     },
   });
 }
 
 const money = (n, c) => new Intl.NumberFormat("en-GB", { style: "currency", currency: c || "GBP" }).format(n);
 
-export default function SmsTopUpCard({ tenantId, canBuy }) {
+const STATUS = { paid: "Paid", pending: "Not completed", awaiting_transfer: "Awaiting bank transfer", cancelled: "Cancelled" };
+
+export default function SmsTopUpCard({ tenantId, canBuy, isSuperAdmin = false }) {
   const { toast } = useToast();
+  const qc = useQueryClient();
   const { data, isLoading } = useSmsBilling(tenantId);
+  const [busy, setBusy] = useState(null);
+  const refresh = () => qc.invalidateQueries({ queryKey: ["sms-billing", tenantId] });
+  const rpc = async (key, name, args, ok) => {
+    setBusy(key);
+    const { error } = await supabase.rpc(name, args);
+    setBusy(null);
+    if (error) { toast({ title: "Couldn't complete", description: error.message, variant: "destructive" }); return; }
+    toast({ title: ok }); refresh();
+  };
+  const requestBank = () => rpc("bank", "request_sms_bank_topup", { _tenant_id: tenantId, _quantity: Number(qty) }, "Bank transfer request created - use the reference shown below");
   const [qty, setQty] = useState(500);
   const [loading, setLoading] = useState(false);
   if (isLoading || !data) return null;
@@ -83,17 +97,34 @@ export default function SmsTopUpCard({ tenantId, canBuy }) {
           </div>
           <Button size="sm" onClick={buy} disabled={loading || Number(qty) < 10}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-            Pay {money(data.unitPrice * Number(qty || 0), data.currency)}
+            Pay by card {money(data.unitPrice * Number(qty || 0), data.currency)}
           </Button>
+          <Button size="sm" variant="outline" onClick={requestBank} disabled={busy === "bank" || Number(qty) < 10} className="ml-2">
+            {busy === "bank" ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+            Pay by bank transfer
+          </Button>
+          <p className="text-xs text-muted-foreground">Bank transfer texts are added once the payment is confirmed as received.</p>
         </div>
       )}
       {data.topups.length > 0 && (
         <div className="space-y-1">
           <p className="text-xs font-medium">Top-up history</p>
           {data.topups.map((t) => (
-            <div key={t.id} className="flex justify-between text-xs">
-              <span>{format(new Date(t.created_at), "d MMM yyyy")} - {t.quantity.toLocaleString()} texts</span>
-              <span>{money(Number(t.amount), t.currency)} - {t.status === "paid" ? "Paid" : t.status === "pending" ? "Not completed" : t.status}</span>
+            <div key={t.id} className="text-xs border-b border-border/50 pb-1 space-y-1">
+              <div className="flex flex-wrap justify-between gap-1">
+                <span>{format(new Date(t.created_at), "d MMM yyyy")} - {t.quantity.toLocaleString()} texts{t.method === "bank_transfer" ? " (bank transfer)" : ""}</span>
+                <span>{money(Number(t.amount), t.currency)} - {STATUS[t.status] || t.status}</span>
+              </div>
+              {t.status === "awaiting_transfer" && (
+                <div className="bg-background rounded p-2 space-y-1">
+                  <p>Pay <strong>{money(Number(t.amount), t.currency)}</strong> using reference <strong className="font-mono">{t.reference}</strong></p>
+                  {data.bank ? <p className="whitespace-pre-line text-muted-foreground">{data.bank}</p> : <p className="text-muted-foreground">Bank details will be sent by your administrator.</p>}
+                  <div className="flex gap-2">
+                    {isSuperAdmin && <Button size="sm" className="h-7" disabled={!!busy} onClick={() => rpc(t.id, "confirm_sms_bank_topup", { _topup_id: t.id }, "Payment confirmed - texts added")}>{busy === t.id ? "Confirming..." : "Mark as received"}</Button>}
+                    {(canBuy || isSuperAdmin) && <Button size="sm" variant="ghost" className="h-7" disabled={!!busy} onClick={() => rpc("c" + t.id, "cancel_sms_bank_topup", { _topup_id: t.id }, "Request cancelled")}>Cancel</Button>}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
