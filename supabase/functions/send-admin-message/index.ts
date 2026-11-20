@@ -12,6 +12,13 @@ const corsHeaders = {
 
 const TEMPLATE_NAME = 'admin-direct-message'
 
+// Strip control characters and HTML tags; keep newlines only where allowed.
+function cleanText(v: string, max: number, keepNewlines = false): string {
+  let s = v.replace(keepNewlines ? /[\u0000-\u0009\u000B-\u001F\u007F]/g : /[\u0000-\u001F\u007F]/g, '')
+  s = s.replace(/<[^>]*>/g, '').trim()
+  return s.length > max ? s.slice(0, max + 1) : s
+}
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -65,8 +72,8 @@ Deno.serve(async (req) => {
   if (!tenantId) {
     return json({ error: 'tenant_id is required' }, 400)
   }
-  const subject = String(templateData.subject || '').trim()
-  const messageBody = String(templateData.body || '').trim()
+  const subject = cleanText(String(templateData.subject || ''), 300).replace(/[\r\n]+/g, ' ')
+  const messageBody = cleanText(String(templateData.body || ''), 20000, true)
   if (!subject || !messageBody) {
     return json({ error: 'subject and body are required' }, 400)
   }
@@ -87,22 +94,49 @@ Deno.serve(async (req) => {
       return json({ error: 'Authorization check failed' }, 500)
     }
     const roles = (roleRows || []).map((r: any) => String(r.role))
-    const allowed = roles.some((r) => ['owner', 'admin', 'pastor', 'super_admin'].includes(r))
+    const allowed = roles.some((r) => ['owner', 'admin'].includes(r))
     if (!allowed) {
       const { data: isSuper } = await admin.rpc('is_super_admin', { _user_id: userId })
       if (!isSuper) return json({ error: 'Forbidden' }, 403)
     }
   }
 
-  // Recipient must be someone already on record for this church.
+  // Recipient must be someone already on record for this church. The
+  // recipient's name comes from that record, not from the request.
+  let recipientName = 'Friend'
   {
     const [m, f, c] = await Promise.all([
-      admin.from('members').select('id').eq('tenant_id', tenantId).ilike('email', recipientEmail).limit(1),
-      admin.from('first_timers').select('id').eq('tenant_id', tenantId).ilike('email', recipientEmail).limit(1),
-      admin.from('contacts').select('id').eq('tenant_id', tenantId).ilike('email', recipientEmail).limit(1),
+      admin.from('members').select('id, first_name').eq('tenant_id', tenantId).ilike('email', recipientEmail).limit(1),
+      admin.from('first_timers').select('id, first_name').eq('tenant_id', tenantId).ilike('email', recipientEmail).limit(1),
+      admin.from('contacts').select('id, first_name').eq('tenant_id', tenantId).ilike('email', recipientEmail).limit(1),
     ])
-    const known = (m.data?.length || 0) + (f.data?.length || 0) + (c.data?.length || 0) > 0
-    if (!known) return json({ error: 'Recipient is not on record for this church' }, 403)
+    const row: any = m.data?.[0] || f.data?.[0] || c.data?.[0]
+    if (!row) return json({ error: 'Recipient is not on record for this church' }, 403)
+    const nm = String(row.first_name || '').trim()
+    if (nm) recipientName = cleanText(nm, 100)
+  }
+
+  // Church and sender names are resolved server-side so the caller only
+  // controls the subject and message text.
+  const { data: tenantRow } = await admin
+    .from('tenants')
+    .select('name, is_archived')
+    .eq('id', tenantId)
+    .maybeSingle()
+  if (!tenantRow || tenantRow.is_archived) return json({ error: 'Church not found' }, 404)
+  const churchName = cleanText(String(tenantRow.name || ''), 150) || 'Our Church'
+
+  let senderName = ''
+  if (userId) {
+    const { data: prof } = await admin
+      .from('profiles')
+      .select('full_name')
+      .eq('user_id', userId)
+      .limit(1)
+      .maybeSingle()
+    senderName = cleanText(String(prof?.full_name || ''), 120)
+  } else {
+    senderName = cleanText(String(templateData.senderName || ''), 120)
   }
 
   try {
@@ -111,7 +145,9 @@ Deno.serve(async (req) => {
       templateName: TEMPLATE_NAME,
       to: recipientEmail,
       templateData: {
-        ...templateData,
+        recipientName,
+        churchName,
+        senderName,
         subject,
         body: messageBody,
       },
@@ -121,6 +157,14 @@ Deno.serve(async (req) => {
     if (!result.sent) {
       return json({ sent: false, reason: result.reason }, 200)
     }
+    // Record who sent what to whom, for accountability.
+    await admin.from('audit_log').insert({
+      action: 'email_sent',
+      entity_type: 'admin_direct_message',
+      user_id: userId,
+      tenant_id: tenantId,
+      details: { module: 'Communications', recipient: recipientEmail, subject },
+    }).then(() => {}, (e: unknown) => console.error('audit insert failed', e))
     return json({ sent: true }, 200)
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)

@@ -80,11 +80,12 @@ function triggerWelcomeEmail(email: string, firstName: string | null, lastName: 
 
 async function createPastoralCareForPrayerRequest(
   supabase: any,
-  memberId: string,
+  memberId: string | null,
   firstName: string,
   lastName: string,
   notes: string,
   tenantId: string | null,
+  unverifiedEmail: string | null = null,
 ) {
   try {
     // Find Pastoral Care unit leaders using round-robin (tenant-scoped)
@@ -119,8 +120,12 @@ async function createPastoralCareForPrayerRequest(
     await supabase.from("pastoral_care").insert({
       member_id: memberId,
       care_type: "Prayer Request",
-      subject: `Prayer Request from ${firstName} ${lastName}`,
-      description: notes,
+      subject: unverifiedEmail
+        ? `Prayer Request from ${firstName} ${lastName} (unverified)`
+        : `Prayer Request from ${firstName} ${lastName}`,
+      description: unverifiedEmail
+        ? `Submitted on the public form using the email ${unverifiedEmail}, which matches an existing record. The sender's identity was not verified, so this request has not been linked to that member.\n\n${notes}`
+        : notes,
       status: "Open",
       assigned_to: assignedTo,
       confidential: false,
@@ -232,9 +237,30 @@ async function queueJoinRequests(
   }
 }
 
-async function ensureTenantAccess(supabase: any, userId: string | null | undefined, tenantId: string | null | undefined) {
-  if (!userId || !tenantId) return;
+// Grants the signed-in caller "member" access to the church ONLY when they are
+// registering themselves (form email matches their confirmed sign-in email)
+// at a real, active church. Callers registering someone else get nothing.
+async function ensureTenantAccess(
+  supabase: any,
+  userId: string | null | undefined,
+  tenantId: string | null | undefined,
+  formEmail: string | null,
+) {
+  if (!userId || !tenantId || !formEmail) return;
   try {
+    const { data: authUser, error: authErr } = await supabase.auth.admin.getUserById(userId);
+    const u = authUser?.user;
+    if (authErr || !u?.email || !u.email_confirmed_at) return;
+    if (u.email.trim().toLowerCase() !== formEmail.trim().toLowerCase()) return;
+
+    const { data: tenantRow } = await supabase
+      .from("tenants")
+      .select("id")
+      .eq("id", tenantId)
+      .eq("is_archived", false)
+      .maybeSingle();
+    if (!tenantRow) return;
+
     await supabase.from("tenant_memberships").upsert(
       { user_id: userId, tenant_id: tenantId, role: "member" },
       { onConflict: "user_id,tenant_id" }
@@ -307,6 +333,22 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "Missing tenant context. This registration link is invalid." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
+    }
+
+    // Confirm the church exists and is active before doing anything with it.
+    {
+      const { data: tenantCheck } = await supabase
+        .from("tenants")
+        .select("id")
+        .eq("id", resolvedTenantId)
+        .eq("is_archived", false)
+        .maybeSingle();
+      if (!tenantCheck) {
+        return new Response(
+          JSON.stringify({ error: "This registration link is invalid." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
     }
 
     const tenantId = resolvedTenantId;
@@ -508,7 +550,7 @@ Deno.serve(async (req) => {
         resultMode = "updated";
 
         // Ensure tenant access rows exist
-        await ensureTenantAccess(supabase, authenticatedUser.userId, tenantId || memberPayload.tenant_id);
+        await ensureTenantAccess(supabase, authenticatedUser.userId, tenantId, email);
 
         if (email) triggerWelcomeEmail(email, firstName, lastName, tenantId);
 
@@ -557,7 +599,7 @@ Deno.serve(async (req) => {
           resultMemberId = emailMatches[0].id;
 
           // Ensure tenant access rows exist
-          await ensureTenantAccess(supabase, authenticatedUser.userId, tenantId || memberPayload.tenant_id);
+          await ensureTenantAccess(supabase, authenticatedUser.userId, tenantId, email);
 
           if (email) triggerWelcomeEmail(email, firstName, lastName, tenantId);
 
@@ -590,7 +632,7 @@ Deno.serve(async (req) => {
 
     // Check for existing member by email (prevents duplicates from double-submit)
     if (email) {
-      let dupeQuery = supabase.from("members").select("id").ilike("email", email);
+      let dupeQuery = supabase.from("members").select("id, user_id").ilike("email", email);
       if (tenantId) dupeQuery = dupeQuery.eq("tenant_id", tenantId);
       const { data: existingByEmail } = await dupeQuery.limit(1).maybeSingle();
 
@@ -602,9 +644,20 @@ Deno.serve(async (req) => {
         resultMode = "updated";
         if (email) triggerWelcomeEmail(email, firstName, lastName, tenantId);
 
-        // Prayer request → pastoral care
+        // Prayer request → pastoral care. Only link it to the existing member
+        // when the signed-in caller owns that record; otherwise keep the
+        // request for the pastoral team but do not attach it to anyone.
         if (notes && notes.trim()) {
-          createPastoralCareForPrayerRequest(supabase, existingByEmail.id, firstName, lastName, notes, tenantId);
+          const ownsRecord = !!verifiedUserId && existingByEmail.user_id === verifiedUserId;
+          createPastoralCareForPrayerRequest(
+            supabase,
+            ownsRecord ? existingByEmail.id : null,
+            firstName,
+            lastName,
+            notes,
+            tenantId,
+            ownsRecord ? null : email,
+          );
         }
 
         await queueJoinRequests(supabase, existingByEmail.id, tenantId, requestedChurchUnit, requestedWsfCentreId, verifiedUserId);
@@ -627,8 +680,10 @@ Deno.serve(async (req) => {
     if (memberError) throw memberError;
     resultMemberId = insertedMember?.id || null;
 
-    // Ensure tenant access rows exist for authenticated users
-    await ensureTenantAccess(supabase, authenticatedUser?.userId, tenantId || memberPayload.tenant_id);
+    // Ensure tenant access rows exist only for verified self-registration
+    if (verifiedUserId) {
+      await ensureTenantAccess(supabase, verifiedUserId, tenantId, email);
+    }
 
     // Fire-and-forget welcome email
     if (email) {

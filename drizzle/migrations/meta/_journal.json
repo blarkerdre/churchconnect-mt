@@ -113,6 +113,13 @@
       "when": 1795132188048,
       "tag": "0015_security_hardening_batch_nov19",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1795134973510,
+      "tag": "0016_child_pickup_verified_release_only",
+      "breakpoints": true
     }
   ]
 }

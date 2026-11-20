@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, CheckCircle2, Clock, XCircle, MinusCircle, Users, X, Lock, Download } from "lucide-react";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
+import { csvSafeCell } from "@/lib/csv-safe";
 
 const STATUS_CONFIG = {
   Present: { color: "bg-chart-3/10 text-chart-3 border-chart-3/20", icon: CheckCircle2, iconColor: "text-chart-3" },
@@ -15,7 +16,7 @@ const STATUS_CONFIG = {
 };
 
 function downloadReport(session, eligibleMembers, records) {
-  const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const esc = csvSafeCell;
   const getRecord = (memberId) => records.find(r => r.member_id === memberId);
   const rows = [
     ["Name", "Status"].join(","),
