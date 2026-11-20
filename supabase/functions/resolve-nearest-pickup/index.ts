@@ -90,6 +90,16 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Only church admins may save map coordinates on pickup
+    // locations; everyone else gets the lookup computed without any write.
+    const { data: isAdminFlag } = await supabase.rpc("is_admin", {
+      _user_id: ures.user.id, _tenant_id: tenant_id,
+    });
+    const { data: isSuperFlag } = await supabase.rpc("has_role", {
+      _user_id: ures.user.id, _role: "super_admin",
+    });
+    const canPersistCoords = isAdminFlag === true || isSuperFlag === true;
+
 
     const passenger = await geocode(postcode);
     if (!passenger) {
@@ -121,7 +131,7 @@ Deno.serve(async (req) => {
         if (g) {
           lat = g.lat;
           lng = g.lng;
-          await supabase
+          if (canPersistCoords) await supabase
             .from("pickup_locations")
             .update({ latitude: lat, longitude: lng })
             .eq("id", loc.id)

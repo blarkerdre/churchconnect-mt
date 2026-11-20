@@ -97,6 +97,28 @@ Deno.serve(async (req) => {
 
     for (const msg of messages) {
       try {
+        // Always send to the person on the linked follow-up, never to a
+        // phone number or email typed into the scheduled message row.
+        const { data: fu } = await supabase
+          .from("followups")
+          .select("member_id, tenant_id")
+          .eq("id", msg.followup_id)
+          .maybeSingle();
+        if (!fu?.member_id || !msg.tenant_id || fu.tenant_id !== msg.tenant_id) {
+          throw new Error("Follow-up recipient could not be verified");
+        }
+        const { data: person } = await supabase
+          .from("members")
+          .select("first_name, last_name, phone, email")
+          .eq("id", fu.member_id)
+          .eq("tenant_id", msg.tenant_id)
+          .maybeSingle();
+        if (!person) throw new Error("Follow-up recipient could not be verified");
+        msg.member_id = fu.member_id;
+        msg.recipient_phone = person.phone || null;
+        msg.recipient_email = person.email || null;
+        msg.recipient_name = [person.first_name, person.last_name].filter(Boolean).join(" ") || msg.recipient_name;
+
         // Resolve church name for placeholder replacement
         let churchName = "our church";
         if (msg.tenant_id) {

@@ -402,9 +402,11 @@ Deno.serve(async (req) => {
         .slice(0, 6);
       // Use the max existing sequence + 1 instead of count(*), which is racy
       // and collides after deletions or partial inserts.
+      // Only this church's own certificates are read to find the next number.
       const { data: latest } = await supabase
         .from("training_completions")
         .select("certificate_number")
+        .eq("tenant_id", tenant_id)
         .ilike("certificate_number", `CERT-${prefix}-${year}-%`)
         .order("certificate_number", { ascending: false })
         .limit(1);
@@ -413,6 +415,18 @@ Deno.serve(async (req) => {
       if (lastNum) {
         const m = lastNum.match(/-(\d+)$/);
         if (m) nextSeq = parseInt(m[1], 10) + 1;
+      }
+      // Certificate numbers are unique platform-wide, so skip any number that
+      // is already taken. Only a yes/no "taken" answer is used; no other
+      // church's data is read or returned.
+      for (let attempt = 0; attempt < 50; attempt++) {
+        const candidate = `CERT-${prefix}-${year}-${String(nextSeq).padStart(4, "0")}`;
+        const { count } = await supabase
+          .from("training_completions")
+          .select("id", { count: "exact", head: true })
+          .eq("certificate_number", candidate);
+        if (!count) break;
+        nextSeq++;
       }
       certificateNumber = `CERT-${prefix}-${year}-${String(nextSeq).padStart(4, "0")}`;
     }
@@ -434,10 +448,22 @@ Deno.serve(async (req) => {
     });
     const memberName = `${member.first_name} ${member.last_name}`;
 
+    // Helper: resolve a template image path to a location inside this
+    // church's own storage folder. Paths that point at another church's
+    // folder, or try to climb out of the folder, are refused.
+    const tenantStoragePath = (raw: string): string | null => {
+      const p = String(raw || "").trim().replace(/^\/+/, "");
+      if (!p || p.includes("..") || p.includes("\\") || /^[a-z]+:\/\//i.test(p)) return null;
+      if (p.startsWith(`${tenant_id}/`)) return p;
+      const first = p.split("/")[0];
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(first)) return null;
+      return `${tenant_id}/${p}`;
+    };
+
     // Helper: fetch a storage path and inline it as a base64 data URI
     const inlineStorageImage = async (path: string): Promise<string> => {
-      const candidates = [path, path.startsWith(`${tenant_id}/`) ? null : `${tenant_id}/${path}`]
-        .filter(Boolean) as string[];
+      const safePath = tenantStoragePath(path);
+      const candidates = safePath ? [safePath] : [];
       for (const p of candidates) {
         const { data: s } = await supabase.storage.from("church-documents").createSignedUrl(p, 3600);
         if (!s?.signedUrl) continue;
@@ -515,10 +541,9 @@ Deno.serve(async (req) => {
     // Fetch background image data URI if configured (used by both Bible School and generic layouts)
     let bgDataUri = "";
     if (backgroundImageUrl) {
-      const candidatePaths = [
-        backgroundImageUrl,
-        backgroundImageUrl.startsWith(`${tenant_id}/`) ? null : `${tenant_id}/${backgroundImageUrl}`,
-      ].filter(Boolean) as string[];
+      // Only ever read images from this church's own storage folder.
+      const safeBg = tenantStoragePath(backgroundImageUrl);
+      const candidatePaths = safeBg ? [safeBg] : [];
       for (const candidate of candidatePaths) {
         const { data: bgSignedData } = await supabase.storage
           .from("church-documents")

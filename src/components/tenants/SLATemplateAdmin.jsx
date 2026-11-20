@@ -15,6 +15,7 @@ import { DEFAULT_SLA_BODY, SLA_TOKENS, mergeSlaTokens } from "@/lib/sla";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import DOMPurify from "dompurify";
 
 export default function SLATemplateAdmin() {
   const { user, roles } = useAuth();
@@ -223,7 +224,7 @@ export default function SLATemplateAdmin() {
           <ScrollArea className="max-h-[65vh] pr-4">
             <div
               className="prose prose-sm dark:prose-invert max-w-none"
-              dangerouslySetInnerHTML={{ __html: mergeSlaTokens(body, previewTokens) }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(mergeSlaTokens(body, previewTokens)) }}
             />
           </ScrollArea>
         </DialogContent>

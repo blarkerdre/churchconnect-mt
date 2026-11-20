@@ -7,6 +7,8 @@ const corsHeaders = {
 };
 
 const TWILIO_GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
+// Twilio message SIDs: "SM" (SMS) or "MM" (MMS) followed by 32 hex characters.
+const TWILIO_SID_RE = /^(SM|MM)[0-9a-f]{32}$/;
 
 function mapTwilioToStatus(twilioStatus: string): { delivery_status: string; status?: string } {
   const s = (twilioStatus || "").toLowerCase();
@@ -91,7 +93,15 @@ Deno.serve(async (req) => {
       .limit(200);
 
     if (Array.isArray(message_sids) && message_sids.length > 0) {
-      q = q.in("message_sid", message_sids);
+      const cleanSids = message_sids
+        .filter((s): s is string => typeof s === "string" && TWILIO_SID_RE.test(s))
+        .slice(0, 200);
+      if (cleanSids.length === 0) {
+        return new Response(JSON.stringify({ scanned: 0, updated: 0, unchanged: 0, failed: 0 }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      q = q.in("message_sid", cleanSids);
     } else {
       // Stuck candidates only
       q = q.or(
@@ -107,8 +117,14 @@ Deno.serve(async (req) => {
     let failed = 0;
 
     for (const row of rows || []) {
+      // Only look up genuine Twilio message IDs; anything else is skipped
+      // so the server's Twilio credentials are never pointed at other paths.
+      if (typeof row.message_sid !== "string" || !TWILIO_SID_RE.test(row.message_sid)) {
+        failed++;
+        continue;
+      }
       try {
-        const resp = await fetch(`${TWILIO_GATEWAY_URL}/Messages/${row.message_sid}.json`, {
+        const resp = await fetch(`${TWILIO_GATEWAY_URL}/Messages/${encodeURIComponent(row.message_sid)}.json`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${LOVABLE_API_KEY}`,

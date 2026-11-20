@@ -62,9 +62,19 @@ Deno.serve(async (req) => {
       // Authorize against the task's own tenant, never a caller-supplied one.
       const { data: isSuper } = await supabase.rpc("has_role", { _user_id: callerId, _role: "super_admin" });
       const { data: isAdminFlag } = await supabase.rpc("is_admin", { _user_id: callerId, _tenant_id: task.tenant_id });
-      const { data: isLeader } = await supabase.rpc("has_role", { _user_id: callerId, _role: "unit_leader" });
+      // Unit-leader role must be held in the task's own church, not elsewhere.
+      const { data: isLeader } = await supabase.rpc("has_role", {
+        _user_id: callerId, _role: "unit_leader", _tenant_id: task.tenant_id,
+      });
       const { data: inTenant } = await supabase.rpc("user_belongs_to_tenant", { _user_id: callerId, _tenant_id: task.tenant_id });
-      if (!isSuper && !isAdminFlag && !(isLeader && inTenant)) {
+      let canManageTask = false;
+      if (isLeader && inTenant) {
+        const { data: canManage } = await supabase.rpc("can_manage_unit_task", {
+          _user_id: callerId, _task_id: task.id, _tenant_id: task.tenant_id,
+        });
+        canManageTask = canManage === true;
+      }
+      if (!isSuper && !isAdminFlag && !canManageTask) {
         return new Response(JSON.stringify({ error: "Forbidden" }), {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
