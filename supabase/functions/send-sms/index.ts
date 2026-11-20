@@ -123,15 +123,30 @@ Deno.serve(async (req) => {
           if (isFollowupMember) {
             const { data: followupRow } = await serviceClient
               .from("followups")
-              .select("id, tenant_id, assigned_to, created_by")
+              .select("id, tenant_id, assigned_to, created_by, member_id")
               .eq("id", reference_id)
               .eq("tenant_id", tenant_id)
               .maybeSingle();
             if (
               followupRow &&
+              followupRow.member_id &&
               (followupRow.assigned_to === userId || followupRow.created_by === userId)
             ) {
-              allowedAsFollowupMember = true;
+              // The single recipient must be the person this follow-up is about.
+              const { data: personRow } = await serviceClient
+                .from("members")
+                .select("phone, emergency_contact_phone")
+                .eq("id", followupRow.member_id)
+                .eq("tenant_id", tenant_id)
+                .maybeSingle();
+              const digits = (p: unknown) => String(p || "").replace(/\D/g, "").slice(-9);
+              const target = digits(recipients[0]?.phone);
+              const personPhones = [personRow?.phone, personRow?.emergency_contact_phone]
+                .map(digits)
+                .filter((d) => d.length >= 7);
+              if (target.length >= 7 && personPhones.includes(target)) {
+                allowedAsFollowupMember = true;
+              }
             }
           }
         }

@@ -120,6 +120,13 @@
       "when": 1795134973510,
       "tag": "0016_child_pickup_verified_release_only",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1795153964860,
+      "tag": "0017_membership_owner_guard_and_clone_tenant_check",
+      "breakpoints": true
     }
   ]
 }
