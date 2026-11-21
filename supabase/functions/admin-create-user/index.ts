@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
     if (role && userId) {
       await supabase.from("user_roles").upsert(
         { user_id: userId, role, ...(tenant_id ? { tenant_id } : {}) },
-        { onConflict: "user_id,role" },
+        { onConflict: "user_id,role,tenant_id", ignoreDuplicates: true },
       );
     }
 
