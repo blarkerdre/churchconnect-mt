@@ -536,6 +536,7 @@ export type Database = {
           sms_template: string
           tenant_id: string
           updated_at: string
+          updated_by: string | null
           whatsapp_template: string
         }
         Insert: {
@@ -549,6 +550,7 @@ export type Database = {
           sms_template?: string
           tenant_id: string
           updated_at?: string
+          updated_by?: string | null
           whatsapp_template?: string
         }
         Update: {
@@ -562,6 +564,7 @@ export type Database = {
           sms_template?: string
           tenant_id?: string
           updated_at?: string
+          updated_by?: string | null
           whatsapp_template?: string
         }
         Relationships: [

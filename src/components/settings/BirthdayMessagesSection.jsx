@@ -206,6 +206,7 @@ export default function BirthdayMessagesSection() {
             <Label className="text-sm font-medium">Email subject</Label>
             <Input
               value={current.email_subject}
+              maxLength={150}
               onChange={(e) => setField("email_subject", e.target.value)}
             />
           </div>
@@ -214,6 +215,7 @@ export default function BirthdayMessagesSection() {
             <Textarea
               rows={6}
               value={current.email_body}
+              maxLength={2000}
               onChange={(e) => setField("email_body", e.target.value)}
             />
           </div>
@@ -222,6 +224,7 @@ export default function BirthdayMessagesSection() {
             <Textarea
               rows={3}
               value={current.sms_template}
+              maxLength={480}
               onChange={(e) => setField("sms_template", e.target.value)}
             />
             <p className="text-[11px] text-muted-foreground">
@@ -233,6 +236,7 @@ export default function BirthdayMessagesSection() {
             <Textarea
               rows={3}
               value={current.whatsapp_template}
+              maxLength={1000}
               onChange={(e) => setField("whatsapp_template", e.target.value)}
             />
           </div>
@@ -241,11 +245,15 @@ export default function BirthdayMessagesSection() {
             <Textarea
               rows={2}
               value={current.in_app_template}
+              maxLength={300}
               onChange={(e) => setField("in_app_template", e.target.value)}
             />
           </div>
           <p className="text-[11px] text-muted-foreground">
             Available placeholders: {PLACEHOLDERS.join("  ")}
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            Each message must mention the birthday and be plain text. If it doesn't, or it asks for codes, payments or uses shortened links, the standard greeting is sent instead. "Send test" only sends to you.
           </p>
         </div>
 

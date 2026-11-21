@@ -61,6 +61,8 @@ export function memberInUnits(churchUnit: unknown, units: string[]): boolean {
 const LINK_RE = /\b(?:https?:\/\/|www\.)\S+|\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|net|org|co|uk|io|me|info|biz|xyz|link|ly|app|site|online|top|click|ng|ca|us)\b(?:\/\S*)?/gi;
 const SHORTENERS = /\b(?:bit\.ly|tinyurl\.com|t\.co|goo\.gl|ow\.ly|is\.gd|buff\.ly|rebrand\.ly|cutt\.ly|shorturl\.at|rb\.gy|tiny\.cc|t\.ly|s\.id)\b/i;
 const IP_LINK = /\b(?:https?:\/\/)?\d{1,3}(?:\.\d{1,3}){3}(?::\d+)?\b/;
+// Classic scam asks: untraceable payment methods and "verify your account" lures.
+const SCAM_BAIT = /\b(?:gift ?cards?|itunes cards?|steam cards?|google play cards?|amazon cards?|bitcoin|usdt|crypto ?currenc(?:y|ies)|crypto wallet|western union|moneygram)\b|\b(?:verify|confirm|unlock|reactivate)\s+(?:your|ur)\s+(?:account|identity|login|log-in|bank)\b|\b(?:your|ur)\s+account\s+(?:has been|is|was)\s+(?:suspended|locked|blocked|compromised|deactivated)\b/i;
 const CREDENTIAL_BAIT = /\b(?:send|reply(?: with)?|share|text|give|tell|confirm|enter|provide|forward)\b[^.!?\n]{0,30}\b(?:your|ur)\s+(?:password|passcode|pin|verification code|security code|one[- ]time code|otp|login code|bank details|account number|card number|card details|sort code|cvv)\b/i;
 
 /**
@@ -81,6 +83,9 @@ export function messageContentProblem(message: string, senderIsAdmin: boolean, k
   const Kind = kind.charAt(0).toUpperCase() + kind.slice(1);
   if (CREDENTIAL_BAIT.test(message)) {
     return `${Kind} can't ask people for passwords, codes, PINs or bank/card details.`;
+  }
+  if (SCAM_BAIT.test(message)) {
+    return `${Kind} can't ask for gift cards, crypto or money-transfer services, or ask people to "verify" or unlock an account.`;
   }
   if (SHORTENERS.test(message) || IP_LINK.test(message)) {
     return `Shortened links and links to number-only addresses aren't allowed in ${kind}. Use the full web address.`;
@@ -190,4 +195,75 @@ export async function callsByCallerLastDay(serviceClient: any, callerId: string,
     return Number.MAX_SAFE_INTEGER; // fail closed
   }
   return count || 0;
+}
+
+/** Hex SHA-256 of a message, used to spot the same message being sent again. */
+export async function messageHash(text: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/**
+ * Phone numbers (as stored in sms_log) that already received exactly this
+ * message from this church in the last 24 hours. Used to stop the same text
+ * being blasted at people over and over.
+ */
+// deno-lint-ignore no-explicit-any
+export async function phonesAlreadySentMessage(serviceClient: any, tenantId: string, message: string, phones: string[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  const unique = Array.from(new Set(phones.filter(Boolean)));
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  for (let i = 0; i < unique.length; i += 150) {
+    const chunk = unique.slice(i, i + 150);
+    const { data, error } = await serviceClient
+      .from("sms_log")
+      .select("recipient_phone, message")
+      .eq("tenant_id", tenantId)
+      .in("recipient_phone", chunk)
+      .neq("status", "failed")
+      .gte("created_at", since)
+      .limit(5000);
+    if (error) {
+      console.error("[sender-guard] repeat check failed", error.message);
+      continue;
+    }
+    for (const r of data || []) {
+      if (r.message === message) out.add(r.recipient_phone);
+    }
+  }
+  return out;
+}
+
+/** How many people a non-admin may email in 24 hours. */
+export const NON_ADMIN_DAILY_EMAIL_LIMIT = 300;
+
+/**
+ * Church emails this person sent in the last 24 hours: total recipients and
+ * whether this exact message (by hash) was already sent.
+ */
+// deno-lint-ignore no-explicit-any
+export async function emailSendsLastDay(serviceClient: any, senderId: string, tenantId: string, hash: string): Promise<{ recipients: number; repeat: boolean }> {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await serviceClient
+    .from("audit_log")
+    .select("details")
+    .eq("tenant_id", tenantId)
+    .eq("user_id", senderId)
+    .eq("action", "email_sent")
+    .gte("created_at", since)
+    .limit(1000);
+  if (error) {
+    console.error("[sender-guard] email count failed", error.message);
+    return { recipients: Number.MAX_SAFE_INTEGER, repeat: false }; // fail closed
+  }
+  let recipients = 0;
+  let repeat = false;
+  // deno-lint-ignore no-explicit-any
+  for (const r of (data || []) as any[]) {
+    const d = r.details || {};
+    if (d.source !== "send-email-alert") continue;
+    recipients += Number(d.success_count ?? d.recipients_count ?? 0) || 0;
+    if (d.message_hash === hash) repeat = true;
+  }
+  return { recipients, repeat };
 }

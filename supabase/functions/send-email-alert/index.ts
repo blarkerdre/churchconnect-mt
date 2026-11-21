@@ -1,7 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { writeAudit } from '../_shared/audit.ts';
 import { sendRawManagedEmail } from '../_shared/managed-email.ts';
-import { callerMfaSatisfied, cleanMessageText, messageContentProblem, tenantSuspended, SUSPENDED_MESSAGE } from '../_shared/sender-guard.ts';
+import { callerMfaSatisfied, cleanMessageText, messageContentProblem, tenantSuspended, SUSPENDED_MESSAGE, messageHash, emailSendsLastDay, NON_ADMIN_DAILY_EMAIL_LIMIT } from '../_shared/sender-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -155,6 +155,16 @@ Deno.serve(async (req) => {
     })
   }
 
+  // The same person can't send the exact same email twice in 24 hours.
+  const messageHashValue = await messageHash(`${subject}\n${body}`)
+  const recentSends = await emailSendsLastDay(serviceClient, user.id, tenant_id, messageHashValue)
+  if (recentSends.repeat) {
+    return new Response(JSON.stringify({ error: 'You already sent this email in the last 24 hours.' }), {
+      status: 429,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
   // Unit leaders (non-admins) may only email members of the units they lead.
   let leaderUnits: string[] | null = null
   if (!isAdmin) {
@@ -256,6 +266,16 @@ Deno.serve(async (req) => {
     })
   }
 
+  // Non-admins (unit leaders) have a personal 24-hour email limit.
+  if (!isAdmin && recentSends.recipients + members.length > NON_ADMIN_DAILY_EMAIL_LIMIT) {
+    return new Response(JSON.stringify({
+      error: `You can email up to ${NON_ADMIN_DAILY_EMAIL_LIMIT} people a day. Ask a church admin to send larger emails.`,
+    }), {
+      status: 429,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
   // Check suppressed emails
   const { data: suppressed } = await serviceClient
     .from('suppressed_emails')
@@ -341,6 +361,8 @@ Deno.serve(async (req) => {
       success_count: enqueued,
       skipped_count: skipped,
       subject,
+      message_excerpt: body.slice(0, 1000),
+      message_hash: messageHashValue,
       source: 'send-email-alert',
       sender_name: senderName,
     },

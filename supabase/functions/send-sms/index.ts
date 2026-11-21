@@ -1,5 +1,5 @@
 import { senderNameFrom } from "../_shared/sms-sender.ts";
-import { callerMfaSatisfied, cleanMessageText, phoneKey, loadLeaderUnits, memberInUnits, smsContentProblem, tenantSuspended, SUSPENDED_MESSAGE, NON_ADMIN_DAILY_SMS_LIMIT, smsSentBySenderLastDay } from "../_shared/sender-guard.ts";
+import { callerMfaSatisfied, cleanMessageText, phoneKey, loadLeaderUnits, memberInUnits, smsContentProblem, tenantSuspended, SUSPENDED_MESSAGE, NON_ADMIN_DAILY_SMS_LIMIT, smsSentBySenderLastDay, phonesAlreadySentMessage } from "../_shared/sender-guard.ts";
 import { loadTenantPhoneSet, isTenantPhone } from "../_shared/tenant-phones.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkSmsQuota, QuotaExceededError } from "../_shared/sms-quota.ts";
@@ -372,8 +372,27 @@ Deno.serve(async (req) => {
 
     const allowedPhones = await loadTenantPhoneSet(serviceClient, tenant_id);
 
+    // People-written texts: never send the exact same message to the same
+    // person twice within 24 hours (stops repeat blasts at members).
+    let alreadySent = new Set<string>();
+    let skippedRepeat = 0;
+    if (!isInternalServiceCall) {
+      const candidatePhones = recipients
+        .map((r: any) => normalizeE164(String(r?.phone || "").trim()))
+        .filter((p: string | null): p is string => !!p);
+      alreadySent = await phonesAlreadySentMessage(serviceClient, tenant_id, message, candidatePhones);
+    }
+    const seenThisBatch = new Set<string>();
+
     for (const recipient of recipients) {
       let normalized = normalizeE164(recipient.phone?.trim() || "");
+      if (normalized && !isInternalServiceCall) {
+        if (alreadySent.has(normalized) || seenThisBatch.has(normalized)) {
+          skippedRepeat++;
+          continue;
+        }
+        seenThisBatch.add(normalized);
+      }
       // Only message numbers already recorded for this church.
       if (normalized && !isTenantPhone(allowedPhones, normalized)) normalized = null;
       if (normalized && restrictedPhoneKeys && !restrictedPhoneKeys.has(phoneKey(normalized))) normalized = null;
@@ -580,11 +599,14 @@ Deno.serve(async (req) => {
         recipients_count: recipients.length,
         success_count: sent,
         failed_count: failed,
+        skipped_repeat_count: skippedRepeat,
+        message_excerpt: message.slice(0, 500),
         source: "send-sms",
       },
     });
 
     const responseBody: Record<string, unknown> = { sent, failed, total: recipients.length };
+    if (skippedRepeat > 0) responseBody.skipped_repeat = skippedRepeat;
     if (quota > 0) {
       responseBody.remaining = Math.max(quota - currentUsage - sent, 0);
       responseBody.limit = quota;

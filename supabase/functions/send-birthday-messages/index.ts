@@ -4,6 +4,41 @@ import { isAuthorizedScheduler } from "../_shared/scheduler-auth.ts";
 // (body: { tenant_id?, member_id?, channels? }).
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendLoggedTemplateEmail } from "../_shared/managed-email.ts";
+import { authorIsChurchAdmin, cleanMessageText, messageContentProblem } from "../_shared/sender-guard.ts";
+import { writeAudit } from "../_shared/audit.ts";
+
+// Built-in greetings used whenever a church's own wording is missing or
+// doesn't pass the checks below.
+const DEFAULTS = {
+  email_subject: "Happy Birthday, {first_name}! 🎂",
+  email_body: "Dear {first_name},\n\nHappy Birthday! 🎂 The {church_name} family is celebrating you today. We pray that this new year of your life brings joy, peace, and abundant blessings.\n\nYou are loved and appreciated.\n\nWith love,\nThe {church_name} Family",
+  sms_template: "Happy Birthday, {first_name}! 🎂 The {church_name} family is praying for a year filled with God's blessings. You are loved!",
+  whatsapp_template: "Happy Birthday, {first_name}! 🎂 The {church_name} family is celebrating you today. May this year be filled with joy, peace, and God's abundant blessings. You are loved! 🙏",
+  in_app_template: "🎂 Happy Birthday, {first_name}! The {church_name} family is celebrating you today.",
+} as const;
+type TemplateKey = keyof typeof DEFAULTS;
+const MAX_LEN: Record<TemplateKey, number> = {
+  email_subject: 150, email_body: 2000, sms_template: 480, whatsapp_template: 1000, in_app_template: 300,
+};
+const BIRTHDAY_WORDS = /birthday|b'?day|🎂|🎉|🥳/i;
+
+/**
+ * Birthday wording is written by church admins but sent automatically to
+ * members. Keep it to a plain-text birthday greeting: within the length
+ * limit, mentioning the birthday, and passing the same content rules as
+ * other church messages. Otherwise use the built-in greeting.
+ */
+function safeTemplate(key: TemplateKey, value: unknown, authorIsAdmin: boolean): string {
+  const cleaned = cleanMessageText(value, key !== "email_subject");
+  if (!cleaned || cleaned.length > MAX_LEN[key]) return DEFAULTS[key];
+  if (!BIRTHDAY_WORDS.test(cleaned)) return DEFAULTS[key];
+  const kind = key.startsWith("email") ? "emails" : "texts";
+  if (messageContentProblem(cleaned, authorIsAdmin, kind)) return DEFAULTS[key];
+  return cleaned;
+}
+
+/** Test sends an admin may trigger per hour. */
+const MANUAL_TESTS_PER_HOUR = 5;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -105,13 +140,15 @@ Deno.serve(async (req) => {
     } catch (_e) { /* not a valid JWT */ }
   }
 
+  // Set when a signed-in church admin (not the scheduler) triggered this run.
+  let callerUserId: string | null = null;
   if (!authorized && bearer) {
     try {
       const userClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: `Bearer ${bearer}` } } });
       const { data: userData } = await userClient.auth.getUser();
       if (userData?.user && body.tenant_id) {
         const { data: isAdmin } = await svc.rpc("is_admin", { _user_id: userData.user.id, _tenant_id: body.tenant_id });
-        if (isAdmin) authorized = true;
+        if (isAdmin) { authorized = true; callerUserId = userData.user.id; }
       }
     } catch (_e) { /* ignored */ }
   }
@@ -132,6 +169,29 @@ Deno.serve(async (req) => {
     });
   }
 
+
+  // Signed-in admins can only send a test greeting to themselves, a few times
+  // an hour. Real greetings go out only from the daily schedule.
+  if (callerUserId) {
+    if (!body.member_id || typeof body.member_id !== "string") {
+      return new Response(JSON.stringify({ error: "Choose your own member record to send a test." }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count } = await svc
+      .from("audit_log")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", callerUserId)
+      .eq("tenant_id", body.tenant_id)
+      .eq("action", "birthday_test_sent")
+      .gte("created_at", since);
+    if ((count ?? 0) >= MANUAL_TESTS_PER_HOUR) {
+      return new Response(JSON.stringify({ error: `You can send up to ${MANUAL_TESTS_PER_HOUR} test greetings an hour.` }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  }
 
   const isManual = Boolean(body.member_id);
   // Compute "today" in Europe/London so send_hour_local and birthday matching
@@ -189,6 +249,16 @@ Deno.serve(async (req) => {
 
     const churchName = (t as any).tenants?.name || "Your Church";
 
+    // Use the church's own wording only when it passes the greeting checks.
+    const authorAdmin = await authorIsChurchAdmin(svc, (t as any).updated_by ?? null, t.tenant_id);
+    const tpl = {
+      email_subject: safeTemplate("email_subject", t.email_subject, authorAdmin),
+      email_body: safeTemplate("email_body", t.email_body, authorAdmin),
+      sms_template: safeTemplate("sms_template", t.sms_template, authorAdmin),
+      whatsapp_template: safeTemplate("whatsapp_template", t.whatsapp_template, authorAdmin),
+      in_app_template: safeTemplate("in_app_template", t.in_app_template, authorAdmin),
+    };
+
     // Query members with birthday today
     let mQ = svc
       .from("members")
@@ -196,6 +266,8 @@ Deno.serve(async (req) => {
       .eq("tenant_id", t.tenant_id)
       .not("date_of_birth", "is", null);
     if (body.member_id) mQ = mQ.eq("id", body.member_id);
+    // A signed-in admin's test only ever goes to their own member record.
+    if (callerUserId) mQ = mQ.eq("user_id", callerUserId);
 
     const { data: members, error: mErr } = await mQ;
     if (mErr) {
@@ -272,7 +344,7 @@ Deno.serve(async (req) => {
             if (!member.user_id) {
               errMsg = "Member has no linked user account";
             } else {
-              const msg = applyVars(t.in_app_template, ctx);
+              const msg = applyVars(tpl.in_app_template, ctx);
               const { error } = await svc.from("notifications").insert({
                 user_id: member.user_id,
                 tenant_id: t.tenant_id,
@@ -301,8 +373,8 @@ Deno.serve(async (req) => {
                     firstName: member.first_name,
                     lastName: member.last_name,
                     churchName,
-                    subject: t.email_subject,
-                    body: t.email_body,
+                    subject: tpl.email_subject,
+                    body: tpl.email_body,
                   },
                 });
                 if (result.sent) ok = true;
@@ -315,7 +387,7 @@ Deno.serve(async (req) => {
             if (!member.phone) {
               errMsg = "Member has no phone number";
             } else {
-              const tmpl = channel === "sms" ? t.sms_template : t.whatsapp_template;
+              const tmpl = channel === "sms" ? tpl.sms_template : tpl.whatsapp_template;
               const text = applyVars(tmpl, ctx);
               const r = await postWithRetry(
                 `${supabaseUrl}/functions/v1/send-sms`,
@@ -380,6 +452,17 @@ Deno.serve(async (req) => {
         }
       }
     }
+  }
+
+  if (callerUserId) {
+    await writeAudit(svc, {
+      tenant_id: body.tenant_id ?? null,
+      user_id: callerUserId,
+      action: "birthday_test_sent",
+      entity_type: "birthday_message_settings",
+      entity_id: body.tenant_id ?? null,
+      details: { processed, sent, failed, channels: body.channels ?? null, source: "send-birthday-messages" },
+    });
   }
 
   return new Response(

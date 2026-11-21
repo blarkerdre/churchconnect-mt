@@ -288,6 +288,13 @@
       "when": 1795298856725,
       "tag": "0040_child_archive_main_parent_only",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1795300111761,
+      "tag": "0041_birthday_settings_guard",
+      "breakpoints": true
     }
   ]
 }
