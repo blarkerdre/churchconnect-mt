@@ -14,6 +14,7 @@ import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
 import { Plus, Pencil, Trash2, Search, Upload, Users, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import { parseContactsCsv as parseCsv } from "@/lib/contact-csv";
 
 const contactSchema = z.object({
   first_name: z.string().trim().max(80).optional().or(z.literal("")),
@@ -30,35 +31,6 @@ const contactSchema = z.object({
 function parseTags(s) {
   if (!s) return [];
   return s.split(",").map(t => t.trim()).filter(Boolean);
-}
-
-function parseCsv(text) {
-  const lines = text.split(/\r?\n/).filter(l => l.trim());
-  if (lines.length === 0) return [];
-  const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
-  const idx = (n) => headers.indexOf(n);
-  const i = {
-    first: idx("first_name") >= 0 ? idx("first_name") : idx("first"),
-    last: idx("last_name") >= 0 ? idx("last_name") : idx("last"),
-    email: idx("email"),
-    phone: idx("phone"),
-    tags: idx("tags"),
-    notes: idx("notes"),
-  };
-  const rows = [];
-  for (let li = 1; li < lines.length; li++) {
-    const cols = lines[li].split(",").map(c => c.trim());
-    rows.push({
-      first_name: i.first >= 0 ? cols[i.first] || null : null,
-      last_name: i.last >= 0 ? cols[i.last] || null : null,
-      email: i.email >= 0 ? (cols[i.email] || null) : null,
-      phone: i.phone >= 0 ? (cols[i.phone] || null) : null,
-      tags: i.tags >= 0 ? parseTags(cols[i.tags]) : [],
-      notes: i.notes >= 0 ? cols[i.notes] || null : null,
-      source: "csv",
-    });
-  }
-  return rows.filter(r => r.email || r.phone);
 }
 
 export function phoneKey(p) {
@@ -268,7 +240,7 @@ export default function ContactsManager() {
       ) : filtered.length === 0 ? (
         <Card className="border-0 shadow-sm p-10 text-center text-muted-foreground">
           <Users className="h-10 w-10 mx-auto mb-3 opacity-20" />
-          <p className="text-sm">No contacts yet. Add one or import a CSV (columns: first_name,last_name,email,phone,tags,notes).</p>
+          <p className="text-sm">No contacts yet. Add one or import a CSV (columns like First Name, Last Name, Email, Phone or Mobile, Tags).</p>
         </Card>
       ) : (
         <div className="space-y-2">
