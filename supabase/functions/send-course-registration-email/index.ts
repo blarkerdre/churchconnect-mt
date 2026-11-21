@@ -55,6 +55,7 @@ Deno.serve(async (req) => {
     );
 
     // If registration_id supplied, load canonical data from DB (preferred admin flow)
+    let registrationEmail: string | null = null;
     let registrationRow: { id: string; tenant_id: string; student_number: string | null } | null = null;
     if (registration_id && typeof registration_id === "string") {
       const { data: reg, error: regErr } = await supabase
@@ -70,7 +71,8 @@ Deno.serve(async (req) => {
       }
       const memberRow = Array.isArray((reg as any).members) ? (reg as any).members[0] : (reg as any).members;
       const courseRow = Array.isArray((reg as any).exam_titles) ? (reg as any).exam_titles[0] : (reg as any).exam_titles;
-      email = memberRow?.email ?? email;
+      registrationEmail = typeof memberRow?.email === "string" && memberRow.email.trim() ? memberRow.email : null;
+      email = registrationEmail ?? email;
       first_name = memberRow?.first_name ?? first_name;
       course_name = courseRow?.name ?? course_name;
       tenant_id = reg.tenant_id;
@@ -90,6 +92,13 @@ Deno.serve(async (req) => {
     // Authorization: allow service-role server-to-server calls, OR an authenticated
     // tenant admin. Admin-only for this flow (no self-send).
     const isServiceRole = authHeader === `Bearer ${serviceRoleKey}`;
+    if (!isServiceRole && registrationRow && !registrationEmail) {
+      // Signed-in callers may only email the address saved on the member record.
+      return new Response(JSON.stringify({ error: "This person has no email address saved. Add one to their member record first." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     if (!isServiceRole && !registrationRow) {
       // Admin callers must reference a registration so the recipient comes from the database.
       return new Response(JSON.stringify({ error: "registration_id is required" }), {

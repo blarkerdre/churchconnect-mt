@@ -32,6 +32,11 @@ function validateEmail(email: string | null): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 255;
 }
 
+// Escape LIKE/ILIKE wildcards so an email is matched literally, never as a pattern.
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
 function validatePhone(phone: string | null): boolean {
   if (!phone) return true;
   return /^[\d\s\+\-\(\)]{5,20}$/.test(phone);
@@ -567,12 +572,14 @@ Deno.serve(async (req) => {
         });
       }
 
-      const candidateEmails = [...new Set([email, authenticatedUser.email].filter(Boolean))];
+      // Only the caller's own sign-in email (which equals the form email here) may be
+      // used to claim an unlinked record, and it is matched literally (no wildcards).
+      const candidateEmails = [authenticatedUser.email.trim().toLowerCase()];
       for (const candidateEmail of candidateEmails) {
         let emailQuery = supabase
           .from("members")
-          .select("id, user_id")
-          .ilike("email", candidateEmail);
+          .select("id, user_id, email")
+          .ilike("email", escapeLike(candidateEmail));
         if (tenantId) emailQuery = emailQuery.eq("tenant_id", tenantId);
 
         const { data: emailMatches, error: emailMatchError } = await emailQuery
@@ -581,12 +588,21 @@ Deno.serve(async (req) => {
 
         if (emailMatchError) throw emailMatchError;
 
-        if (emailMatches.length === 1 && (!emailMatches[0].user_id || emailMatches[0].user_id === authenticatedUser.userId)) {
-          // Verify the auth user actually exists before writing user_id (prevents FK violation)
+        if (
+          emailMatches.length === 1 &&
+          (emailMatches[0].email ?? "").trim().toLowerCase() === candidateEmail &&
+          (!emailMatches[0].user_id || emailMatches[0].user_id === authenticatedUser.userId)
+        ) {
+          // Verify the auth user exists AND has confirmed this exact email before
+          // letting them take over an existing record.
           const { data: verifiedUser, error: verifyErr } = await supabase.auth.admin.getUserById(authenticatedUser.userId);
-          if (verifyErr || !verifiedUser?.user) {
-            console.error("Auth user verification failed during claim:", verifyErr?.message);
-            // Skip claim - just insert as new member without user_id
+          const vu = verifiedUser?.user;
+          if (
+            verifyErr || !vu || !vu.email || !vu.email_confirmed_at ||
+            vu.email.trim().toLowerCase() !== candidateEmail
+          ) {
+            console.warn("public-register: claim skipped - sign-in email not confirmed or mismatched");
+            // Skip claim - fall through to normal insert/duplicate handling
             break;
           }
 
@@ -632,7 +648,7 @@ Deno.serve(async (req) => {
 
     // Check for existing member by email (prevents duplicates from double-submit)
     if (email) {
-      let dupeQuery = supabase.from("members").select("id, user_id").ilike("email", email);
+      let dupeQuery = supabase.from("members").select("id, user_id").ilike("email", escapeLike(email));
       if (tenantId) dupeQuery = dupeQuery.eq("tenant_id", tenantId);
       const { data: existingByEmail } = await dupeQuery.limit(1).maybeSingle();
 
