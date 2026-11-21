@@ -67,6 +67,23 @@ export async function subscribeToPush(userId, tenantId) {
   }
 }
 
+export async function unsubscribeFromPush(userId) {
+  try {
+    if ("serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.ready.catch(() => null);
+      const sub = reg ? await reg.pushManager.getSubscription() : null;
+      if (sub) await sub.unsubscribe().catch(() => {});
+    }
+    if (userId) {
+      await supabase.from("push_subscriptions").delete().eq("user_id", userId);
+    }
+    return true;
+  } catch (e) {
+    console.warn("Push unsubscribe failed:", e);
+    return false;
+  }
+}
+
 export default function usePushSubscription() {
   const { user } = useAuth();
   const { tenantId } = useTenantQuery();

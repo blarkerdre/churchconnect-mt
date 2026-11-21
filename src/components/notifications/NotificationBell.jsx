@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow, format } from "date-fns";
 import { toast } from "sonner";
 import { requestNotificationPermission, registerServiceWorker, triggerNotificationAlert, testNotificationSound } from "@/lib/notification-alert";
-import { subscribeToPush } from "@/hooks/usePushSubscription";
+import { subscribeToPush, unsubscribeFromPush } from "@/hooks/usePushSubscription";
 
 const typeIcons = {
   pastoral_care: Heart,
@@ -87,6 +87,11 @@ export default function NotificationBell() {
   const [permission, setPermission] = useState(
     typeof Notification !== "undefined" ? Notification.permission : "default"
   );
+  // Remember when the user turns alerts off so we don't auto-resubscribe.
+  const [alertsOff, setAlertsOff] = useState(
+    () => typeof localStorage !== "undefined" && localStorage.getItem("push-alerts-off") === "1"
+  );
+  const alertsOn = permission === "granted" && !alertsOff;
 
   useEffect(() => {
     registerServiceWorker();
@@ -94,9 +99,9 @@ export default function NotificationBell() {
 
   // Auto-subscribe to push when permission is granted
   useEffect(() => {
-    if (!user?.id || permission !== "granted") return;
+    if (!user?.id || !alertsOn) return;
     subscribeToPush(user.id, tenantId);
-  }, [user?.id, tenantId, permission]);
+  }, [user?.id, tenantId, alertsOn]);
 
   const handleEnableAlerts = async () => {
     // Play the chime immediately inside the user gesture - this both unlocks
@@ -106,10 +111,27 @@ export default function NotificationBell() {
     const result = await requestNotificationPermission();
     setPermission(result);
     if (result === "granted") {
+      localStorage.removeItem("push-alerts-off");
+      setAlertsOff(false);
       toast.success("Alerts enabled");
       if (user?.id) subscribeToPush(user.id, tenantId);
     } else if (result === "denied") {
       toast.error("Notifications blocked. Enable them in your browser settings.");
+    } else {
+      toast.error(
+        "Your browser didn't ask for permission here. Open the published app (not the preview) and try again, or allow notifications in your browser settings."
+      );
+    }
+  };
+
+  const handleDisableAlerts = async () => {
+    const ok = await unsubscribeFromPush(user?.id);
+    if (ok) {
+      localStorage.setItem("push-alerts-off", "1");
+      setAlertsOff(true);
+      toast.success("Alerts turned off for this device");
+    } else {
+      toast.error("Could not turn off alerts. Try your browser settings.");
     }
   };
 
@@ -244,10 +266,22 @@ export default function NotificationBell() {
               )}
             </div>
           </div>
-          {permission !== "granted" && (
+          {alertsOn ? (
+            <div className="px-4 py-2 border-b border-border bg-primary/5 flex items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground leading-tight flex items-center gap-1.5">
+                <Bell className="h-3.5 w-3.5 text-primary shrink-0" />
+                Alerts are on. You'll hear a chime and get phone notifications.
+              </p>
+              <Button size="sm" variant="outline" className="h-7 text-xs shrink-0" onClick={handleDisableAlerts}>
+                Disable
+              </Button>
+            </div>
+          ) : (
             <div className="px-4 py-2 border-b border-border bg-primary/5 flex items-center justify-between gap-2">
               <p className="text-xs text-muted-foreground leading-tight">
-                Tap Enable and you should hear a chime. If you don't, check your device isn't on silent.
+                {permission === "granted"
+                  ? "Alerts are off for this device. Tap Enable to turn them back on."
+                  : "Tap Enable and you should hear a chime. If you don't, check your device isn't on silent."}
               </p>
               <Button size="sm" className="h-7 text-xs shrink-0" onClick={handleEnableAlerts}>
                 Enable
