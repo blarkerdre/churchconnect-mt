@@ -629,6 +629,7 @@ export type Database = {
       }
       call_log: {
         Row: {
+          billable_minutes: number | null
           call_type: string | null
           caller_id: string | null
           created_at: string
@@ -648,6 +649,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billable_minutes?: number | null
           call_type?: string | null
           caller_id?: string | null
           created_at?: string
@@ -667,6 +669,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billable_minutes?: number | null
           call_type?: string | null
           caller_id?: string | null
           created_at?: string
@@ -4468,6 +4471,7 @@ export type Database = {
           feature_flags: Json
           id: string
           included_ai_calls: number
+          included_call_minutes: number
           included_email: number
           included_members: number
           included_sms: number
@@ -4477,6 +4481,7 @@ export type Database = {
           is_public: boolean
           name: string
           overage_price_ai_call: number
+          overage_price_call_minute: number
           overage_price_email: number
           overage_price_member: number
           overage_price_sms: number
@@ -4505,6 +4510,7 @@ export type Database = {
           feature_flags?: Json
           id?: string
           included_ai_calls?: number
+          included_call_minutes?: number
           included_email?: number
           included_members?: number
           included_sms?: number
@@ -4514,6 +4520,7 @@ export type Database = {
           is_public?: boolean
           name: string
           overage_price_ai_call?: number
+          overage_price_call_minute?: number
           overage_price_email?: number
           overage_price_member?: number
           overage_price_sms?: number
@@ -4542,6 +4549,7 @@ export type Database = {
           feature_flags?: Json
           id?: string
           included_ai_calls?: number
+          included_call_minutes?: number
           included_email?: number
           included_members?: number
           included_sms?: number
@@ -4551,6 +4559,7 @@ export type Database = {
           is_public?: boolean
           name?: string
           overage_price_ai_call?: number
+          overage_price_call_minute?: number
           overage_price_email?: number
           overage_price_member?: number
           overage_price_sms?: number
@@ -5981,6 +5990,9 @@ export type Database = {
           archived_at: string | null
           archived_by: string | null
           billing_currency: string
+          call_minute_price_override: number | null
+          call_minutes_balance: number
+          call_minutes_limit_monthly: number
           certificate_code: string | null
           created_at: string
           created_by: string | null
@@ -6010,6 +6022,9 @@ export type Database = {
           archived_at?: string | null
           archived_by?: string | null
           billing_currency?: string
+          call_minute_price_override?: number | null
+          call_minutes_balance?: number
+          call_minutes_limit_monthly?: number
           certificate_code?: string | null
           created_at?: string
           created_by?: string | null
@@ -6039,6 +6054,9 @@ export type Database = {
           archived_at?: string | null
           archived_by?: string | null
           billing_currency?: string
+          call_minute_price_override?: number | null
+          call_minutes_balance?: number
+          call_minutes_limit_monthly?: number
           certificate_code?: string | null
           created_at?: string
           created_by?: string | null
@@ -7972,6 +7990,8 @@ export type Database = {
           }
       auto_manage_exam_sessions: { Args: never; Returns: undefined }
       auto_manage_wofbi_sessions: { Args: never; Returns: undefined }
+      call_cycle_start: { Args: { _tenant_id: string }; Returns: string }
+      call_minutes_used: { Args: { _tenant_id: string }; Returns: number }
       can_admin_member_photo_folder: {
         Args: { _folder: string }
         Returns: boolean

@@ -43,10 +43,10 @@ import ModuleTour from "@/components/tour/ModuleTour";
 
 
 const PLAN_TIERS = [
-  { value: "free", label: "Free", memberLimit: 100, storageLimit: 500, smsLimit: 50, whatsappLimit: 50 },
-  { value: "starter", label: "Starter", memberLimit: 500, storageLimit: 2000, smsLimit: 500, whatsappLimit: 500 },
-  { value: "growth", label: "Growth", memberLimit: 2000, storageLimit: 5000, smsLimit: 2000, whatsappLimit: 2000 },
-  { value: "enterprise", label: "Enterprise", memberLimit: 10000, storageLimit: 20000, smsLimit: 0, whatsappLimit: 0 },
+  { value: "free", callMinutes: 30, label: "Free", memberLimit: 100, storageLimit: 500, smsLimit: 50, whatsappLimit: 50 },
+  { value: "starter", callMinutes: 120, label: "Starter", memberLimit: 500, storageLimit: 2000, smsLimit: 500, whatsappLimit: 500 },
+  { value: "growth", callMinutes: 600, label: "Growth", memberLimit: 2000, storageLimit: 5000, smsLimit: 2000, whatsappLimit: 2000 },
+  { value: "enterprise", callMinutes: 2500, label: "Enterprise", memberLimit: 10000, storageLimit: 20000, smsLimit: 0, whatsappLimit: 0 },
 ];
 
 const DATA_TABLES_FOR_COUNTS = [
@@ -306,6 +306,7 @@ export default function TenantAdmin() {
       storage_limit_mb: tenant.storage_limit_mb || 500,
       sms_limit_monthly: tenant.sms_limit_monthly || 0,
       whatsapp_limit_monthly: tenant.whatsapp_limit_monthly || 0,
+      call_minutes_limit_monthly: tenant.call_minutes_limit_monthly || 0,
       certificate_code: tenant.certificate_code || "",
       disabled_features: settings.disabled_features || [],
       primary_color: settings.primary_color || "",
@@ -315,7 +316,7 @@ export default function TenantAdmin() {
 
   const handleSaveEdit = () => {
     if (!editTenant) return;
-    const { name, slug, timezone, logo_url, setup_complete, plan_tier, member_limit, storage_limit_mb, sms_limit_monthly, whatsapp_limit_monthly, certificate_code, disabled_features, primary_color, welcome_message } = editForm;
+    const { name, slug, timezone, logo_url, setup_complete, plan_tier, member_limit, storage_limit_mb, sms_limit_monthly, whatsapp_limit_monthly, call_minutes_limit_monthly, certificate_code, disabled_features, primary_color, welcome_message } = editForm;
     const settings = {
       ...(editTenant.settings || {}),
       disabled_features,
@@ -334,6 +335,7 @@ export default function TenantAdmin() {
       storage_limit_mb: parseInt(storage_limit_mb) || 500,
       sms_limit_monthly: parseInt(sms_limit_monthly) || 0,
       whatsapp_limit_monthly: parseInt(whatsapp_limit_monthly) || 0,
+      call_minutes_limit_monthly: parseInt(call_minutes_limit_monthly) || 0,
       certificate_code: (certificate_code || "").trim().toUpperCase() || null,
       settings,
     });
@@ -359,6 +361,7 @@ export default function TenantAdmin() {
       storage_limit_mb: plan?.storageLimit || editForm.storage_limit_mb,
       sms_limit_monthly: plan?.smsLimit ?? editForm.sms_limit_monthly,
       whatsapp_limit_monthly: plan?.whatsappLimit ?? editForm.whatsapp_limit_monthly,
+      call_minutes_limit_monthly: plan?.callMinutes ?? editForm.call_minutes_limit_monthly,
     });
   };
 
@@ -1166,6 +1169,17 @@ export default function TenantAdmin() {
               </div>
 
               <div className="space-y-2">
+                <Label>Monthly Call Minutes <span className="text-muted-foreground font-normal">(0 = unlimited)</span></Label>
+                <Input
+                  type="number"
+                  value={editForm.call_minutes_limit_monthly || ""}
+                  onChange={(e) => setEditForm({ ...editForm, call_minutes_limit_monthly: e.target.value })}
+                  min={0}
+                  placeholder="0"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label>Monthly WhatsApp Limit <span className="text-muted-foreground font-normal">(0 = unlimited)</span></Label>
                 <Input
                   type="number"
@@ -1179,7 +1193,7 @@ export default function TenantAdmin() {
               <div className="p-3 bg-muted/50 rounded-lg text-xs text-muted-foreground space-y-1">
                 <p className="font-medium">Plan tier presets:</p>
                 {PLAN_TIERS.map(p => (
-                  <p key={p.value}>• <strong>{p.label}</strong>: {p.memberLimit} members, {p.storageLimit}MB, {p.smsLimit || "∞"} SMS, {p.whatsappLimit || "∞"} WhatsApp</p>
+                  <p key={p.value}>• <strong>{p.label}</strong>: {p.memberLimit} members, {p.storageLimit}MB, {p.smsLimit || "∞"} SMS, {p.whatsappLimit || "∞"} WhatsApp, {p.callMinutes || "∞"} call mins</p>
                 ))}
               </div>
             </TabsContent>

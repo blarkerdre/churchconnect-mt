@@ -24,6 +24,7 @@ const METRICS = [
   { key: "whatsapp", label: "WhatsApp", unit: "per message" },
   { key: "email", label: "Email", unit: "per message" },
   { key: "ai_call", label: "AI call", unit: "per call" },
+  { key: "call_minute", label: "Phone call", unit: "per minute" },
 ];
 
 const emptyPlan = {
@@ -46,12 +47,14 @@ const emptyPlan = {
   included_whatsapp: 0,
   included_email: 0,
   included_ai_calls: 0,
+  included_call_minutes: 0,
   overage_price_member: 0,
   overage_price_storage_gb: 0,
   overage_price_sms: 0,
   overage_price_whatsapp: 0,
   overage_price_email: 0,
   overage_price_ai_call: 0,
+  overage_price_call_minute: 0,
   allow_overage_member: false,
   allow_overage_storage: false,
   allow_overage_sms: true,
@@ -217,6 +220,7 @@ function PlanEditorDialog({ plan, onClose, onSave, saving }) {
               <div><Label>WhatsApp</Label><Input type="number" value={form.included_whatsapp} onChange={(e) => num("included_whatsapp", e.target.value)} /></div>
               <div><Label>Email</Label><Input type="number" value={form.included_email} onChange={(e) => num("included_email", e.target.value)} /></div>
               <div><Label>AI calls</Label><Input type="number" value={form.included_ai_calls} onChange={(e) => num("included_ai_calls", e.target.value)} /></div>
+              <div><Label>Call minutes</Label><Input type="number" value={form.included_call_minutes} onChange={(e) => num("included_call_minutes", e.target.value)} /></div>
             </div>
           </div>
 
@@ -230,6 +234,7 @@ function PlanEditorDialog({ plan, onClose, onSave, saving }) {
               <div><Label>Per extra WhatsApp</Label><Input type="number" step="0.0001" value={form.overage_price_whatsapp} onChange={(e) => num("overage_price_whatsapp", e.target.value)} /></div>
               <div><Label>Per extra Email</Label><Input type="number" step="0.0001" value={form.overage_price_email} onChange={(e) => num("overage_price_email", e.target.value)} /></div>
               <div><Label>Per extra AI call</Label><Input type="number" step="0.0001" value={form.overage_price_ai_call} onChange={(e) => num("overage_price_ai_call", e.target.value)} /></div>
+              <div><Label>Per extra call minute</Label><Input type="number" step="0.0001" value={form.overage_price_call_minute} onChange={(e) => num("overage_price_call_minute", e.target.value)} /></div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mt-3">
               <div className="flex items-center gap-2"><Switch checked={form.allow_overage_member} onCheckedChange={(v) => set("allow_overage_member", v)} /><Label>Allow extra members</Label></div>
@@ -302,7 +307,8 @@ function CostsSubTab() {
       cost("sms", plan.included_sms) +
       cost("whatsapp", plan.included_whatsapp) +
       cost("email", plan.included_email) +
-      cost("ai_call", plan.included_ai_calls);
+      cost("ai_call", plan.included_ai_calls) +
+      cost("call_minute", plan.included_call_minutes || 0);
     const margin = Number(latestByMetric["base_infra"]?.target_margin_pct || 50);
     const suggested = monthlyCost * (1 + margin / 100);
     return { monthlyCost, suggested, margin };

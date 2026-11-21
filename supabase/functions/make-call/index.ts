@@ -121,6 +121,20 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Call-minute allowance: 0 = unlimited; otherwise need unused minutes or prepaid balance.
+    const { data: tq } = await serviceClient.from("tenants")
+      .select("call_minutes_limit_monthly, call_minutes_balance").eq("id", tenant_id).maybeSingle();
+    const minLimit = Number(tq?.call_minutes_limit_monthly || 0);
+    if (minLimit > 0) {
+      const { data: usedMin } = await serviceClient.rpc("call_minutes_used", { _tenant_id: tenant_id });
+      if (Number(usedMin || 0) >= minLimit && Number(tq?.call_minutes_balance || 0) <= 0) {
+        return new Response(JSON.stringify({ error: `This church has used all ${minLimit} call minutes for this billing cycle. Ask the platform team to add more minutes.` }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Normalize phone
     let phone = (recipient_phone || "").replace(/[\s\-\(\)\.]/g, "");
     if (/^0[1-9]\d{9,10}$/.test(phone)) phone = "+44" + phone.slice(1);
