@@ -130,9 +130,18 @@ export async function requestNotificationPermission() {
   }
 }
 
+function isPreviewHost() {
+  try { if (window.self !== window.top) return true; } catch { return true; }
+  const h = window.location.hostname.toLowerCase();
+  return h.includes('id-preview--') || h.includes('lovableproject.com') || h === 'localhost' || h === '127.0.0.1';
+}
+
 export async function registerServiceWorker() {
   try {
     if (!('serviceWorker' in navigator)) return;
+    if (!isPreviewHost()) {
+      await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    }
     const reg = await navigator.serviceWorker.ready;
     swRegistration = reg;
   } catch {

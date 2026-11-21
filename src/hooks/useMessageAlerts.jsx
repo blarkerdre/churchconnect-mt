@@ -64,11 +64,8 @@ export default function useMessageAlerts() {
           const row = payload.new || {};
           if (row.recipient_id !== user.id) return;
           if (row.sender_id === user.id) return;
-          const sender = await getDisplayName(row.sender_id, tenantId);
-          triggerNotificationAlert(
-            `New message from ${sender}`,
-            preview(row.subject ? `${row.subject} - ${row.content}` : row.content)
-          );
+          // The chime/banner comes from the matching bell notification
+          // (created by the database), so only refresh the inbox here.
           queryClient.invalidateQueries({ queryKey: ["messages"] });
         }
       )

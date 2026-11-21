@@ -14,6 +14,7 @@ const VAPID_SUBJECT = "mailto:admin@churchmanagementsuite.org";
 const referenceRoutes: Record<string, string> = {
   event: "/events",
   announcement: "/communications",
+  message: "/communications",
   followup: "/followups",
   pastoral_care: "/pastoral-care",
   transport: "/transportation",
@@ -89,7 +90,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    const route = referenceRoutes[notif.reference_type || notif.type] || "/";
+    const path = referenceRoutes[notif.reference_type || notif.type] || "/";
+    let route = path;
+    if (notif.tenant_id) {
+      const { data: t } = await supabase.from("tenants").select("slug").eq("id", notif.tenant_id).maybeSingle();
+      if (t?.slug) route = `/t/${t.slug}${path === "/" ? "" : path}`;
+    }
     const payload = JSON.stringify({
       title: notif.title || "New Notification",
       message: notif.message || "",
