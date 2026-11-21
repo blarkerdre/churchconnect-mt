@@ -462,6 +462,24 @@ export default function Layout({ children }) {
               <Button variant="ghost" size="icon" className="lg:hidden shrink-0" onClick={() => setSidebarOpen(true)}>
                 <Menu className="h-5 w-5" />
               </Button>
+              {barePath !== "/" && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0 h-8 w-8"
+                  aria-label="Go back"
+                  title="Back"
+                  onClick={() => {
+                    if ((window.history.state?.idx ?? 0) > 0) navigate(-1);
+                    else {
+                      const parent = barePath.split("/").filter(Boolean).slice(0, -1).join("/");
+                      navigate(`${tenantPrefix}/${parent}`);
+                    }
+                  }}
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+              )}
               <div className="min-w-0">
                 <h2 className="text-lg font-display font-bold text-foreground leading-tight truncate">
                   {currentNav.name}

@@ -198,6 +198,12 @@ export default function Members() {
 
 
   const filtered = filterMembers(unitFilteredMembers, { search, filters });
+  const PAGE_SIZE = 50;
+  const [page, setPage] = useState(0);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  React.useEffect(() => { setPage(0); }, [search, filters]);
+  const safePage = Math.min(page, totalPages - 1);
+  const pageRows = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
   const memberSummary = getMemberSummary(filtered);
 
   // Super admins can see every church a linked member belongs to
@@ -446,7 +452,7 @@ export default function Members() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((m) => (
+                {pageRows.map((m) => (
                   <tr key={m.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                     <td className="p-3 sm:p-4">
                       <div className="flex items-center gap-2 sm:gap-3">
@@ -531,6 +537,16 @@ export default function Members() {
               </tbody>
             </table>
           </div>
+          {filtered.length > PAGE_SIZE && (
+            <div className="flex items-center justify-between gap-2 p-3 border-t border-border text-sm">
+              <span className="text-muted-foreground">{safePage * PAGE_SIZE + 1}-{Math.min((safePage + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}</span>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" disabled={safePage === 0} onClick={() => setPage(safePage - 1)}>Previous</Button>
+                <span>{safePage + 1} / {totalPages}</span>
+                <Button size="sm" variant="outline" disabled={safePage >= totalPages - 1} onClick={() => setPage(safePage + 1)}>Next</Button>
+              </div>
+            </div>
+          )}
         </Card>
       )}
 
