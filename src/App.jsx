@@ -51,6 +51,7 @@ const Trust = lazyRetry(() => import("@/pages/Trust"));
 const UnitTasks = lazyRetry(() => import("@/pages/UnitTasks"));
 const Reports = lazyRetry(() => import("@/pages/Reports"));
 const SmsUsageReport = lazyRetry(() => import("@/pages/SmsUsageReport"));
+const CallUsageReport = lazyRetry(() => import("@/pages/CallUsageReport"));
 const CertificatesReport = lazyRetry(() => import("@/pages/CertificatesReport"));
 const CertificateApprovals = lazyRetry(() => import("@/pages/CertificateApprovals"));
 const ChildrenChurch = lazyRetry(() => import("@/pages/ChildrenChurch"));
@@ -225,6 +226,7 @@ function AppPages() {
         <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
         <Route path="/reports" element={<ReportsRoute><Reports /></ReportsRoute>} />
         <Route path="/reports/sms" element={<ReportsRoute><SmsUsageReport /></ReportsRoute>} />
+        <Route path="/reports/calls" element={<ReportsRoute><CallUsageReport /></ReportsRoute>} />
         <Route path="/certificates-report" element={<CertificateApprovalsRoute><CertificatesReport /></CertificateApprovalsRoute>} />
         <Route path="/certificate-approvals" element={<CertificateApprovalsRoute><CertificateApprovals /></CertificateApprovalsRoute>} />
         <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
