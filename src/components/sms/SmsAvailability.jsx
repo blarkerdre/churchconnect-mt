@@ -1,16 +1,15 @@
 import { useParams, Link } from "react-router-dom";
 import { useSmsBilling } from "@/components/billing/SmsTopUpCard";
 import { smsSendCoverage } from "@/lib/sms-coverage";
-import { smsSegments } from "@/lib/sms-segments";
 
-export function useSmsSendCheck(tenantId, text, recipients) {
+// `text` is accepted for call-site compatibility; the allowance counts one text per recipient.
+export function useSmsSendCheck(tenantId, _text, recipients) {
   const { data } = useSmsBilling(tenantId);
   if (!data) return { ready: false, blocked: false };
-  const segments = Math.max(1, smsSegments(text || "").segments || 1);
   const cov = smsSendCoverage({
     limit: Number(data.tenant?.sms_limit_monthly || 0), used: data.used,
     credits: Number(data.tenant?.sms_credit_balance || 0), allowOverage: Boolean(data.plan?.allow_overage_sms),
-    recipients, segments,
+    recipients,
   });
   return { ready: true, ...cov, unitPrice: data.unitPrice, currency: data.currency };
 }
