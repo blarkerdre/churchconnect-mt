@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS tenant_payments_stripe_reference_uniq ON public.tenant_payments(reference) WHERE payment_method = 'Stripe' AND reference IS NOT NULL;

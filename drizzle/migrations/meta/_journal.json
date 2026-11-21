@@ -253,6 +253,13 @@
       "when": 1795289441790,
       "tag": "0035_suspended_church_hides_more_member_views",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1795294712882,
+      "tag": "0036_stripe_payment_once",
+      "breakpoints": true
     }
   ]
 }

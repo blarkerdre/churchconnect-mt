@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@18.5.0";
+import Stripe from "npm:stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { sendLoggedTemplateEmail } from "../_shared/managed-email.ts";
+import { linkSubscription, recordPaidInvoice, markPastDue, markCancelled, invoiceSubscriptionId } from "../_shared/stripe-sync.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -75,237 +75,28 @@ serve(async (req) => {
           }
           break;
         }
-        const stripeSubscriptionId = session.subscription as string;
-
-        if (!stripeSubscriptionId) {
-          logStep("No subscription in checkout session, skipping");
-          break;
-        }
-
-        // Retrieve subscription to get metadata
-        const stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
-        const tenantId = stripeSub.metadata?.tenant_id;
-        const subscriptionId = stripeSub.metadata?.subscription_id;
-
-        if (!tenantId) {
-          logStep("No tenant_id in subscription metadata, skipping");
-          break;
-        }
-
-        // Store stripe_subscription_id and stripe_customer_id
-        const updatePayload: Record<string, any> = {
-          stripe_subscription_id: stripeSubscriptionId,
-          stripe_customer_id: session.customer as string,
-        };
-
-        // Store the price ID from the subscription
-        if (stripeSub.items?.data?.[0]?.price?.id) {
-          updatePayload.stripe_price_id = stripeSub.items.data[0].price.id;
-        }
-
-        // Mark setup fee as paid if it was included in this checkout
-        if (stripeSub.metadata?.setup_fee_charged === "true") {
-          updatePayload.setup_fee_paid = true;
-          updatePayload.setup_fee_paid_at = new Date().toISOString();
-        }
-
-        if (subscriptionId) {
-          await supabaseAdmin
-            .from("tenant_subscriptions")
-            .update(updatePayload)
-            .eq("id", subscriptionId);
-        } else {
-          await supabaseAdmin
-            .from("tenant_subscriptions")
-            .update(updatePayload)
-            .eq("tenant_id", tenantId)
-            .eq("is_active", true);
-        }
-
-        logStep("Stored stripe_subscription_id", { tenantId, stripeSubscriptionId, setupFeePaid: stripeSub.metadata?.setup_fee_charged === "true" });
+        if (!session.subscription) { logStep("No subscription in checkout session, skipping"); break; }
+        const stripeSub = await stripe.subscriptions.retrieve(session.subscription as string);
+        await linkSubscription(supabaseAdmin, stripeSub);
         break;
       }
 
-      case "invoice.payment_succeeded": {
-        const invoice = event.data.object as Stripe.Invoice;
-        const stripeSubscriptionId = invoice.subscription as string;
-
-        if (!stripeSubscriptionId) {
-          logStep("No subscription on invoice, skipping");
-          break;
-        }
-
-        // Retrieve subscription metadata to get tenant_id
-        const stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
-        const tenantId = stripeSub.metadata?.tenant_id;
-        const subscriptionId = stripeSub.metadata?.subscription_id;
-
-        if (!tenantId) {
-          logStep("No tenant_id in subscription metadata for invoice, skipping");
-          break;
-        }
-
-        const paymentAmount = (invoice.amount_paid || 0) / 100;
-        const paymentCurrency = (invoice.currency || "gbp").toUpperCase();
-        const paymentDate = new Date().toISOString().split("T")[0];
-        const paymentReference = invoice.id;
-
-        // Record payment
-        await supabaseAdmin.from("tenant_payments").insert({
-          tenant_id: tenantId,
-          subscription_id: subscriptionId || null,
-          amount: paymentAmount,
-          currency: paymentCurrency,
-          payment_date: paymentDate,
-          payment_method: "Stripe",
-          stripe_payment_intent_id: invoice.payment_intent as string,
-          reference: paymentReference,
-          status: "completed",
-        });
-
-        // Set tenant status to active
-        await supabaseAdmin
-          .from("tenants")
-          .update({ subscription_status: "active" })
-          .eq("id", tenantId);
-
-        logStep("Payment recorded & status set to active", { tenantId, amount: paymentAmount });
-
-        // Send payment receipt emails to tenant admins (non-blocking)
-        try {
-          const { data: tenantInfo } = await supabaseAdmin
-            .from("tenants").select("name, slug").eq("id", tenantId).single();
-
-          const { data: subInfo } = await supabaseAdmin
-            .from("tenant_subscriptions")
-            .select("billing_cycle, next_due_date")
-            .eq("tenant_id", tenantId)
-            .eq("is_active", true)
-            .maybeSingle();
-
-          const { data: admins } = await supabaseAdmin
-            .from("tenant_memberships")
-            .select("user_id, profiles!inner(email, full_name)")
-            .eq("tenant_id", tenantId)
-            .in("role", ["owner", "admin"]);
-
-          const settingsUrl = tenantInfo?.slug
-            ? `https://churchconnect-mt.lovable.app/t/${tenantInfo.slug}/settings`
-            : "https://churchconnect-mt.lovable.app/settings";
-
-          for (const admin of admins || []) {
-            const email = (admin as any).profiles?.email;
-            if (!email) continue;
-            try {
-              await sendLoggedTemplateEmail({
-                supabase: supabaseAdmin,
-                templateName: "payment-receipt",
-                to: email,
-                tenantId,
-                idempotencyKey: `payment-receipt-${paymentReference}-${email}`,
-                templateData: {
-                  churchName: tenantInfo?.name || "Your Church",
-                  amount: paymentAmount.toFixed(2),
-                  currency: paymentCurrency,
-                  paymentDate,
-                  paymentMethod: "Stripe",
-                  reference: paymentReference,
-                  billingCycle: subInfo?.billing_cycle || "monthly",
-                  nextDueDate: subInfo?.next_due_date || null,
-                  settingsUrl,
-                },
-              });
-            } catch (sendErr) {
-              console.error("[stripe-webhook] Failed to send receipt email", sendErr);
-            }
-          }
-          logStep("Payment receipt emails sent", { tenantId });
-        } catch (emailErr) {
-          console.error("[stripe-webhook] Failed to send receipt email:", emailErr.message);
-        }
-
+      case "invoice.payment_succeeded":
+      case "invoice.paid": {
+        await recordPaidInvoice(supabaseAdmin, stripe, event.data.object);
         break;
       }
 
       case "invoice.payment_failed": {
-        const invoice = event.data.object as Stripe.Invoice;
-        const stripeSubscriptionId = invoice.subscription as string;
-
-        if (!stripeSubscriptionId) break;
-
-        const stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
-        const tenantId = stripeSub.metadata?.tenant_id;
-
-        if (!tenantId) break;
-
-        // Set tenant status to past_due
-        await supabaseAdmin
-          .from("tenants")
-          .update({ subscription_status: "past_due" })
-          .eq("id", tenantId);
-
-        // Notify admins
-        const { data: admins } = await supabaseAdmin
-          .from("tenant_memberships")
-          .select("user_id")
-          .eq("tenant_id", tenantId)
-          .in("role", ["owner", "admin"]);
-
-        if (admins && admins.length > 0) {
-          const notifications = admins.map((a) => ({
-            user_id: a.user_id,
-            title: "Payment Failed",
-            message: "Your subscription payment has failed. Please update your payment method to avoid service interruption.",
-            type: "billing",
-            reference_type: "tenant_subscription",
-            tenant_id: tenantId,
-          }));
-          await supabaseAdmin.from("notifications").insert(notifications);
-        }
-
-        logStep("Payment failed, status set to past_due", { tenantId });
+        const subId = invoiceSubscriptionId(event.data.object);
+        if (!subId) break;
+        const stripeSub = await stripe.subscriptions.retrieve(subId);
+        if (stripeSub.metadata?.tenant_id) await markPastDue(supabaseAdmin, stripeSub.metadata.tenant_id);
         break;
       }
 
       case "customer.subscription.deleted": {
-        const subscription = event.data.object as Stripe.Subscription;
-        const tenantId = subscription.metadata?.tenant_id;
-
-        if (!tenantId) break;
-
-        // Set tenant status to suspended
-        await supabaseAdmin
-          .from("tenants")
-          .update({ subscription_status: "suspended" })
-          .eq("id", tenantId);
-
-        // Clear stripe_subscription_id
-        await supabaseAdmin
-          .from("tenant_subscriptions")
-          .update({ stripe_subscription_id: null, stripe_price_id: null })
-          .eq("tenant_id", tenantId)
-          .eq("is_active", true);
-
-        // Notify admins
-        const { data: admins } = await supabaseAdmin
-          .from("tenant_memberships")
-          .select("user_id")
-          .eq("tenant_id", tenantId)
-          .in("role", ["owner", "admin"]);
-
-        if (admins && admins.length > 0) {
-          const notifications = admins.map((a) => ({
-            user_id: a.user_id,
-            title: "Subscription Cancelled",
-            message: "Your subscription has been cancelled. Access will be restricted until a new subscription is activated.",
-            type: "billing",
-            reference_type: "tenant_subscription",
-            tenant_id: tenantId,
-          }));
-          await supabaseAdmin.from("notifications").insert(notifications);
-        }
-
-        logStep("Subscription deleted, status set to suspended", { tenantId });
+        await markCancelled(supabaseAdmin, event.data.object as Stripe.Subscription);
         break;
       }
 

@@ -141,6 +141,10 @@ function BillingSection() {
   const { data: subscription, isLoading: subLoading } = useQuery({
     queryKey: ["tenant-subscription", tenantId],
     queryFn: async () => {
+      // Catch up on card payments Stripe may not have told us about yet.
+      if (isTenantOwner || isTAdmin) {
+        try { await supabase.functions.invoke("verify-tenant-subscription", { body: { tenant_id: tenantId } }); } catch { /* best effort */ }
+      }
       const { data, error } = await supabase
         .from("tenant_subscriptions")
         .select("*")
