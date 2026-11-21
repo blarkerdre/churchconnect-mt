@@ -4,6 +4,7 @@ import { sendLoggedTemplateEmail } from "../_shared/managed-email.ts";
 import { assertSmsQuota, QuotaExceededError } from "../_shared/sms-quota.ts";
 import { validateOutboundUrl, validateMethod } from "../_shared/url-validator.ts";
 import { isAuthorizedScheduler } from "../_shared/scheduler-auth.ts";
+import { scheduledSmsContentProblem } from "../_shared/sender-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -137,6 +138,8 @@ Deno.serve(async (req) => {
         }
 
         if (msg.channel === "sms") {
+          const contentProblem = await scheduledSmsContentProblem(supabase, msg.message, msg.created_by ?? null, msg.tenant_id);
+          if (contentProblem) throw new Error(contentProblem);
           await assertSmsQuota(supabase, msg.tenant_id, "sms", 1);
           await sendSms(msg, supabase, supabaseUrl);
         } else if (msg.channel === "email") {

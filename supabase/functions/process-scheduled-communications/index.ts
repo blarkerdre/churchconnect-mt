@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { isAuthorizedScheduler } from '../_shared/scheduler-auth.ts'
+import { scheduledSmsContentProblem } from '../_shared/sender-guard.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -83,7 +84,10 @@ Deno.serve(async (req) => {
           .update({ status: 'sent', sent_at: new Date().toISOString() })
           .eq('id', item.id)
       } else {
-        // SMS or WhatsApp - query members then invoke send-sms
+        // SMS or WhatsApp - same content rules as a live send, judged by who wrote it
+        const contentProblem = await scheduledSmsContentProblem(client, String(item.message || ''), item.created_by ?? null, item.tenant_id)
+        if (contentProblem) throw new Error(contentProblem)
+        // query members then invoke send-sms
         const filters = (item.filters || {}) as Record<string, unknown>
         let query = client
           .from('members')

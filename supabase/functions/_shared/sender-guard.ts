@@ -85,3 +85,21 @@ export function smsContentProblem(message: string, senderIsAdmin: boolean): stri
   }
   return null;
 }
+
+/**
+ * For texts a person wrote earlier and the system sends later (scheduled texts,
+ * scheduled follow-up texts): apply the same content rules as a live send,
+ * judged by the author's role. Returns a reason when it must not be sent.
+ */
+// deno-lint-ignore no-explicit-any
+export async function scheduledSmsContentProblem(serviceClient: any, message: string, authorId: string | null, tenantId: string): Promise<string | null> {
+  let authorIsAdmin = false;
+  if (authorId) {
+    const [{ data: a }, { data: s }] = await Promise.all([
+      serviceClient.rpc("is_admin", { _user_id: authorId, _tenant_id: tenantId }),
+      serviceClient.rpc("has_role", { _user_id: authorId, _role: "super_admin" }),
+    ]);
+    authorIsAdmin = a === true || s === true;
+  }
+  return smsContentProblem(message, authorIsAdmin);
+}
