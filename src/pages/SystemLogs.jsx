@@ -249,8 +249,9 @@ function SMSLogsPanel() {
     },
   });
 
-  const sentCount = logs.filter(l => l.status === "sent").length;
-  const failedCount = logs.filter(l => l.status === "failed").length;
+  const isFailed = (l) => l.status === "failed" || ["failed", "undelivered"].includes(l.delivery_status);
+  const sentCount = logs.filter(l => !isFailed(l)).length;
+  const failedCount = logs.filter(isFailed).length;
 
   return (
     <div className="space-y-4">
@@ -259,7 +260,7 @@ function SMSLogsPanel() {
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {["All", "announcement", "event", "followup", "bulk"].map(t => (
+            {["All", "announcement", "event", "followup", "bulk", "birthday", "direct"].map(t => (
               <SelectItem key={t} value={t}>{t === "All" ? "All Types" : t.charAt(0).toUpperCase() + t.slice(1)}</SelectItem>
             ))}
           </SelectContent>
@@ -333,8 +334,9 @@ function WhatsAppLogsPanel() {
     },
   });
 
-  const sentCount = logs.filter(l => l.status === "sent").length;
-  const failedCount = logs.filter(l => l.status === "failed").length;
+  const isFailed = (l) => l.status === "failed" || ["failed", "undelivered"].includes(l.delivery_status);
+  const sentCount = logs.filter(l => !isFailed(l)).length;
+  const failedCount = logs.filter(isFailed).length;
 
   return (
     <div className="space-y-4">
