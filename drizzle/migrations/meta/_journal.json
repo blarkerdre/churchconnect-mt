@@ -232,6 +232,13 @@
       "when": 1795285133265,
       "tag": "0032_security_erasure_lock_and_task_check_binding",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1795285957439,
+      "tag": "0033_permission_checks_answer_only_for_caller",
+      "breakpoints": true
     }
   ]
 }

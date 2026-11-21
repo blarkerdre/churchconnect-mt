@@ -8743,6 +8743,10 @@ export type Database = {
         Args: { _course_id: string; _on_date: string; _tenant_id: string }
         Returns: string
       }
+      rpc_probe_blocked: {
+        Args: { _fn: string; _user_id: string }
+        Returns: boolean
+      }
       search_tenant_members_for_guardian: {
         Args: { _q: string; _tenant_id: string }
         Returns: {
