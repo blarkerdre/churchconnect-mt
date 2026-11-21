@@ -267,6 +267,13 @@
       "when": 1795296044228,
       "tag": "0037_sms_cycle_on_subscription_payment",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1795298144091,
+      "tag": "0038_guardian_and_followup_message_guards",
+      "breakpoints": true
     }
   ]
 }

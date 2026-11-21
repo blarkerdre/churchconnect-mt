@@ -73,17 +73,61 @@ const CREDENTIAL_BAIT = /\b(?:send|reply(?: with)?|share|text|give|tell|confirm|
  * - Nobody may ask recipients to send passwords, codes or bank/card details.
  */
 export function smsContentProblem(message: string, senderIsAdmin: boolean): string | null {
+  return messageContentProblem(message, senderIsAdmin, "texts");
+}
+
+/** Same rules as smsContentProblem, worded for the kind of message ("texts", "emails"). */
+export function messageContentProblem(message: string, senderIsAdmin: boolean, kind: "texts" | "emails" = "texts"): string | null {
+  const Kind = kind.charAt(0).toUpperCase() + kind.slice(1);
   if (CREDENTIAL_BAIT.test(message)) {
-    return "Texts can't ask people for passwords, codes, PINs or bank/card details.";
+    return `${Kind} can't ask people for passwords, codes, PINs or bank/card details.`;
   }
   if (SHORTENERS.test(message) || IP_LINK.test(message)) {
-    return "Shortened links and links to number-only addresses aren't allowed in texts. Use the full web address.";
+    return `Shortened links and links to number-only addresses aren't allowed in ${kind}. Use the full web address.`;
   }
   LINK_RE.lastIndex = 0;
   if (!senderIsAdmin && LINK_RE.test(message)) {
-    return "Only church admins can include web links in texts.";
+    return `Only church admins can include web links in ${kind}.`;
   }
   return null;
+}
+
+/** True when the church's account is suspended for billing. */
+// deno-lint-ignore no-explicit-any
+export async function tenantSuspended(serviceClient: any, tenantId: string): Promise<boolean> {
+  const { data, error } = await serviceClient
+    .from("tenants")
+    .select("subscription_status")
+    .eq("id", tenantId)
+    .maybeSingle();
+  if (error) {
+    console.error("[sender-guard] suspension check failed", error.message);
+    return true; // fail closed
+  }
+  return String(data?.subscription_status || "").toLowerCase() === "suspended";
+}
+
+export const SUSPENDED_MESSAGE = "This church's account is suspended. Messages can't be sent until billing is sorted out.";
+
+/** How many texts a non-admin may send in 24 hours (on top of the church's own limit). */
+export const NON_ADMIN_DAILY_SMS_LIMIT = 200;
+
+/** Texts this person sent for this church in the last 24 hours. */
+// deno-lint-ignore no-explicit-any
+export async function smsSentBySenderLastDay(serviceClient: any, senderId: string, tenantId: string): Promise<number> {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count, error } = await serviceClient
+    .from("sms_log")
+    .select("id", { count: "exact", head: true })
+    .eq("sender_id", senderId)
+    .eq("tenant_id", tenantId)
+    .neq("status", "failed")
+    .gte("created_at", since);
+  if (error) {
+    console.error("[sender-guard] sender count failed", error.message);
+    return Number.MAX_SAFE_INTEGER; // fail closed
+  }
+  return count || 0;
 }
 
 /**
@@ -92,14 +136,38 @@ export function smsContentProblem(message: string, senderIsAdmin: boolean): stri
  * judged by the author's role. Returns a reason when it must not be sent.
  */
 // deno-lint-ignore no-explicit-any
-export async function scheduledSmsContentProblem(serviceClient: any, message: string, authorId: string | null, tenantId: string): Promise<string | null> {
-  let authorIsAdmin = false;
-  if (authorId) {
-    const [{ data: a }, { data: s }] = await Promise.all([
-      serviceClient.rpc("is_admin", { _user_id: authorId, _tenant_id: tenantId }),
-      serviceClient.rpc("has_role", { _user_id: authorId, _role: "super_admin" }),
-    ]);
-    authorIsAdmin = a === true || s === true;
+export async function scheduledSmsContentProblem(serviceClient: any, message: string, authorId: string | null, tenantId: string, kind: "texts" | "emails" = "texts"): Promise<string | null> {
+  const authorIsAdmin = await authorIsChurchAdmin(serviceClient, authorId, tenantId);
+  return messageContentProblem(message, authorIsAdmin, kind);
+}
+
+/** True when the author is an admin of this church or a platform super-admin. */
+// deno-lint-ignore no-explicit-any
+export async function authorIsChurchAdmin(serviceClient: any, authorId: string | null, tenantId: string): Promise<boolean> {
+  if (!authorId) return false;
+  const [{ data: a }, { data: s }] = await Promise.all([
+    serviceClient.rpc("is_admin", { _user_id: authorId, _tenant_id: tenantId }),
+    serviceClient.rpc("has_role", { _user_id: authorId, _role: "super_admin" }),
+  ]);
+  return a === true || s === true;
+}
+
+/** Follow-up texts already sent about one follow-up in the last 24 hours. */
+export const FOLLOWUP_DAILY_SMS_LIMIT = 3;
+// deno-lint-ignore no-explicit-any
+export async function followupSmsLastDay(serviceClient: any, followupId: string, tenantId: string): Promise<number> {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count, error } = await serviceClient
+    .from("sms_log")
+    .select("id", { count: "exact", head: true })
+    .eq("reference_id", followupId)
+    .eq("tenant_id", tenantId)
+    .eq("sms_type", "followup")
+    .neq("status", "failed")
+    .gte("created_at", since);
+  if (error) {
+    console.error("[sender-guard] follow-up count failed", error.message);
+    return Number.MAX_SAFE_INTEGER; // fail closed
   }
-  return smsContentProblem(message, authorIsAdmin);
+  return count || 0;
 }

@@ -1,5 +1,5 @@
 import { senderNameFrom } from "../_shared/sms-sender.ts";
-import { callerMfaSatisfied, cleanMessageText, phoneKey, loadLeaderUnits, memberInUnits, smsContentProblem } from "../_shared/sender-guard.ts";
+import { callerMfaSatisfied, cleanMessageText, phoneKey, loadLeaderUnits, memberInUnits, smsContentProblem, tenantSuspended, SUSPENDED_MESSAGE, NON_ADMIN_DAILY_SMS_LIMIT, smsSentBySenderLastDay } from "../_shared/sender-guard.ts";
 import { loadTenantPhoneSet, isTenantPhone } from "../_shared/tenant-phones.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkSmsQuota, QuotaExceededError } from "../_shared/sms-quota.ts";
@@ -105,6 +105,17 @@ Deno.serve(async (req) => {
       });
       if (!belongsToTenant) {
         return new Response(JSON.stringify({ error: "Forbidden: not a member of this tenant" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // A suspended church can't send texts until billing is sorted
+      // (platform super-admins excepted). The app hides sending, but this
+      // function can be called directly.
+      const { data: callerIsSuper } = await serviceClient.rpc("has_role", { _user_id: userId, _role: "super_admin" });
+      if (callerIsSuper !== true && (await tenantSuspended(serviceClient, tenant_id))) {
+        return new Response(JSON.stringify({ error: SUSPENDED_MESSAGE }), {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -228,6 +239,20 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Between 1 and 500 recipients are allowed per request" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Non-admin senders (unit leaders, follow-up workers) have a personal
+    // 24-hour cap on top of the church's own monthly limit.
+    if (!isInternalServiceCall && !senderIsAdmin) {
+      const sentToday = await smsSentBySenderLastDay(serviceClient, userId!, tenant_id);
+      if (sentToday + recipients.length > NON_ADMIN_DAILY_SMS_LIMIT) {
+        return new Response(JSON.stringify({
+          error: `You can send up to ${NON_ADMIN_DAILY_SMS_LIMIT} messages a day. Ask a church admin to send larger messages.`,
+        }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const msgChannel = channel === "whatsapp" ? "whatsapp" : "sms";

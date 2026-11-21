@@ -283,7 +283,7 @@ function ChildForm({ open, onOpenChange, child, memberId, onSaved }) {
 }
 
 
-function GuardianManager({ open, onOpenChange, child }) {
+function GuardianManager({ open, onOpenChange, child, canManage = false, myMemberId = null }) {
   const confirmDelete = useConfirmDelete();
   const { tenantId, withTenant } = useTenantQuery();
   const qc = useQueryClient();
@@ -358,11 +358,16 @@ function GuardianManager({ open, onOpenChange, child }) {
                   <p className="text-sm font-medium">{g.first_name} {g.last_name}</p>
                   <p className="text-xs text-muted-foreground">{g.relationship}</p>
                 </div>
-                <Button variant="ghost" size="sm" onClick={async () => { if (await confirmDelete({ title: "Remove authorised adult", description: "This adult will no longer be authorised to collect this child.", confirmLabel: "Remove" })) removeGuardian.mutate(g.id); }}><Trash2 className="h-4 w-4" /></Button>
+                {(canManage || g.member_id === myMemberId) && (
+                  <Button variant="ghost" size="sm" aria-label="Remove authorised adult" onClick={async () => { if (await confirmDelete({ title: "Remove authorised adult", description: "This adult will no longer be authorised to collect this child.", confirmLabel: "Remove" })) removeGuardian.mutate(g.id); }}><Trash2 className="h-4 w-4" /></Button>
+                )}
               </div>
             ))}
             {guardians.length === 0 && <p className="text-xs text-muted-foreground">No additional adults yet.</p>}
           </div>
+          {!canManage ? (
+            <p className="border-t pt-3 text-xs text-muted-foreground">Only this child's main parent or a church admin can add or change authorised adults.</p>
+          ) : (
           <div className="border-t pt-3 space-y-2">
             <Label>Add an authorised adult</Label>
             {!pendingAdult ? (
@@ -400,6 +405,7 @@ function GuardianManager({ open, onOpenChange, child }) {
               </div>
             )}
           </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
@@ -729,7 +735,15 @@ export default function MyFamily() {
 
 
       {meMember && <ChildForm open={childOpen} onOpenChange={setChildOpen} child={editChild} memberId={meMember.id} onSaved={refetch} />}
-      {guardianFor && <GuardianManager open={!!guardianFor} onOpenChange={() => setGuardianFor(null)} child={guardianFor} />}
+      {guardianFor && (
+        <GuardianManager
+          open={!!guardianFor}
+          onOpenChange={() => setGuardianFor(null)}
+          child={guardianFor}
+          myMemberId={meMember?.id}
+          canManage={isAdmin || isSuperAdmin || (!!meMember?.id && guardianFor.primary_guardian_member_id === meMember.id)}
+        />
+      )}
       {delegateFor && <DelegationDialog open={!!delegateFor} onOpenChange={() => setDelegateFor(null)} child={delegateFor} />}
 
       <AlertDialog open={!!deleteChild} onOpenChange={(o) => !o && setDeleteChild(null)}>

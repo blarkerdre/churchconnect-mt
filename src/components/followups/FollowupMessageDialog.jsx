@@ -13,6 +13,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useAuth } from "@/hooks/useAuth";
 import SmsCharCounter from "@/components/sms/SmsCharCounter";
+import { functionErrorMessage } from "@/lib/function-error";
 
 const MESSAGE_TEMPLATES = {
   "First Timer": (name, church) =>
@@ -155,7 +156,7 @@ export default function FollowupMessageDialog({
           "process-scheduled-followups",
           { body: { message_id: messageId } }
         );
-        if (fnErr) throw new Error(fnErr.message);
+        if (fnErr) throw new Error(await functionErrorMessage(fnErr, "Message failed to send"));
         if (result?.failed > 0) {
           throw new Error(result?.errors?.[0] || "Message failed to send");
         }

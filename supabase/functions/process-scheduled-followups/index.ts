@@ -4,7 +4,7 @@ import { sendLoggedTemplateEmail } from "../_shared/managed-email.ts";
 import { assertSmsQuota, QuotaExceededError } from "../_shared/sms-quota.ts";
 import { validateOutboundUrl, validateMethod } from "../_shared/url-validator.ts";
 import { isAuthorizedScheduler } from "../_shared/scheduler-auth.ts";
-import { scheduledSmsContentProblem } from "../_shared/sender-guard.ts";
+import { scheduledSmsContentProblem, callerMfaSatisfied, tenantSuspended, SUSPENDED_MESSAGE, authorIsChurchAdmin, followupSmsLastDay, FOLLOWUP_DAILY_SMS_LIMIT, smsSentBySenderLastDay, NON_ADMIN_DAILY_SMS_LIMIT } from "../_shared/sender-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,13 +46,34 @@ Deno.serve(async (req) => {
       const userClient = createClient(supabaseUrl, anonKey, {
         global: { headers: { Authorization: authHeader } },
       });
+      const { data: { user: caller } } = await userClient.auth.getUser();
+      if (!caller) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Same two-step verification rule as sending a text directly.
+      if (!(await callerMfaSatisfied(supabaseUrl, anonKey, authHeader))) {
+        return new Response(JSON.stringify({ error: "Two-step verification is required to send messages" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const { data: visible, error: visibleErr } = await userClient
         .from("followup_scheduled_messages")
-        .select("id")
+        .select("id, tenant_id, created_by")
         .eq("id", requestedId)
         .maybeSingle();
       if (visibleErr || !visible) {
         return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Only the person who wrote the message, or a church admin, may send it now.
+      if (visible.created_by !== caller.id && !(await authorIsChurchAdmin(supabase, caller.id, visible.tenant_id))) {
+        return new Response(JSON.stringify({ error: "Only the person who wrote this message or a church admin can send it" }), {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -137,13 +158,30 @@ Deno.serve(async (req) => {
             .replace(/\{church\}/gi, churchName);
         }
 
+        // Suspended churches can't send messages until billing is sorted.
+        if (await tenantSuspended(supabase, msg.tenant_id)) throw new Error(SUSPENDED_MESSAGE);
+
         if (msg.channel === "sms") {
           const contentProblem = await scheduledSmsContentProblem(supabase, msg.message, msg.created_by ?? null, msg.tenant_id);
           if (contentProblem) throw new Error(contentProblem);
+          // Bound how often one person can be texted about a follow-up, and how
+          // many follow-up texts a non-admin author can send per day.
+          if ((await followupSmsLastDay(supabase, msg.followup_id, msg.tenant_id)) >= FOLLOWUP_DAILY_SMS_LIMIT) {
+            throw new Error(`This person has already had ${FOLLOWUP_DAILY_SMS_LIMIT} follow-up texts today. Try again tomorrow.`);
+          }
+          if (!(await authorIsChurchAdmin(supabase, msg.created_by ?? null, msg.tenant_id))) {
+            if (!msg.created_by || (await smsSentBySenderLastDay(supabase, msg.created_by, msg.tenant_id)) >= NON_ADMIN_DAILY_SMS_LIMIT) {
+              throw new Error(`The author has reached the limit of ${NON_ADMIN_DAILY_SMS_LIMIT} texts a day.`);
+            }
+          }
           await assertSmsQuota(supabase, msg.tenant_id, "sms", 1);
           await sendSms(msg, supabase, supabaseUrl);
         } else if (msg.channel === "email") {
+          const contentProblem = await scheduledSmsContentProblem(supabase, `${msg.subject || ""}\n${msg.message || ""}`, msg.created_by ?? null, msg.tenant_id, "emails");
+          if (contentProblem) throw new Error(contentProblem);
           await sendEmail(msg, supabase, supabaseUrl);
+        } else {
+          throw new Error("Unknown message channel");
         }
 
         await supabase

@@ -1,7 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { writeAudit } from '../_shared/audit.ts';
 import { sendRawManagedEmail } from '../_shared/managed-email.ts';
-import { callerMfaSatisfied, cleanMessageText } from '../_shared/sender-guard.ts';
+import { callerMfaSatisfied, cleanMessageText, messageContentProblem, tenantSuspended, SUSPENDED_MESSAGE } from '../_shared/sender-guard.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -121,6 +121,16 @@ Deno.serve(async (req) => {
     })
   }
 
+  // A suspended church can't send emails until billing is sorted
+  // (platform super-admins excepted).
+  const { data: callerIsSuper } = await serviceClient.rpc('has_role', { _user_id: user.id, _role: 'super_admin' })
+  if (callerIsSuper !== true && (await tenantSuspended(serviceClient, tenant_id))) {
+    return new Response(JSON.stringify({ error: SUSPENDED_MESSAGE }), {
+      status: 403,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
   const { data: isAdmin } = await serviceClient.rpc('is_admin', { _user_id: user.id, _tenant_id: tenant_id })
   const { data: isLeader } = await serviceClient.rpc('has_role', {
     _user_id: user.id,
@@ -131,6 +141,16 @@ Deno.serve(async (req) => {
   if (!isAdmin && !isLeader) {
     return new Response(JSON.stringify({ error: 'Forbidden: admin or unit leader required' }), {
       status: 403,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  }
+
+  // Same content rules as texts: no requests for passwords/codes/bank details,
+  // no shortened or number-only links, and only church admins may add links.
+  const contentProblem = messageContentProblem(`${subject}\n${body}`, isAdmin === true, 'emails')
+  if (contentProblem) {
+    return new Response(JSON.stringify({ error: contentProblem }), {
+      status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
