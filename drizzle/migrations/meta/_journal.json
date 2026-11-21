@@ -274,6 +274,20 @@
       "when": 1795298144091,
       "tag": "0038_guardian_and_followup_message_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1795298844255,
+      "tag": "0039_teen_guardian_guard_and_child_family_actions",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1795298856725,
+      "tag": "0040_child_archive_main_parent_only",
+      "breakpoints": true
     }
   ]
 }

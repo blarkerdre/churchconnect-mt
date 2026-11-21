@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
   // 1. Pick tenants
   let tenantsQ = svc
     .from("birthday_message_settings")
-    .select("*, tenants!inner(id, name, is_archived)")
+    .select("*, tenants!inner(id, name, is_archived, subscription_status)")
     .eq("enabled", true);
   if (body.tenant_id) tenantsQ = tenantsQ.eq("tenant_id", body.tenant_id);
   const { data: tenants, error: tErr } = await tenantsQ;
@@ -171,6 +171,11 @@ Deno.serve(async (req) => {
 
   for (const t of tenants || []) {
     if ((t as any).tenants?.is_archived) continue;
+    // Suspended churches don't send messages until billing is sorted.
+    if (String((t as any).tenants?.subscription_status || "").toLowerCase() === "suspended") {
+      summary.push({ tenant_id: t.tenant_id, skipped: "suspended" });
+      continue;
+    }
 
     // Skip in cron mode if it's not the configured local hour (Europe/London).
     if (!isManual) {

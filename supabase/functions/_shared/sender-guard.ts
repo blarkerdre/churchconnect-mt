@@ -171,3 +171,23 @@ export async function followupSmsLastDay(serviceClient: any, followupId: string,
   }
   return count || 0;
 }
+
+/** How many phone calls a non-admin may place in 24 hours. */
+export const NON_ADMIN_DAILY_CALL_LIMIT = 50;
+
+/** Calls this person placed for this church in the last 24 hours. */
+// deno-lint-ignore no-explicit-any
+export async function callsByCallerLastDay(serviceClient: any, callerId: string, tenantId: string): Promise<number> {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count, error } = await serviceClient
+    .from("call_log")
+    .select("id", { count: "exact", head: true })
+    .eq("caller_id", callerId)
+    .eq("tenant_id", tenantId)
+    .gte("created_at", since);
+  if (error) {
+    console.error("[sender-guard] call count failed", error.message);
+    return Number.MAX_SAFE_INTEGER; // fail closed
+  }
+  return count || 0;
+}

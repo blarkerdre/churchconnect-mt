@@ -1,6 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { isAuthorizedScheduler } from '../_shared/scheduler-auth.ts'
-import { scheduledSmsContentProblem } from '../_shared/sender-guard.ts'
+import { scheduledSmsContentProblem, tenantSuspended, SUSPENDED_MESSAGE } from '../_shared/sender-guard.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -57,6 +57,9 @@ Deno.serve(async (req) => {
         .from('scheduled_communications')
         .update({ status: 'processing' })
         .eq('id', item.id)
+
+      // Suspended churches can't send messages until billing is sorted.
+      if (await tenantSuspended(client, item.tenant_id)) throw new Error(SUSPENDED_MESSAGE)
 
       if (item.channel === 'email') {
         // Invoke send-email-alert

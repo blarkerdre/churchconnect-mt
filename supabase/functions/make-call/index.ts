@@ -1,6 +1,7 @@
 import { loadTenantPhoneSet, isTenantPhone } from "../_shared/tenant-phones.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { validateOutboundUrl, validateMethod } from "../_shared/url-validator.ts";
+import { tenantSuspended, NON_ADMIN_DAILY_CALL_LIMIT, callsByCallerLastDay } from "../_shared/sender-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -95,6 +96,26 @@ Deno.serve(async (req) => {
       if (!allowedAsFollowupMember) {
         return new Response(JSON.stringify({ error: "Only admins or unit leaders can place calls" }), {
           status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // Suspended churches can't place calls (super-admins excepted).
+    const { data: isSuper } = await serviceClient.rpc("has_role", { _user_id: user.id, _role: "super_admin" });
+    if (!isSuper && await tenantSuspended(serviceClient, tenant_id)) {
+      return new Response(JSON.stringify({ error: "This church's account is suspended. Calls can't be placed until billing is sorted out." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Non-admins get a daily call limit.
+    if (!isAdmin && !isSuper) {
+      const made = await callsByCallerLastDay(serviceClient, user.id, tenant_id);
+      if (made >= NON_ADMIN_DAILY_CALL_LIMIT) {
+        return new Response(JSON.stringify({ error: `You've reached today's limit of ${NON_ADMIN_DAILY_CALL_LIMIT} calls. Try again tomorrow or ask a church admin.` }), {
+          status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
