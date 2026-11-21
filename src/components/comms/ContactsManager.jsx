@@ -15,6 +15,8 @@ import { Plus, Pencil, Trash2, Search, Upload, Users, Loader2 } from "lucide-rea
 import { z } from "zod";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 import { parseContactsCsv as parseCsv } from "@/lib/contact-csv";
+import { Checkbox } from "@/components/ui/checkbox";
+import { logAudit } from "@/lib/audit";
 
 const contactSchema = z.object({
   first_name: z.string().trim().max(80).optional().or(z.literal("")),
@@ -51,6 +53,7 @@ export default function ContactsManager() {
   const fileRef = useRef(null);
 
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState(() => new Set());
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ first_name: "", last_name: "", email: "", phone: "", tags: "", notes: "" });
@@ -111,6 +114,35 @@ export default function ContactsManager() {
         .toLowerCase().includes(q)
     );
   }, [contacts, search]);
+
+  const visibleSelected = useMemo(() => filtered.filter(c => selected.has(c.id)).map(c => c.id), [filtered, selected]);
+  const allChecked = filtered.length > 0 && visibleSelected.length === filtered.length;
+  const someChecked = visibleSelected.length > 0 && !allChecked;
+  const toggleAll = () => setSelected(allChecked ? new Set() : new Set(filtered.map(c => c.id)));
+  const toggleOne = (id) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids) => {
+      for (let k = 0; k < ids.length; k += 200) {
+        const { error } = await supabase.from("contacts").delete().in("id", ids.slice(k, k + 200)).eq("tenant_id", tenantId);
+        if (error) throw error;
+      }
+      await logAudit("contacts_bulk_deleted", "contacts", null, { count: ids.length }, tenantId);
+      return ids.length;
+    },
+    onSuccess: (n) => {
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ["contacts"] });
+      toast({ title: `${n} contact${n === 1 ? "" : "s"} deleted` });
+    },
+    onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const bulkDelete = async () => {
+    const ids = visibleSelected;
+    if (!ids.length) return;
+    if (await confirmDelete({ title: "Delete selected contacts", description: `Delete ${ids.length} contact${ids.length === 1 ? "" : "s"}? This cannot be undone.` })) bulkDeleteMutation.mutate(ids);
+  };
 
   const openNew = () => {
     setEditing(null);
@@ -256,9 +288,26 @@ export default function ContactsManager() {
         </Card>
       ) : (
         <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-3 px-1">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox checked={allChecked ? true : someChecked ? "indeterminate" : false} onCheckedChange={toggleAll} aria-label="Select all contacts" />
+              Select all ({filtered.length})
+            </label>
+            {visibleSelected.length > 0 && (
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-sm text-muted-foreground">{visibleSelected.length} selected</span>
+                <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>Clear</Button>
+                <Button variant="destructive" size="sm" onClick={bulkDelete} disabled={bulkDeleteMutation.isPending}>
+                  {bulkDeleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                  Delete selected
+                </Button>
+              </div>
+            )}
+          </div>
           {filtered.map(c => (
             <Card key={c.id} className="border-0 shadow-sm">
               <CardContent className="p-3 flex items-start gap-3">
+                <Checkbox className="mt-1" checked={selected.has(c.id)} onCheckedChange={() => toggleOne(c.id)} aria-label={`Select ${fullName(c) || c.email || c.phone}`} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">
                     {(c.first_name || c.last_name) ? `${c.first_name || ""} ${c.last_name || ""}`.trim() : (c.email || c.phone)}
