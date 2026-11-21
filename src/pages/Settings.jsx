@@ -1,3 +1,4 @@
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 import { RenewalReminderSetting } from "@/components/billing/RenewalBanner";
 import SmsTopUpCard from "@/components/billing/SmsTopUpCard";
 import { smsCycleStart } from "@/lib/sms-cycle";
@@ -138,6 +139,7 @@ function BillingSection() {
   const { isTenantOwner, isTenantAdmin: isTAdmin } = useTenant();
   const [payLoading, setPayLoading] = useState(false);
   const [manageLoading, setManageLoading] = useState(false);
+  const confirmPw = useConfirmDelete();
 
   const { data: subscription, isLoading: subLoading } = useQuery({
     queryKey: ["tenant-subscription", tenantId],
@@ -190,6 +192,7 @@ function BillingSection() {
   });
 
   const handlePayNow = async () => {
+    if (!(await confirmPw({ title: "Confirm subscription payment", description: "You are about to pay your church subscription by card.", confirmLabel: "Continue to payment" }))) return;
     setPayLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("create-tenant-checkout", {
@@ -206,6 +209,7 @@ function BillingSection() {
   };
 
   const handleManageSubscription = async () => {
+    if (!(await confirmPw({ title: "Manage subscription", description: "Open the payment page to change or cancel your subscription.", confirmLabel: "Continue" }))) return;
     setManageLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("manage-tenant-subscription", {

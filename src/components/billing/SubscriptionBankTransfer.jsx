@@ -3,12 +3,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 import { Landmark, Loader2, Check, X } from "lucide-react";
 
 /** Request / track / confirm a subscription payment by bank transfer. */
 export default function SubscriptionBankTransfer({ tenantId, subscription, canRequest, isSuperAdmin }) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState(null);
+  const confirmPw = useConfirmDelete();
 
   const { data: pending = [] } = useQuery({
     queryKey: ["sub-bank-pending", tenantId],
@@ -30,6 +32,7 @@ export default function SubscriptionBankTransfer({ tenantId, subscription, canRe
       .forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
   };
   const run = async (key, fn, ok) => {
+    if (!(await confirmPw({ title: "Confirm subscription payment change", description: ok.startsWith("Invoice") ? "Create a bank transfer invoice for your subscription." : ok === "Payment confirmed" ? "Mark this subscription payment as received." : "Cancel this bank transfer request.", confirmLabel: "Continue" }))) return;
     setBusy(key);
     try {
       const { error } = await fn();

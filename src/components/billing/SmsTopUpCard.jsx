@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { MessageSquare, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { smsCycleStart } from "@/lib/sms-cycle";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 const PACKS = [100, 500, 1000, 5000];
 
@@ -46,6 +47,8 @@ export default function SmsTopUpCard({ tenantId, canBuy, isSuperAdmin = false })
   const qc = useQueryClient();
   const { data, isLoading } = useSmsBilling(tenantId);
   const [busy, setBusy] = useState(null);
+  const confirmPw = useConfirmDelete();
+  const askPw = (title, description, confirmLabel) => confirmPw({ title, description, confirmLabel });
   const refresh = () => qc.invalidateQueries({ queryKey: ["sms-billing", tenantId] });
   const rpc = async (key, name, args, ok) => {
     setBusy(key);
@@ -54,7 +57,7 @@ export default function SmsTopUpCard({ tenantId, canBuy, isSuperAdmin = false })
     if (error) { toast({ title: "Couldn't complete", description: error.message, variant: "destructive" }); return; }
     toast({ title: ok }); refresh();
   };
-  const requestBank = () => rpc("bank", "request_sms_bank_topup", { _tenant_id: tenantId, _quantity: Number(qty) }, "Bank transfer request created - use the reference shown below");
+  const requestBank = async () => { if (!(await askPw("Confirm bank transfer request", `Request ${Number(qty)} texts by bank transfer.`, "Continue"))) return; rpc("bank", "request_sms_bank_topup", { _tenant_id: tenantId, _quantity: Number(qty) }, "Bank transfer request created - use the reference shown below"); };
   const [qty, setQty] = useState(500);
   const [loading, setLoading] = useState(false);
   const [thr, setThr] = useState(null);
@@ -69,6 +72,7 @@ export default function SmsTopUpCard({ tenantId, canBuy, isSuperAdmin = false })
   const limit = Number(data.tenant?.sms_limit_monthly || 0);
 
   const buy = async () => {
+    if (!(await askPw("Confirm text payment", `Pay ${money(data.unitPrice * Number(qty || 0), data.currency)} for ${Number(qty)} texts.`, "Continue to payment"))) return;
     setLoading(true);
     try {
       const { data: res, error } = await supabase.functions.invoke("create-sms-topup-checkout", { body: { tenant_id: tenantId, quantity: Number(qty) } });
@@ -147,8 +151,8 @@ export default function SmsTopUpCard({ tenantId, canBuy, isSuperAdmin = false })
                   <p>Pay <strong>{money(Number(t.amount), t.currency)}</strong> using reference <strong className="font-mono">{t.reference}</strong></p>
                   {data.bank ? <p className="whitespace-pre-line text-muted-foreground">{data.bank}</p> : <p className="text-muted-foreground">Bank details will be sent by your administrator.</p>}
                   <div className="flex gap-2">
-                    {isSuperAdmin && <Button size="sm" className="h-7" disabled={!!busy} onClick={() => rpc(t.id, "confirm_sms_bank_topup", { _topup_id: t.id }, "Payment confirmed - texts added")}>{busy === t.id ? "Confirming..." : "Mark as received"}</Button>}
-                    {(canBuy || isSuperAdmin) && <Button size="sm" variant="ghost" className="h-7" disabled={!!busy} onClick={() => rpc("c" + t.id, "cancel_sms_bank_topup", { _topup_id: t.id }, "Request cancelled")}>Cancel</Button>}
+                    {isSuperAdmin && <Button size="sm" className="h-7" disabled={!!busy} onClick={async () => { if (await askPw("Mark payment received", "Texts will be added to this church.", "Mark as received")) rpc(t.id, "confirm_sms_bank_topup", { _topup_id: t.id }, "Payment confirmed - texts added"); }}>{busy === t.id ? "Confirming..." : "Mark as received"}</Button>}
+                    {(canBuy || isSuperAdmin) && <Button size="sm" variant="ghost" className="h-7" disabled={!!busy} onClick={async () => { if (await askPw("Cancel top-up request", "This bank transfer request will be cancelled.", "Cancel request")) rpc("c" + t.id, "cancel_sms_bank_topup", { _topup_id: t.id }, "Request cancelled"); }}>Cancel</Button>}
                   </div>
                 </div>
               )}

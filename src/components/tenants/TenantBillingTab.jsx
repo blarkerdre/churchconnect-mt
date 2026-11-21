@@ -15,6 +15,7 @@ import { CreditCard, Plus, Save, Loader2, RefreshCw, Receipt } from "lucide-reac
 import { format } from "date-fns";
 import InvoicesReceiptsList from "./InvoicesReceiptsList";
 import SubscriptionBankTransfer from "@/components/billing/SubscriptionBankTransfer";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
 export default function TenantBillingTab({ tenant }) {
   const { toast } = useToast();
@@ -23,6 +24,7 @@ export default function TenantBillingTab({ tenant }) {
   const [paymentForm, setPaymentForm] = useState({ amount: "", payment_date: new Date().toISOString().split("T")[0], payment_method: "Manual", reference: "", notes: "" });
 
   const tenantId = tenant?.id;
+  const confirmPw = useConfirmDelete();
 
   const { data: subscription, isLoading: subLoading } = useQuery({
     queryKey: ["tenant-subscription-admin", tenantId],
@@ -57,6 +59,7 @@ export default function TenantBillingTab({ tenant }) {
 
   const upsertSubMutation = useMutation({
     mutationFn: async (payload) => {
+      if (!(await confirmPw({ title: "Confirm subscription change", description: "Save changes to this church's subscription.", confirmLabel: "Save" }))) throw new Error("Cancelled");
       if (subscription) {
         const { error } = await supabase.from("tenant_subscriptions").update(payload).eq("id", subscription.id).eq("tenant_id", tenantId);
         if (error) throw error;
@@ -75,6 +78,7 @@ export default function TenantBillingTab({ tenant }) {
 
   const recordPaymentMutation = useMutation({
     mutationFn: async (payload) => {
+      if (!(await confirmPw({ title: "Confirm payment record", description: "Record this payment for the church.", confirmLabel: "Record payment" }))) throw new Error("Cancelled");
       const { error } = await supabase.from("tenant_payments").insert({
         tenant_id: tenantId,
         subscription_id: subscription?.id || null,
