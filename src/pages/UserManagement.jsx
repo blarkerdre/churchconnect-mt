@@ -175,7 +175,11 @@ export default function UserManagement() {
       const { data, error } = await supabase.functions.invoke("admin-reset-mfa", {
         body: { user_id: userId, tenant_id: tenantId },
       });
-      if (error) throw error;
+      if (error) {
+        let msg = null;
+        try { msg = (await error.context?.json?.())?.error; } catch { /* ignore */ }
+        throw new Error(msg || error.message);
+      }
       if (data?.error) throw new Error(data.error);
       await logAudit("mfa_reset", "profiles", userId, { target_name: targetName, factors_removed: data?.removed ?? 0 }, tenantId);
       return data;

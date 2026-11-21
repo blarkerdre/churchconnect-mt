@@ -1175,7 +1175,11 @@ function CommunicationsSection() {
       toast({ title: "Invalid WhatsApp number", description: "Must be E.164 format (e.g. +447123456789)", variant: "destructive" });
       return;
     }
-    if (smsProvider === "custom" && !customSmsEndpoint.trim()) {
+    if (smsProvider === "custom" && !canSetCustomVoice && !providerSettings?.custom_sms_provider_config?.endpoint) {
+      toast({ title: "Custom text provider needs the platform team", description: "Only a platform super-admin can set up a custom text-message provider for your church.", variant: "destructive" });
+      return;
+    }
+    if (smsProvider === "custom" && canSetCustomVoice && !customSmsEndpoint.trim()) {
       toast({ title: "Custom SMS endpoint URL is required", variant: "destructive" });
       return;
     }
@@ -1224,7 +1228,7 @@ function CommunicationsSection() {
           { key: "termii_sender_id", value: termiiSenderId.trim() || null },
         );
       }
-      if (smsProvider === "custom") {
+      if (smsProvider === "custom" && canSetCustomVoice) {
         credentialPairs.push({
           key: "custom_sms_provider_config",
           value: {
@@ -1425,6 +1429,12 @@ function CommunicationsSection() {
         {smsProvider === "custom" && (
           <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
             <p className="text-xs font-semibold text-muted-foreground">Custom SMS Provider</p>
+            {!canSetCustomVoice && (
+              <p className="text-xs text-muted-foreground">
+                For safety, only the platform team can set up or change a custom text-message provider. Contact them to have it added for your church.
+              </p>
+            )}
+            <fieldset disabled={!canSetCustomVoice} className="space-y-3 disabled:opacity-70">
             <div className="space-y-2">
               <Label className="text-sm">Provider Name</Label>
               <Input value={customSmsName} onChange={(e) => setCustomSmsName(e.target.value)} placeholder="e.g. BulkSMS, Vonage, SMSLive247" />
@@ -1480,6 +1490,7 @@ function CommunicationsSection() {
                 Use placeholders: <code className="bg-muted px-1 rounded">{"{{to}}"}</code>, <code className="bg-muted px-1 rounded">{"{{message}}"}</code>, <code className="bg-muted px-1 rounded">{"{{from}}"}</code>
               </p>
             </div>
+            </fieldset>
           </div>
         )}
 

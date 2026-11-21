@@ -8601,6 +8601,10 @@ export type Database = {
             }
             Returns: undefined
           }
+      person_in_tenant: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       preteen_checkin: {
         Args: { _pin?: string; _preteen_id: string; _qr_token: string }
         Returns: Json

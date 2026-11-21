@@ -218,6 +218,13 @@
       "when": 1795280127591,
       "tag": "0030_security_batch_nov21_roster_voice_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1795280465210,
+      "tag": "0031_security_custom_sms_and_same_church_assignees",
+      "breakpoints": true
     }
   ]
 }

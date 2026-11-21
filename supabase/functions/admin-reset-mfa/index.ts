@@ -73,6 +73,18 @@ Deno.serve(async (req) => {
       if (targetIsSuperAdmin) {
         return json({ error: "Only super-admins can reset 2FA for super-admin accounts" }, 403);
       }
+
+      // Removing two-step login is account-wide (it weakens sign-in to every
+      // church). A church admin may only do this for people who belong to
+      // their church alone; anyone in another church needs a super-admin.
+      const [{ data: otherMemberships }, { data: otherMembers }, { data: otherRoles }] = await Promise.all([
+        supabase.from("tenant_memberships").select("tenant_id").eq("user_id", user_id).neq("tenant_id", tenant_id).limit(1),
+        supabase.from("members").select("tenant_id").eq("user_id", user_id).neq("tenant_id", tenant_id).limit(1),
+        supabase.from("user_roles").select("tenant_id").eq("user_id", user_id).not("tenant_id", "is", null).neq("tenant_id", tenant_id).limit(1),
+      ]);
+      if ((otherMemberships?.length || 0) > 0 || (otherMembers?.length || 0) > 0 || (otherRoles?.length || 0) > 0) {
+        return json({ error: "This person also belongs to another church, so only a platform super-admin can reset their two-step login." }, 403);
+      }
     }
 
     const { data: factorsData, error: listError } = await supabase.auth.admin.mfa.listFactors({

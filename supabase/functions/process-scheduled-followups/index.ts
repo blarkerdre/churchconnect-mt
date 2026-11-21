@@ -211,12 +211,23 @@ async function sendSms(
     // Custom provider
     const { data: customConfigRow } = await supabase
       .from("app_settings")
-      .select("value")
+      .select("value, updated_by")
       .eq("tenant_id", msg.tenant_id)
       .eq("key", "custom_sms_provider_config")
       .maybeSingle();
     const customConfig = customConfigRow?.value as Record<string, string> | null;
     if (!customConfig?.endpoint) throw new Error("Custom SMS provider not configured");
+    // Only use a custom text-message provider a platform super-admin set up.
+    // Church admins cannot point texts (and members' numbers) at their own address.
+    let approved = false;
+    if (customConfigRow?.updated_by) {
+      const { data: approverIsSuper } = await supabase.rpc("has_role", {
+        _user_id: customConfigRow.updated_by,
+        _role: "super_admin",
+      });
+      approved = approverIsSuper === true;
+    }
+    if (!approved) throw new Error("This church's custom text-message provider hasn't been approved by the platform team yet.");
 
     let bodyStr = (customConfig.body_template || "")
       .replace(/\{\{to\}\}/g, phone)
