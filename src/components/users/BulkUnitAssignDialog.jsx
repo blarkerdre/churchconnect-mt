@@ -32,7 +32,7 @@ export default function BulkUnitAssignDialog({ open, onOpenChange }) {
         .from("user_roles")
         .select("user_id")
         .eq("role", "unit_leader");
-      if (tenantId) rolesQuery = rolesQuery.eq("tenant_id", tenantId);
+      rolesQuery = rolesQuery.eq("tenant_id", tenantId || "00000000-0000-0000-0000-000000000000");
       const { data: roles } = await rolesQuery;
       if (!roles?.length) return [];
       const userIds = roles.map(r => r.user_id);

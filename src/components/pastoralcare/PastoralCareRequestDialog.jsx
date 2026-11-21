@@ -146,7 +146,7 @@ export default function PastoralCareRequestDialog({ open, onOpenChange, currentU
         let leadersQuery = supabase
           .from("unit_leader_assignments").select("user_id")
           .in("unit_name", ["Pastoral Care", "Pastoral care", "pastoral care"]);
-        if (tenantId) leadersQuery = leadersQuery.eq("tenant_id", tenantId);
+        leadersQuery = leadersQuery.eq("tenant_id", tenantId || "00000000-0000-0000-0000-000000000000");
         const { data: pcLeaders } = await leadersQuery;
         if (pcLeaders && pcLeaders.length > 0) {
           const leaderIds = pcLeaders.map(l => l.user_id);

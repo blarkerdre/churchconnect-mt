@@ -125,7 +125,7 @@ export default function Members() {
         return data;
       }
     },
-    enabled: !!user?.id && !authLoading,
+    enabled: !!user?.id && !authLoading && !!tenantId,
     refetchOnWindowFocus: true,
     refetchInterval: isAdmin || viewOnly ? 5000 : false,
   });

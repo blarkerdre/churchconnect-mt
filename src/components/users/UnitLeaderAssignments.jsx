@@ -57,7 +57,7 @@ export default function UnitLeaderAssignments({ userId }) {
         .delete()
         .eq("user_id", userId)
         .eq("unit_name", unitName);
-      if (tenantId) q = q.eq("tenant_id", tenantId);
+      q = q.eq("tenant_id", tenantId || "00000000-0000-0000-0000-000000000000");
       const { error } = await q;
       if (error) throw error;
     },

@@ -1023,7 +1023,7 @@ function CourseRegistrationsView({ course }) {
         .select("id, registered_at, member_id, student_number, status, approved_at, exam_link_sent_at, registration_email_sent_at, registration_origin, session_id, edition:exam_sessions(id, name), members(first_name, last_name, email, phone, user_id)")
         .eq("course_id", course.id)
         .in("status", ["approved", "active"]);
-      if (tenantId) q = q.eq("tenant_id", tenantId);
+      q = q.eq("tenant_id", tenantId || "00000000-0000-0000-0000-000000000000");
       q = applyEdition(q).order("registered_at", { ascending: false });
       const { data, error } = await q;
       if (error) throw error;
@@ -1806,7 +1806,7 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
     queryKey: ["my-course-registrations", memberId, tenantId],
     queryFn: async () => {
       let query = supabase.from("course_registrations").select("id, course_id").eq("member_id", memberId);
-      if (tenantId) query = query.eq("tenant_id", tenantId);
+      query = query.eq("tenant_id", tenantId || "00000000-0000-0000-0000-000000000000");
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
@@ -1872,7 +1872,7 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
         .eq("status", "approved")
         .not("student_number", "is", null)
         .limit(1);
-      if (tenantId) query = query.eq("tenant_id", tenantId);
+      query = query.eq("tenant_id", tenantId || "00000000-0000-0000-0000-000000000000");
       const { data, error } = await query;
       if (error) throw error;
       return (data || []).length > 0;
@@ -1889,7 +1889,7 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
         .select("course_id, status")
         .eq("member_id", memberId)
         .in("status", ["submitted", "pending"]);
-      if (tenantId) query = query.eq("tenant_id", tenantId);
+      query = query.eq("tenant_id", tenantId || "00000000-0000-0000-0000-000000000000");
       const { data, error } = await query;
       if (error) throw error;
       return (data || []).map(r => r.course_id);
@@ -1919,7 +1919,7 @@ function MemberExamsView({ memberId, memberRecord, courses, loading }) {
         .from("exam_attempts")
         .select("subject_id, training_type, score, total_points, passed, retake_allowed")
         .eq("member_id", memberId);
-      if (tenantId) query = query.eq("tenant_id", tenantId);
+      query = query.eq("tenant_id", tenantId || "00000000-0000-0000-0000-000000000000");
       const { data, error } = await query;
       if (error) throw error;
       return data;

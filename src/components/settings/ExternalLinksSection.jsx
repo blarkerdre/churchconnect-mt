@@ -33,7 +33,7 @@ export default function ExternalLinksSection() {
         .from("app_settings")
         .select("value")
         .eq("key", "external_links");
-      if (tenantId) q = q.eq("tenant_id", tenantId);
+      q = q.eq("tenant_id", tenantId || "00000000-0000-0000-0000-000000000000");
       const { data, error } = await q.maybeSingle();
       if (error) throw error;
       return Array.isArray(data?.value) ? data.value : [];

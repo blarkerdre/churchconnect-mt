@@ -70,7 +70,7 @@ function NotificationPreferencesSection() {
         .from("app_settings")
         .select("value")
         .eq("key", "sms_notifications_enabled");
-      if (tenantId) q = q.eq("tenant_id", tenantId);
+      q = q.eq("tenant_id", tenantId || "00000000-0000-0000-0000-000000000000");
       const { data, error } = await q.maybeSingle();
       if (error) throw error;
       return data?.value === true || data?.value === null || data === null;
@@ -397,7 +397,7 @@ function SettingsListSection({ settingsKey, title, icon: Icon, description, defa
         .from("app_settings")
         .select("value")
         .eq("key", settingsKey);
-      if (tenantId) q = q.eq("tenant_id", tenantId);
+      q = q.eq("tenant_id", tenantId || "00000000-0000-0000-0000-000000000000");
       const { data, error } = await q.maybeSingle();
       if (error) throw error;
       return {
@@ -1584,7 +1584,7 @@ function TestimonyEmailSection() {
     queryKey: ["app-settings", "testimony_recipient_email", tenantId],
     queryFn: async () => {
       let q = supabase.from("app_settings").select("value").eq("key", "testimony_recipient_email");
-      if (tenantId) q = q.eq("tenant_id", tenantId);
+      q = q.eq("tenant_id", tenantId || "00000000-0000-0000-0000-000000000000");
       const { data, error } = await q.maybeSingle();
       if (error) throw error;
       return typeof data?.value === "string" ? data.value : "";

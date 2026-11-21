@@ -59,7 +59,7 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
     queryKey: ["app-settings", "training_types", tenantId],
     queryFn: async () => {
       let q = supabase.from("app_settings").select("value").eq("key", "training_types");
-      if (tenantId) q = q.eq("tenant_id", tenantId);
+      q = q.eq("tenant_id", tenantId || "00000000-0000-0000-0000-000000000000");
       const { data, error } = await q.maybeSingle();
       if (error) throw error;
       return Array.isArray(data?.value) ? data.value : [];
@@ -71,7 +71,7 @@ export default function IssueCertificateDialog({ open, onOpenChange, member }) {
     queryKey: ["exam-titles-active", tenantId],
     queryFn: async () => {
       let q = supabase.from("exam_titles").select("name").eq("is_active", true).order("name");
-      if (tenantId) q = q.eq("tenant_id", tenantId);
+      q = q.eq("tenant_id", tenantId || "00000000-0000-0000-0000-000000000000");
       const { data, error } = await q;
       if (error) throw error;
       return data.map((t) => t.name);

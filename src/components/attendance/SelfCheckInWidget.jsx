@@ -32,7 +32,7 @@ export default function SelfCheckInWidget() {
         .from("members")
         .select("id, first_name, last_name, church_unit, wsf_centre_id")
         .eq("user_id", user.id);
-      if (tenantId) query = query.eq("tenant_id", tenantId);
+      query = query.eq("tenant_id", tenantId || "00000000-0000-0000-0000-000000000000");
       const { data, error } = await query.maybeSingle();
       if (error) throw error;
       return data;

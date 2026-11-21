@@ -175,9 +175,7 @@ export default function MyProfile() {
         .select("*, wsf_centres!fk_members_wsf_centre(name)")
         .eq("user_id", user.id);
 
-      if (tenantId) {
-        query = query.eq("tenant_id", tenantId);
-      }
+      query = query.eq("tenant_id", tenantId || "00000000-0000-0000-0000-000000000000");
 
       const { data, error } = await query.maybeSingle();
       if (error) throw error;

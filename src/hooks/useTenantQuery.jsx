@@ -13,6 +13,8 @@ import { useCallback, useMemo } from "react";
  *   // Use withTenant to auto-inject tenant_id into insert payloads:
  *   supabase.from("members").insert(withTenant({ first_name: "John", last_name: "Doe" }))
  */
+export const NO_TENANT = "00000000-0000-0000-0000-000000000000";
+
 export function useTenantQuery() {
   const { tenantId } = useTenant();
 
@@ -36,10 +38,8 @@ export function useTenantQuery() {
    */
   const scopeQuery = useCallback(
     (query) => {
-      if (tenantId) {
-        return query.eq("tenant_id", tenantId);
-      }
-      return query;
+      // Fail closed: with no church selected, match nothing rather than every church.
+      return query.eq("tenant_id", tenantId || NO_TENANT);
     },
     [tenantId]
   );
