@@ -316,6 +316,13 @@
       "when": 1795302910951,
       "tag": "0044_call_minutes_used_fix",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1795303395176,
+      "tag": "0045_guard_sms_billing_columns",
+      "breakpoints": true
     }
   ]
 }
