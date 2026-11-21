@@ -43,27 +43,46 @@ Deno.serve(async (req) => {
     })
   }
 
-  const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { Authorization: authHeader } },
-  })
-  const { data: { user }, error: userError } = await anonClient.auth.getUser()
-  if (userError || !user) {
-    return new Response(JSON.stringify({ error: 'Invalid token' }), {
-      status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  }
-
-  if (!(await callerMfaSatisfied(supabaseUrl, supabaseAnonKey, authHeader))) {
-    return new Response(JSON.stringify({ error: 'Two-step verification is required to send messages' }), {
-      status: 403,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
-  }
-
   const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
-
   const payload = await req.json()
+
+  // Scheduled emails are sent by the scheduler on behalf of their author;
+  // every role, unit, content and limit check below then applies to that author.
+  let user: { id: string } | null = null
+  if (authHeader.slice(7).trim() === supabaseServiceKey) {
+    const authorId = typeof payload.created_by === 'string' ? payload.created_by : ''
+    if (!authorId) {
+      return new Response(JSON.stringify({ error: 'Scheduled email has no author' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    user = { id: authorId }
+  } else {
+    const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    })
+    const { data: { user: authUser }, error: userError } = await anonClient.auth.getUser()
+    if (userError || !authUser) {
+      return new Response(JSON.stringify({ error: 'Invalid token' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    if (!(await callerMfaSatisfied(supabaseUrl, supabaseAnonKey, authHeader))) {
+      return new Response(JSON.stringify({ error: 'Two-step verification is required to send messages' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    user = { id: authUser.id }
+  }
+  if (!user) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  }
+
+
   const { audience, filters, tenant_id, member_ids, audience_label } = payload
   // Plain text only: strip HTML and control characters (no newlines in subject).
   const subject = typeof payload.subject === 'string' ? cleanMessageText(payload.subject, false) : payload.subject

@@ -376,7 +376,8 @@ Deno.serve(async (req) => {
     // person twice within 24 hours (stops repeat blasts at members).
     let alreadySent = new Set<string>();
     let skippedRepeat = 0;
-    if (!isInternalServiceCall) {
+    const applyRepeatCheck = !isInternalServiceCall || sms_type === "scheduled";
+    if (applyRepeatCheck) {
       const candidatePhones = recipients
         .map((r: any) => normalizeE164(String(r?.phone || "").trim()))
         .filter((p: string | null): p is string => !!p);
@@ -386,7 +387,7 @@ Deno.serve(async (req) => {
 
     for (const recipient of recipients) {
       let normalized = normalizeE164(recipient.phone?.trim() || "");
-      if (normalized && !isInternalServiceCall) {
+      if (normalized && applyRepeatCheck) {
         if (alreadySent.has(normalized) || seenThisBatch.has(normalized)) {
           skippedRepeat++;
           continue;

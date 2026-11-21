@@ -295,6 +295,13 @@
       "when": 1795300111761,
       "tag": "0041_birthday_settings_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1795301765697,
+      "tag": "0042_notification_insert_guard",
+      "breakpoints": true
     }
   ]
 }

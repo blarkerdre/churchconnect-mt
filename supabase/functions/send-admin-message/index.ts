@@ -4,7 +4,7 @@
 // admin rights in the target tenant.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { sendLoggedTemplateEmail } from '../_shared/managed-email.ts'
-import { callerMfaSatisfied } from '../_shared/sender-guard.ts'
+import { callerMfaSatisfied, messageContentProblem, messageHash, tenantSuspended, SUSPENDED_MESSAGE } from '../_shared/sender-guard.ts'
 import { escapeLike } from '../_shared/like-escape.ts'
 
 const corsHeaders = {
@@ -106,6 +106,36 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Suspended churches can't send (super-admins excepted).
+  let callerSuper = false
+  if (userId) {
+    const { data: sup } = await admin.rpc('is_super_admin', { _user_id: userId })
+    callerSuper = sup === true
+  }
+  if (!callerSuper && (await tenantSuspended(admin, tenantId))) {
+    return json({ error: SUSPENDED_MESSAGE }, 403)
+  }
+
+  // Same scam-wording rules as church emails.
+  const contentProblem = messageContentProblem(`${subject}\n${messageBody}`, true, 'emails')
+  if (contentProblem) return json({ error: contentProblem }, 400)
+
+  // The same email can't go to the same person twice in 24 hours.
+  const contentHash = await messageHash(`${recipientEmail}\n${subject}\n${messageBody}`)
+  {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const { data: prior, error: priorErr } = await admin
+      .from('audit_log')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .eq('entity_type', 'admin_direct_message')
+      .gte('created_at', since)
+      .contains('details', { hash: contentHash })
+      .limit(1)
+    if (priorErr) return json({ error: 'Could not check recent emails' }, 500)
+    if (prior && prior.length > 0) return json({ error: 'This email was already sent to this person in the last 24 hours.' }, 429)
+  }
+
   // Recipient must be someone already on record for this church. The
   // recipient's name comes from that record, not from the request.
   let recipientName = 'Friend'
@@ -168,7 +198,7 @@ Deno.serve(async (req) => {
       entity_type: 'admin_direct_message',
       user_id: userId,
       tenant_id: tenantId,
-      details: { module: 'Communications', recipient: recipientEmail, subject },
+      details: { module: 'Communications', recipient: recipientEmail, subject, hash: contentHash },
     }).then(() => {}, (e: unknown) => console.error('audit insert failed', e))
     return json({ sent: true }, 200)
   } catch (error) {

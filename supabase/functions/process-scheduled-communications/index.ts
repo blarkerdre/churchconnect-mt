@@ -74,6 +74,7 @@ Deno.serve(async (req) => {
             body: item.message,
             tenant_id: item.tenant_id,
             filters: item.filters || {},
+            created_by: item.created_by,
           }),
         })
 
