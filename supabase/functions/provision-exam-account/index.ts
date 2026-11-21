@@ -4,6 +4,7 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendLoggedTemplateEmail } from "../_shared/managed-email.ts";
+import { escapeLike } from "../_shared/like-escape.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -177,7 +178,7 @@ Deno.serve(async (req) => {
           .from("members")
           .select("id, user_id")
           .eq("tenant_id", app.tenant_id)
-          .ilike("email", emailLower)
+          .ilike("email", escapeLike(emailLower))
           .maybeSingle();
         if (byEmail) {
           memberId = byEmail.id;

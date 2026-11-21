@@ -5,6 +5,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { sendLoggedTemplateEmail } from '../_shared/managed-email.ts'
 import { callerMfaSatisfied } from '../_shared/sender-guard.ts'
+import { escapeLike } from '../_shared/like-escape.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -110,9 +111,9 @@ Deno.serve(async (req) => {
   let recipientName = 'Friend'
   {
     const [m, f, c] = await Promise.all([
-      admin.from('members').select('id, first_name').eq('tenant_id', tenantId).ilike('email', recipientEmail).limit(1),
-      admin.from('first_timers').select('id, first_name').eq('tenant_id', tenantId).ilike('email', recipientEmail).limit(1),
-      admin.from('contacts').select('id, first_name').eq('tenant_id', tenantId).ilike('email', recipientEmail).limit(1),
+      admin.from('members').select('id, first_name').eq('tenant_id', tenantId).ilike('email', escapeLike(recipientEmail)).limit(1),
+      admin.from('first_timers').select('id, first_name').eq('tenant_id', tenantId).ilike('email', escapeLike(recipientEmail)).limit(1),
+      admin.from('contacts').select('id, first_name').eq('tenant_id', tenantId).ilike('email', escapeLike(recipientEmail)).limit(1),
     ])
     const row: any = m.data?.[0] || f.data?.[0] || c.data?.[0]
     if (!row) return json({ error: 'Recipient is not on record for this church' }, 403)

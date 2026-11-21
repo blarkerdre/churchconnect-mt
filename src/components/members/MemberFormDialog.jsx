@@ -31,6 +31,7 @@ import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 import { diffUnitMembership, submitJoinRequests } from "@/hooks/usePendingJoinRequests";
 import { Info as InfoIcon } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
+import { escapeLike } from "@/lib/like-escape";
 
 const STATUSES = ["Active", "New Convert", "First Timer", "Visitor", "Bible School"];
 const GENDERS = ["Male", "Female"];
@@ -427,7 +428,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
             .from("members")
             .select("id, first_name, last_name")
             .eq("tenant_id", tenantId)
-            .ilike("email", payload.email)
+            .ilike("email", escapeLike(payload.email))
             .limit(1)
             .maybeSingle();
           if (existing) {
