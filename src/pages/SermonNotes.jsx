@@ -58,31 +58,33 @@ export default function SermonNotes() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const { data: notes = [], isLoading } = useQuery({
-    queryKey: ["sermon_notes", user?.id],
+    queryKey: ["sermon_notes", user?.id, tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sermon_notes")
         .select("*")
         .eq("user_id", user.id)
+        .eq("tenant_id", tenantId)
         .order("service_date", { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!user && !!tenantId,
   });
 
   const { data: folders = [] } = useQuery({
-    queryKey: ["sermon_note_folders", user?.id],
+    queryKey: ["sermon_note_folders", user?.id, tenantId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sermon_note_folders")
         .select("*")
         .eq("user_id", user.id)
+        .eq("tenant_id", tenantId)
         .order("name", { ascending: true });
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!user && !!tenantId,
   });
 
   const { data: memberships = [] } = useQuery({
@@ -95,7 +97,7 @@ export default function SermonNotes() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user,
+    enabled: !!user && !!tenantId,
   });
 
   const tenantNames = useMemo(() => {
