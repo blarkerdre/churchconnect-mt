@@ -2,6 +2,7 @@ import { resolveSmsFrom } from "../_shared/sms-sender.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkSmsQuota } from "../_shared/sms-quota.ts";
 import { sendRawManagedEmail } from "../_shared/managed-email.ts";
+import { emailSentRecently, notificationSentRecently, smsSentRecently } from "../_shared/notice-dedupe.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -150,7 +151,7 @@ Deno.serve(async (req) => {
         }
 
         // In-app notification
-        if (a.user_id) {
+        if (a.user_id && !(await notificationSentRecently(supabase, a.user_id, "unit_task", task.id))) {
           await supabase.from("notifications").insert({
             user_id: a.user_id,
             tenant_id: task.tenant_id,
@@ -174,8 +175,9 @@ Deno.serve(async (req) => {
         }
 
         // Email
-        if (email) {
-          const messageId = `unit-task-${task.id}-${a.user_id || a.member_id}`;
+        const emailPrefix = `unit-task-${task.id}-${a.user_id || a.member_id}`;
+        if (email && !(await emailSentRecently(supabase, emailPrefix))) {
+          const messageId = `${emailPrefix}-${Date.now()}`;
           const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;background:#f4f5f7;"><tr><td align="center">
@@ -217,7 +219,7 @@ ${task.description ? `<p style="margin:8px 0 0;color:#555;font-size:14px;">${esc
           let cleaned = phone.replace(/[\s\-\(\)\.]/g, "");
           if (/^0[1-9]\d{9,10}$/.test(cleaned)) cleaned = "+44" + cleaned.slice(1);
           if (!cleaned.startsWith("+")) cleaned = "+" + cleaned;
-          if (/^\+[1-9]\d{6,14}$/.test(cleaned)) {
+          if (/^\+[1-9]\d{6,14}$/.test(cleaned) && !(await smsSentRecently(supabase, "unit-task-assignment", task.id, cleaned))) {
             const quota = await checkSmsQuota(supabase, task.tenant_id, "sms", 1);
             if (quota.allowed) {
               const body = `Hi ${name}, you have a new task in ${task.unit_name}: "${task.title}". Check the app. - ${churchShort}`;

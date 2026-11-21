@@ -2,6 +2,7 @@ import { resolveSmsFrom } from "../_shared/sms-sender.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkSmsQuota } from "../_shared/sms-quota.ts";
 import { sendRawManagedEmail } from "../_shared/managed-email.ts";
+import { emailSentRecently, smsSentRecently } from "../_shared/notice-dedupe.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -112,6 +113,17 @@ Deno.serve(async (req) => {
       });
     }
 
+    // The assignee must belong to the same church as the case.
+    const { data: assigneeInTenant } = await supabase.rpc("person_in_tenant", {
+      _user_id: assigned_to, _tenant_id: tenant_id,
+    });
+    if (!assigneeInTenant) {
+      return new Response(JSON.stringify({ message: "Assignee not in this church" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const dedupePrefix = `pastoral-assign-${case_id}-${assigned_to}-`;
+
 
     // Fetch tenant settings for sender name
     let churchName = "Winners Chapel International Cardiff";
@@ -154,8 +166,8 @@ Deno.serve(async (req) => {
     const bodyText = `Hi ${recipientName},\n\n${introLine}\n\nSubject: ${subject}\nType: ${care_type || "General"}\n${description ? `Details: ${description}\n` : ""}\nPlease log in to the Church Management System to view and manage this case.\n\nGod bless,\n${churchName}`;
 
     // Send email notification via queue
-    if (recipientEmail) {
-      const messageId = `pastoral-assign-${crypto.randomUUID()}`;
+    if (recipientEmail && !(await emailSentRecently(supabase, dedupePrefix))) {
+      const messageId = `${dedupePrefix}${Date.now()}`;
 
       const htmlContent = `
 <!DOCTYPE html>
@@ -228,7 +240,7 @@ Deno.serve(async (req) => {
         }
         if (!cleaned.startsWith("+")) cleaned = "+" + cleaned;
 
-        if (/^\+[1-9]\d{6,14}$/.test(cleaned)) {
+        if (/^\+[1-9]\d{6,14}$/.test(cleaned) && !(await smsSentRecently(supabase, "pastoral-assignment", case_id, cleaned))) {
           const smsAction = is_new_request ? "been assigned a new" : "been reassigned a";
           const smsBody = `Hi ${recipientName}, you've ${smsAction} pastoral care case: "${subject}". Please check the Church Management System. - ${churchShortName}`;
 
