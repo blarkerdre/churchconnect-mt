@@ -6,6 +6,7 @@ import {
   Megaphone, Car, TrendingUp, BookOpen, Globe, MessageSquareHeart, ArrowRight, FileText, MessageSquare, Phone,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenant } from "@/contexts/TenantContext";
 import ModuleTour from "@/components/tour/ModuleTour";
 
 const MODULES = [
@@ -17,8 +18,8 @@ const MODULES = [
   { title: "Follow-ups", description: "Follow-ups, sign-posts and referral history.", icon: HeartHandshake, path: "/followups" },
   { title: "Pastoral Care", description: "Care requests, prayer requests and assignments.", icon: Heart, path: "/pastoral-care" },
   { title: "Events", description: "Event registrations and participation reports.", icon: CalendarDays, path: "/events" },
-  { title: "SMS Usage", description: "Texts used, allowance, top-up balance, cost per text and sent summary.", icon: MessageSquare, path: "/reports/sms" },
-  { title: "Call Usage", description: "Call minutes used, allowance, extra minutes balance and monthly call trends.", icon: Phone, path: "/reports/calls" },
+  { title: "SMS Usage", description: "Texts used, allowance, top-up balance, cost per text and sent summary.", icon: MessageSquare, path: "/reports/sms", feature: "/sms" },
+  { title: "Call Usage", description: "Call minutes used, allowance, extra minutes balance and monthly call trends.", icon: Phone, path: "/reports/calls", feature: "/phone-call" },
   { title: "Communications", description: "Announcements, SMS, email and message history.", icon: Megaphone, path: "/communications" },
   { title: "Transportation", description: "Ride bookings, assignments and trip reports.", icon: Car, path: "/transportation" },
   { title: "Training Reports", description: "BFC, BCC, LCC and LDC training progress.", icon: TrendingUp, path: "/training-reports" },
@@ -31,6 +32,8 @@ const MODULES = [
 export default function Reports() {
   const { tenantSlug } = useParams();
   const { isReportsOfficer, isAdmin } = useAuth();
+  const { currentTenant } = useTenant();
+  const disabled = currentTenant?.settings?.disabled_features || [];
   const prefix = tenantSlug ? `/t/${tenantSlug}` : "";
 
   return (
@@ -50,7 +53,7 @@ export default function Reports() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {MODULES.map((m) => {
+        {MODULES.filter((m) => !m.feature || !disabled.includes(m.feature)).map((m) => {
           const Icon = m.icon;
           return (
             <Card key={m.path} className="hover:shadow-md transition-shadow flex flex-col">

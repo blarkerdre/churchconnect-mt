@@ -225,8 +225,8 @@ function AppPages() {
         <Route path="/unit-tasks" element={<Navigate to="/church-unit?tab=tasks" replace />} />
         <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
         <Route path="/reports" element={<ReportsRoute><Reports /></ReportsRoute>} />
-        <Route path="/reports/sms" element={<ReportsRoute><SmsUsageReport /></ReportsRoute>} />
-        <Route path="/reports/calls" element={<ReportsRoute><CallUsageReport /></ReportsRoute>} />
+        <Route path="/reports/sms" element={<FeatureGate path="/sms"><ReportsRoute><SmsUsageReport /></ReportsRoute></FeatureGate>} />
+        <Route path="/reports/calls" element={<FeatureGate path="/phone-call"><ReportsRoute><CallUsageReport /></ReportsRoute></FeatureGate>} />
         <Route path="/certificates-report" element={<CertificateApprovalsRoute><CertificatesReport /></CertificateApprovalsRoute>} />
         <Route path="/certificate-approvals" element={<CertificateApprovalsRoute><CertificateApprovals /></CertificateApprovalsRoute>} />
         <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />

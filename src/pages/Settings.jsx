@@ -139,6 +139,8 @@ function NotificationPreferencesSection() {
 function BillingSection() {
   const { tenantId } = useTenantQuery();
   const { isTenantOwner, isTenantAdmin: isTAdmin } = useTenant();
+  const smsOn = useTenantFeatureEnabled("/sms");
+  const callOn = useTenantFeatureEnabled("/phone-call");
   const [payLoading, setPayLoading] = useState(false);
   const [manageLoading, setManageLoading] = useState(false);
   const confirmPw = useConfirmDelete();
@@ -239,8 +241,8 @@ function BillingSection() {
       </CardHeader>
       <CardContent className="space-y-4">
         {(isTenantOwner || isTAdmin) && <RenewalReminderSetting tenantId={tenantId} />}
-        <SmsTopUpCard tenantId={tenantId} canBuy={isTenantOwner || isTAdmin} />
-        <CallTopUpCard tenantId={tenantId} canBuy={isTenantOwner || isTAdmin} />
+        {smsOn && <SmsTopUpCard tenantId={tenantId} canBuy={isTenantOwner || isTAdmin} />}
+        {callOn && <CallTopUpCard tenantId={tenantId} canBuy={isTenantOwner || isTAdmin} />}
         {subLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading...</div>
         ) : !subscription ? (
@@ -1689,10 +1691,12 @@ export default function Settings() {
   const isSuperAdmin = roles.includes("super_admin");
   const canManageTenant = isSuperAdmin || isTenantOwner || isTenantAdmin;
   const canOwnerOnly = isSuperAdmin || isTenantOwner;
+  const billingEnabled = useTenantFeatureEnabled("/billing");
+  const canBilling = canOwnerOnly && (isSuperAdmin || billingEnabled);
   const slideshowEnabled = useTenantFeatureEnabled("/dashboard-slideshow");
   const settingsSections = [
     { value: "branding", label: "Branding" },
-    ...(canOwnerOnly ? [{ value: "billing", label: "Billing" }] : []),
+    ...(canBilling ? [{ value: "billing", label: "Billing" }] : []),
     { value: "notifications", label: "Notifications" },
     { value: "comms", label: "Communications" },
     { value: "units", label: "Church Units" },
@@ -1749,7 +1753,7 @@ export default function Settings() {
           className="hidden sm:flex h-auto w-full max-w-full flex-nowrap justify-start gap-1 overflow-x-auto overflow-y-hidden pb-2 [scrollbar-color:hsl(var(--border))_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent [&_[role=tab]]:shrink-0 [&_[role=tab]]:whitespace-nowrap"
         >
           <TabsTrigger data-tour="settings-branding" value="branding" className="gap-1.5 text-xs"><ImageIcon className="h-3.5 w-3.5" /><span>Branding</span></TabsTrigger>
-          {canOwnerOnly && (
+          {canBilling && (
             <TabsTrigger value="billing" className="gap-1.5 text-xs"><CreditCard className="h-3.5 w-3.5" /><span>Billing</span></TabsTrigger>
           )}
           <TabsTrigger data-tour="settings-restart-tours" value="notifications" className="gap-1.5 text-xs"><Bell className="h-3.5 w-3.5" /><span>Notifications</span></TabsTrigger>
@@ -1791,7 +1795,7 @@ export default function Settings() {
           {slideshowEnabled && <DashboardBannerSettings />}
         </TabsContent>
 
-        {canOwnerOnly && (
+        {canBilling && (
           <TabsContent value="billing" className="space-y-4">
             <SLASection />
             <BillingSection />

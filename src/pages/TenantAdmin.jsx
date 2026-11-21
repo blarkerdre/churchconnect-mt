@@ -1157,6 +1157,7 @@ export default function TenantAdmin() {
                 />
               </div>
 
+              {!(editForm.disabled_features || []).includes("/sms") && (
               <div className="space-y-2">
                 <Label>Monthly SMS Limit <span className="text-muted-foreground font-normal">(0 = unlimited)</span></Label>
                 <Input
@@ -1167,7 +1168,9 @@ export default function TenantAdmin() {
                   placeholder="0"
                 />
               </div>
+              )}
 
+              {!(editForm.disabled_features || []).includes("/phone-call") && (
               <div className="space-y-2">
                 <Label>Monthly Call Minutes <span className="text-muted-foreground font-normal">(0 = unlimited)</span></Label>
                 <Input
@@ -1178,7 +1181,9 @@ export default function TenantAdmin() {
                   placeholder="0"
                 />
               </div>
+              )}
 
+              {!(editForm.disabled_features || []).includes("/whatsapp") && (
               <div className="space-y-2">
                 <Label>Monthly WhatsApp Limit <span className="text-muted-foreground font-normal">(0 = unlimited)</span></Label>
                 <Input
@@ -1189,6 +1194,7 @@ export default function TenantAdmin() {
                   placeholder="0"
                 />
               </div>
+              )}
 
               <div className="p-3 bg-muted/50 rounded-lg text-xs text-muted-foreground space-y-1">
                 <p className="font-medium">Plan tier presets:</p>
@@ -1200,7 +1206,7 @@ export default function TenantAdmin() {
 
             {/* Billing Tab */}
             <TabsContent value="billing" className="space-y-4 mt-4">
-              <TenantBillingTab tenant={editTenant} />
+              <TenantBillingTab tenant={editTenant} disabledFeatures={editForm.disabled_features || []} />
             </TabsContent>
 
             {/* Features Tab */}

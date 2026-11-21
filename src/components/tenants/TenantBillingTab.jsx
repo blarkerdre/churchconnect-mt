@@ -18,7 +18,7 @@ import InvoicesReceiptsList from "./InvoicesReceiptsList";
 import SubscriptionBankTransfer from "@/components/billing/SubscriptionBankTransfer";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 
-export default function TenantBillingTab({ tenant }) {
+export default function TenantBillingTab({ tenant, disabledFeatures = [] }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showPaymentForm, setShowPaymentForm] = useState(false);
@@ -126,8 +126,9 @@ export default function TenantBillingTab({ tenant }) {
 
   return (
     <div className="space-y-4">
-      <SmsPricingAdmin tenantId={tenantId} />
-      <CallMinutesAdmin tenantId={tenantId} />
+      {disabledFeatures.includes("/billing") && <p className="text-xs text-muted-foreground p-3 bg-muted/50 rounded-lg">Plan &amp; Billing is turned off for this church, so its admins can't see the Billing page.</p>}
+      {!disabledFeatures.includes("/sms") && <SmsPricingAdmin tenantId={tenantId} />}
+      {!disabledFeatures.includes("/phone-call") && <CallMinutesAdmin tenantId={tenantId} />}
       <Separator />
       {/* Subscription Config */}
       <div className="space-y-3">
