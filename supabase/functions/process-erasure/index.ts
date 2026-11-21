@@ -78,15 +78,33 @@ Deno.serve(async (req) => {
       }
     }
 
+    // The account being erased must belong to this church. Never act on an
+    // account from another church, whatever the stored request says.
+    if (subjectUserId) {
+      const { data: inTenant } = await admin.rpc("person_in_tenant", {
+        _user_id: subjectUserId, _tenant_id: tenantId,
+      });
+      if (!inTenant) {
+        return new Response(JSON.stringify({ error: "This person does not belong to this church" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
+    // Personal rows are always erased inside this church only.
+    const TENANT_SCOPED = ["sermon_notes", "sermon_note_folders", "testimonies",
+                           "app_feedback", "push_subscriptions"];
+
     // Snapshot member row + related for recovery
     const snapshot: Record<string, unknown[]> = {};
     if (memberId) {
       const { data: m } = await admin.from("members").select("*").eq("id", memberId).eq("tenant_id", tenantId);
       snapshot["members"] = m || [];
-      for (const t of ["sermon_notes", "testimonies", "app_feedback", "push_subscriptions",
-                       "life_event_requests", "consent_events"]) {
+    }
+    if (subjectUserId) {
+      for (const t of ["sermon_notes", "testimonies", "app_feedback", "push_subscriptions", "consent_events"]) {
         try {
-          const { data } = await admin.from(t).select("*").eq("user_id", subjectUserId);
+          const { data } = await admin.from(t).select("*")
+            .eq("user_id", subjectUserId).eq("tenant_id", tenantId);
           if (data) snapshot[t] = data;
         } catch { /* ignore */ }
       }
@@ -125,21 +143,34 @@ Deno.serve(async (req) => {
       }).eq("id", memberId).eq("tenant_id", tenantId);
     }
 
-    // Delete personal artefacts (belong solely to the individual)
     if (subjectUserId) {
-      for (const t of ["sermon_notes", "sermon_note_folders", "testimonies",
-                       "app_feedback", "push_subscriptions", "user_tour_completions"]) {
-        try { await admin.from(t).delete().eq("user_id", subjectUserId); } catch { /* ignore */ }
+      // Delete personal artefacts that belong to this church
+      for (const t of TENANT_SCOPED) {
+        try {
+          await admin.from(t).delete().eq("user_id", subjectUserId).eq("tenant_id", tenantId);
+        } catch { /* ignore */ }
       }
 
       // Remove tenant membership + roles scoped to this tenant
       await admin.from("tenant_memberships").delete()
         .eq("user_id", subjectUserId).eq("tenant_id", tenantId);
+      await admin.from("user_roles").delete()
+        .eq("user_id", subjectUserId).eq("tenant_id", tenantId);
 
-      // Delete auth user only if they have no other memberships
-      const { data: others } = await admin.from("tenant_memberships")
-        .select("id").eq("user_id", subjectUserId).limit(1);
-      if (!others || others.length === 0) {
+      // The sign-in account is shared across churches. Only delete it when
+      // the person has no ties to any other church and is not a platform
+      // super-admin.
+      const [{ data: otherMemberships }, { data: otherMembers }, { data: otherRoles }, { data: isSuper }] =
+        await Promise.all([
+          admin.from("tenant_memberships").select("id").eq("user_id", subjectUserId).neq("tenant_id", tenantId).limit(1),
+          admin.from("members").select("id").eq("user_id", subjectUserId).neq("tenant_id", tenantId).limit(1),
+          admin.from("user_roles").select("id").eq("user_id", subjectUserId).neq("tenant_id", tenantId).limit(1),
+          admin.rpc("has_role", { _user_id: subjectUserId, _role: "super_admin" }),
+        ]);
+      const hasOtherTies = (otherMemberships?.length ?? 0) > 0 || (otherMembers?.length ?? 0) > 0 ||
+        (otherRoles?.length ?? 0) > 0 || isSuper === true;
+      if (!hasOtherTies) {
+        try { await admin.from("user_tour_completions").delete().eq("user_id", subjectUserId); } catch { /* ignore */ }
         try { await admin.auth.admin.deleteUser(subjectUserId); } catch (e) { console.error("deleteUser", e); }
       }
     }

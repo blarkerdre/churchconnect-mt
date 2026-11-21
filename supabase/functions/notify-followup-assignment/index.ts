@@ -24,9 +24,8 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify authentication - accept service role / job token (DB trigger) or authenticated user
+    // Only the database (service role / job token) may call this function
     const authHeader = req.headers.get("Authorization");
     const svcClient = createClient(supabaseUrl, serviceKey);
 
@@ -48,23 +47,14 @@ Deno.serve(async (req) => {
       isServiceRole = authHeader.replace("Bearer ", "") === serviceKey;
     }
 
-    let callerUserId: string | null = null;
-
+    // This notice is only ever sent by the database when a follow-up is
+    // created or reassigned. Signed-in users cannot trigger it directly.
     if (!isServiceRole) {
-      // Validate as user JWT
-      const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
-        global: { headers: { Authorization: authHeader! } },
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-      const { data: { user }, error: userError } = await anonClient.auth.getUser();
-      if (userError || !user) {
-        return new Response(JSON.stringify({ error: "Invalid token" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      callerUserId = user.id;
     }
-
 
     const supabase = svcClient;
 
@@ -98,20 +88,6 @@ Deno.serve(async (req) => {
     const description = followup.description;
     const followup_type = followup.followup_type;
 
-    // Enforce tenant-scoped authorization for non-service-role callers
-    if (!isServiceRole && callerUserId) {
-      const [{ data: isAdmin }, { data: isTenantLeader }] = await Promise.all([
-        svcClient.rpc("is_admin", { _user_id: callerUserId, _tenant_id: tenant_id }),
-        svcClient.rpc("has_role", { _user_id: callerUserId, _role: "unit_leader", _tenant_id: tenant_id }),
-      ]);
-      if (!isAdmin && !isTenantLeader) {
-        return new Response(JSON.stringify({ error: "Forbidden" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
-
     // Optional consistency check: reject mismatched body tenant_id
     if (bodyTenantId && bodyTenantId !== tenant_id) {
       return new Response(JSON.stringify({ error: "Tenant mismatch" }), {
@@ -125,6 +101,22 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // The assignee must belong to the same church as the follow-up.
+    const { data: assigneeInTenant } = await supabase.rpc("person_in_tenant", {
+      _user_id: assigned_to, _tenant_id: tenant_id,
+    });
+    if (!assigneeInTenant) {
+      console.warn("[notify-followup-assignment] assignee not in tenant - skipping");
+      return new Response(JSON.stringify({ message: "Assignee not in this church" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Send at most one email and one text per follow-up and assignee per day,
+    // so re-assigning a case back and forth cannot be used to spam someone.
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const dedupePrefix = `followup-assign-${followup_id}-${assigned_to}`;
 
 
     // Fetch tenant settings for sender name
@@ -178,8 +170,16 @@ Deno.serve(async (req) => {
     const bodyText = `Hi ${recipientName},\n\nYou have been assigned a new ${followup_type || "follow-up"} task for ${member_name}.\n\n${description || ""}\n\nPlease log in to the Church Management System to view and manage this task.\n\nGod bless,\n${churchName}`;
 
     // Send email notification via queue
-    if (recipientEmail) {
-      const messageId = `followup-assign-${crypto.randomUUID()}`;
+    const { data: recentEmail } = await supabase
+      .from("email_send_log")
+      .select("id")
+      .like("message_id", `${dedupePrefix}-%`)
+      .gte("created_at", since)
+      .limit(1);
+    const emailAlreadySent = (recentEmail?.length ?? 0) > 0;
+
+    if (recipientEmail && !emailAlreadySent) {
+      const messageId = `${dedupePrefix}-${Date.now()}`;
 
       const htmlContent = `
 <!DOCTYPE html>
@@ -240,7 +240,17 @@ Deno.serve(async (req) => {
     const smsEnabled = smsSetting?.value === true || smsSetting === null;
 
     // Send SMS notification (only if enabled)
-    if (recipientPhone && smsEnabled) {
+    const { data: recentSms } = await supabase
+      .from("sms_log")
+      .select("id")
+      .eq("sms_type", "followup-assignment")
+      .eq("reference_id", followup_id)
+      .eq("sender_id", assigned_to)
+      .gte("created_at", since)
+      .limit(1);
+    const smsAlreadySent = (recentSms?.length ?? 0) > 0;
+
+    if (recipientPhone && smsEnabled && !smsAlreadySent) {
       const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
       const TWILIO_API_KEY = Deno.env.get("TWILIO_API_KEY");
       const TWILIO_FROM = Deno.env.get("TWILIO_FROM_NUMBER");

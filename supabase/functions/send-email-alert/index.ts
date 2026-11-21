@@ -83,6 +83,25 @@ Deno.serve(async (req) => {
     })
   }
 
+  // Validate recipient filters: known statuses, short unit names, real dates.
+  const MEMBER_STATUSES = ['Active', 'Inactive', 'New Convert', 'First Timer', 'Visitor', 'Bible School']
+  const badFilter = (msg: string) => new Response(JSON.stringify({ error: msg }), {
+    status: 400,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+  if (filters != null && (typeof filters !== 'object' || Array.isArray(filters))) return badFilter('Invalid filters')
+  if (filters?.status != null && !MEMBER_STATUSES.includes(String(filters.status))) return badFilter('Invalid member status')
+  if (filters?.unit != null && (typeof filters.unit !== 'string' || filters.unit.length > 100)) return badFilter('Invalid unit')
+  for (const k of ['dateFrom', 'dateTo']) {
+    const v = filters?.[k]
+    if (v != null && (typeof v !== 'string' || Number.isNaN(Date.parse(v)))) return badFilter('Invalid date')
+  }
+  if (audience != null && (typeof audience !== 'string' || audience.length > 120)) return badFilter('Invalid audience')
+  if (audience?.startsWith('status:') && !MEMBER_STATUSES.includes(audience.slice(7))) return badFilter('Invalid member status')
+  if (member_ids != null && !Array.isArray(member_ids)) return badFilter('Invalid member_ids')
+  // Treat unit names literally (no wildcard characters).
+  const likeSafe = (v: string) => v.replace(/[\\%_]/g, (c) => `\\${c}`)
+
   if (!tenant_id) {
     return new Response(JSON.stringify({ error: 'tenant_id is required' }), {
       status: 400,
@@ -147,6 +166,14 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Every email names the person who wrote it, so members can see who it is
+  // from and reply to them directly.
+  const { data: senderProfile } = await serviceClient
+    .from('profiles').select('full_name, email').eq('user_id', user.id).maybeSingle()
+  const senderName = cleanMessageText(senderProfile?.full_name || user.email || 'a church leader', false).slice(0, 120)
+  const senderEmail = senderProfile?.email || user.email || undefined
+  const senderRoleLabel = isAdmin ? 'church admin' : 'unit leader'
+
   // Build member query based on explicit IDs, filters, or legacy audience
   let query = serviceClient.from('members').select('email, first_name, last_name, church_unit')
     .not('email', 'is', null)
@@ -169,7 +196,7 @@ Deno.serve(async (req) => {
       query = query.eq('membership_status', filters.status)
     }
     if (filters.unit) {
-      query = query.ilike('church_unit', `%${filters.unit}%`)
+      query = query.ilike('church_unit', `%${likeSafe(filters.unit)}%`)
     }
     if (filters.dateFrom) {
       query = query.gte('created_at', filters.dateFrom)
@@ -183,7 +210,7 @@ Deno.serve(async (req) => {
       const statusValue = audience.replace('status:', '')
       query = query.eq('membership_status', statusValue)
     } else if (audience !== 'All Members') {
-      query = query.ilike('church_unit', `%${audience}%`)
+      query = query.ilike('church_unit', `%${likeSafe(audience)}%`)
     }
   }
 
@@ -240,6 +267,7 @@ Deno.serve(async (req) => {
           <h2 style="margin:0 0 16px;color:#1a2d4d;font-size:18px;">${escHtml(subject)}</h2>
           <div style="margin:0 0 24px;color:#555555;font-size:15px;line-height:1.6;white-space:pre-wrap;">${escHtml(body)}</div>
           <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
+          <p style="margin:0 0 6px;color:#999999;font-size:12px;text-align:center;">Sent by ${escHtml(senderName)} (${senderRoleLabel}) at ${escHtml(tenantSenderName)}.</p>
           <p style="margin:0;color:#999999;font-size:12px;text-align:center;">This email was sent to ${escHtml(audienceLabel)} members.</p>
         </td></tr>
       </table>
@@ -265,7 +293,8 @@ Deno.serve(async (req) => {
         to: member.email,
         subject: subject,
         html: htmlTemplate(firstName),
-        text: `Dear ${firstName},\n\n${subject}\n\n${body}\n\nThis email was sent to ${audienceLabel} members.\n\n${tenantSenderName}`,
+        text: `Dear ${firstName},\n\n${subject}\n\n${body}\n\nSent by ${senderName} (${senderRoleLabel}) at ${tenantSenderName}.\nThis email was sent to ${audienceLabel} members.\n\n${tenantSenderName}`,
+        replyTo: senderEmail,
         label: 'email-alert',
         idempotencyKey: messageId,
         tenantId: tenant_id,
@@ -293,6 +322,7 @@ Deno.serve(async (req) => {
       skipped_count: skipped,
       subject,
       source: 'send-email-alert',
+      sender_name: senderName,
     },
   })
 
