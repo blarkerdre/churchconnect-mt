@@ -1,3 +1,5 @@
+import { money as formatMoney } from "@/lib/money";
+import CallTopUpCard from "@/components/billing/CallTopUpCard";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 import { RenewalReminderSetting } from "@/components/billing/RenewalBanner";
 import SmsTopUpCard from "@/components/billing/SmsTopUpCard";
@@ -238,6 +240,7 @@ function BillingSection() {
       <CardContent className="space-y-4">
         {(isTenantOwner || isTAdmin) && <RenewalReminderSetting tenantId={tenantId} />}
         <SmsTopUpCard tenantId={tenantId} canBuy={isTenantOwner || isTAdmin} />
+        <CallTopUpCard tenantId={tenantId} canBuy={isTenantOwner || isTAdmin} />
         {subLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading...</div>
         ) : !subscription ? (
@@ -249,14 +252,14 @@ function BillingSection() {
                 <span className="text-muted-foreground">Status</span>
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full capitalize ${statusColor}`}>{tenantData?.subscription_status || "active"}</span>
               </div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-semibold">{subscription.currency} {Number(subscription.amount).toFixed(2)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Amount</span><span className="font-semibold">{formatMoney(subscription.amount, subscription.currency)}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Billing Cycle</span><span className="capitalize">{subscription.billing_cycle}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Next Due Date</span><span className={tenantData?.subscription_status !== "active" ? "text-destructive font-medium" : ""}>{subscription.next_due_date}</span></div>
               {Number(subscription.setup_fee_amount) > 0 && (
                 <div className="flex justify-between items-center gap-2 flex-wrap">
                   <span className="text-muted-foreground">Setup Fee (one-time)</span>
                   <span className="flex items-center gap-2">
-                    <span className="font-semibold">{subscription.currency} {Number(subscription.setup_fee_amount).toFixed(2)}</span>
+                    <span className="font-semibold">{formatMoney(subscription.setup_fee_amount, subscription.currency)}</span>
                     {subscription.setup_fee_paid ? (
                       <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600 text-white">Paid</Badge>
                     ) : (
@@ -269,7 +272,7 @@ function BillingSection() {
 
             {!subscription.stripe_subscription_id && Number(subscription.setup_fee_amount) > 0 && !subscription.setup_fee_paid && (
               <p className="text-xs text-muted-foreground px-1">
-                Your first payment will include a one-time setup fee of <span className="font-medium text-foreground">{subscription.currency} {Number(subscription.setup_fee_amount).toFixed(2)}</span> plus the recurring <span className="font-medium text-foreground">{subscription.currency} {Number(subscription.amount).toFixed(2)}</span> / {subscription.billing_cycle}.
+                Your first payment will include a one-time setup fee of <span className="font-medium text-foreground">{formatMoney(subscription.setup_fee_amount, subscription.currency)}</span> plus the recurring <span className="font-medium text-foreground">{formatMoney(subscription.amount, subscription.currency)}</span> / {subscription.billing_cycle}.
               </p>
             )}
 
@@ -321,7 +324,7 @@ function BillingSection() {
                       {(showAllPayments ? payments : payments.slice(0, 5)).map((p) => (
                         <TableRow key={p.id}>
                           <TableCell className="text-xs">{p.payment_date}</TableCell>
-                          <TableCell className="text-xs font-medium">{p.currency} {Number(p.amount).toFixed(2)}</TableCell>
+                          <TableCell className="text-xs font-medium">{formatMoney(p.amount, p.currency)}</TableCell>
                           <TableCell className="text-xs">{p.payment_method || "Stripe"}</TableCell>
                           <TableCell className="text-xs">
                             <Badge variant={p.status === "completed" ? "default" : p.status === "pending" ? "secondary" : "destructive"} className={`text-[10px] ${p.status === "completed" ? "bg-green-600" : p.status === "pending" ? "bg-amber-500" : ""}`}>

@@ -705,6 +705,56 @@ export type Database = {
           },
         ]
       }
+      call_minute_topups: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          minutes: number
+          paid_at: string | null
+          status: string
+          stripe_session_id: string | null
+          tenant_id: string
+          unit_price: number
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          minutes: number
+          paid_at?: string | null
+          status?: string
+          stripe_session_id?: string | null
+          tenant_id: string
+          unit_price?: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          minutes?: number
+          paid_at?: string | null
+          status?: string
+          stripe_session_id?: string | null
+          tenant_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_minute_topups_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       certificate_templates: {
         Row: {
           accent_color: string
@@ -7960,12 +8010,20 @@ export type Database = {
           tenant_slug: string
         }[]
       }
+      add_call_minutes_for_topup: {
+        Args: { _session_id: string }
+        Returns: number
+      }
       add_member_unit: {
         Args: { _member: string; _unit: string }
         Returns: undefined
       }
       add_sms_credits_for_topup: {
         Args: { _session_id: string }
+        Returns: number
+      }
+      admin_adjust_sms_credits: {
+        Args: { _delta: number; _tenant_id: string }
         Returns: number
       }
       approve_course_registration: {

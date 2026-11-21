@@ -342,7 +342,7 @@ function buildBody(report, logoRelId, logo) {
         "S/N",
         "APPROVED LECTURERS",
         "NO. OF COURSES",
-        `RECOMMENDED HONORARIUM (£${report.honorarium_matrix?.rate ?? 0} PER COURSE)`,
+        `RECOMMENDED HONORARIUM (${report.currency_symbol || "£"}${report.honorarium_matrix?.rate ?? 0} PER COURSE)`,
         "SIGNED CONTRACT OF SERVICE (COS)/ PAYROLL",
       ],
       (report.honorarium_matrix?.rows || []).map((r, i) => [

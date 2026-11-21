@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { useTenant } from "@/contexts/TenantContext";
+import { currencySymbol } from "@/lib/money";
 import { toast } from "@/components/ui/use-toast";
 import { Loader2, Save, RefreshCw, Printer, FileDown, Plus, Trash2, FileText, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -246,6 +247,7 @@ export default function CourseReportTab() {
 
   const reportForExport = {
     ...report,
+    currency_symbol: currencySymbol(currentTenant?.billing_currency),
     cover: { ...report.cover, logo_url: exportLogoUrl },
   };
 
@@ -517,7 +519,7 @@ export default function CourseReportTab() {
       const matrixRows = Object.entries(perLecturer).map(([lecturer, n]) => ({
         lecturer,
         courses: String(n),
-        amount: `£${n * rate}`,
+        amount: `${currencySymbol(currentTenant?.billing_currency)}${n * rate}`,
         cos: "",
       }));
 
@@ -913,7 +915,7 @@ export default function CourseReportTab() {
                   { key: "remarks", label: "Remarks" },
                 ]} />
               <div className="space-y-2">
-                <TextField label="Honorarium rate per course (£)" value={report.honorarium_matrix.rate}
+                <TextField label={`Honorarium rate per course (${currencySymbol(currentTenant?.billing_currency)})`} value={report.honorarium_matrix.rate}
                   onChange={(v) => set("honorarium_matrix.rate", v)} />
                 <RowEditor rows={report.honorarium_matrix.rows} onChange={(v) => set("honorarium_matrix.rows", v)} addLabel="Add lecturer"
                   columns={[

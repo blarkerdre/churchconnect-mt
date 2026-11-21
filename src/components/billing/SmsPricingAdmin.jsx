@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 import SmsTopUpCard, { useSmsBilling } from "./SmsTopUpCard";
 
 const CURRENCIES = ["GBP", "USD", "EUR", "NGN", "CAD"];
@@ -15,6 +16,7 @@ export default function SmsPricingAdmin({ tenantId }) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const { data } = useSmsBilling(tenantId);
+  const confirmPw = useConfirmDelete();
   const [price, setPrice] = useState("");
   const [saving, setSaving] = useState(null); // "price" | "currency" | null
   const [saved, setSaved] = useState(null);
@@ -29,12 +31,24 @@ export default function SmsPricingAdmin({ tenantId }) {
   const saveCurrency = async () => {
     const { data: sub } = await supabase.from("tenant_subscriptions").select("id, stripe_subscription_id").eq("tenant_id", tenantId).maybeSingle();
     if (sub?.stripe_subscription_id && !window.confirm("This church has an active card subscription. Stripe can't change its currency, so the subscription will need to be set up again in the new currency. Continue?")) return;
+    qc.invalidateQueries({ queryKey: ["call-billing", tenantId] }); qc.invalidateQueries({ queryKey: ["call-minutes-admin", tenantId] });
     setSaving("currency"); setErr((e) => ({ ...e, currency: null }));
     const { data: rows, error } = await supabase.from("tenants").update({ billing_currency: cur }).eq("id", tenantId).select("id");
     const msg = error?.message || (!rows?.length ? "You don't have permission to change this church." : null);
     if (!msg && sub) await supabase.from("tenant_subscriptions").update({ currency: cur }).eq("id", sub.id).eq("tenant_id", tenantId);
     if (msg) { setSaving(null); setErr((e) => ({ ...e, currency: msg })); toast({ title: "Couldn't save", description: msg, variant: "destructive" }); return; }
     await refresh(); setSaving(null); flash("currency"); toast({ title: "Billing currency saved" });
+  };
+  const [adj, setAdj] = useState("");
+  const adjustSms = async () => {
+    const d = Number(adj);
+    if (!Number.isInteger(d) || d === 0) { toast({ title: "Enter a whole number like 500 or -200", variant: "destructive" }); return; }
+    if (!(await confirmPw({ title: d > 0 ? "Add top-up texts" : "Remove top-up texts", description: `${d > 0 ? "Add" : "Remove"} ${Math.abs(d)} texts ${d > 0 ? "to" : "from"} this church's top-up balance.`, confirmLabel: "Confirm" }))) return;
+    setSaving("adj");
+    const { data: next, error } = await supabase.rpc("admin_adjust_sms_credits", { _tenant_id: tenantId, _delta: d });
+    setSaving(null);
+    if (error) { toast({ title: "Couldn't change texts", description: error.message, variant: "destructive" }); return; }
+    setAdj(""); await refresh(); toast({ title: `Top-up balance is now ${Number(next).toLocaleString()} texts` });
   };
   const [bank, setBank] = useState(null);
   const saveBank = async () => {
@@ -92,6 +106,14 @@ export default function SmsPricingAdmin({ tenantId }) {
         ? <p className="text-xs text-destructive">The plan is priced in {data.plan?.currency || "GBP"}. Set a Cost per SMS in {data.currency} so this church can buy texts.</p>
         : <p className="text-xs text-muted-foreground">Using this church's own price in {data.currency} (the plan's {data.plan?.currency || "GBP"} price is ignored).</p>)}
       <p className="text-xs text-muted-foreground">Leave blank to use the plan's price. Used for top-ups and extra texts after the monthly quota.</p>
+      <h4 className="text-sm font-medium">Add or remove top-up texts</h4>
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="space-y-1">
+          <Label className="text-xs">Current balance: {Number(data?.tenant?.sms_credit_balance || 0).toLocaleString()} texts</Label>
+          <Input type="number" placeholder="e.g. 500 or -200" value={adj} onChange={(e) => setAdj(e.target.value)} className="w-44" aria-label="Texts to add or remove" />
+        </div>
+        <Button size="sm" variant="outline" onClick={adjustSms} disabled={saving === "adj"}>{saving === "adj" ? "Saving..." : "Apply"}</Button>
+      </div>
       <h4 className="text-sm font-medium">Bank details for transfers (all churches)</h4>
       <Textarea rows={4} value={bank ?? data?.bank ?? ""} onChange={(e) => setBank(e.target.value)} placeholder={"Account name\nSort code\nAccount number / IBAN"} />
       <Button size="sm" disabled={saving === "bank" || bank === null} onClick={saveBank}>{btnLabel("bank")}</Button>
