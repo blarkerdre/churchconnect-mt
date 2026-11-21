@@ -206,12 +206,24 @@ export default function ContactsManager() {
         return;
       }
       const payload = fresh.map(r => withTenant({ ...r, created_by: user?.id }));
-      const { error } = await supabase.from("contacts").upsert(payload, { onConflict: "tenant_id,email", ignoreDuplicates: true });
-      if (error) throw error;
+      let imported = 0, raced = 0;
+      for (let k = 0; k < payload.length; k += 200) {
+        const chunk = payload.slice(k, k + 200);
+        const { error } = await supabase.from("contacts").insert(chunk);
+        if (!error) { imported += chunk.length; continue; }
+        if (error.code !== "23505") throw error;
+        for (const row of chunk) {
+          const { error: e1 } = await supabase.from("contacts").insert(row);
+          if (!e1) imported++;
+          else if (e1.code === "23505") raced++;
+          else throw e1;
+        }
+      }
+      const totalSkipped = skipped + raced;
       qc.invalidateQueries({ queryKey: ["contacts"] });
-      toast({ title: "Contacts imported", description: skipped
-        ? `${fresh.length} imported, ${skipped} duplicate${skipped === 1 ? "" : "s"} skipped (${existing} already in contacts, ${inFile} repeated in file).`
-        : `${fresh.length} imported.` });
+      toast({ title: "Contacts imported", description: totalSkipped
+        ? `${imported} imported, ${totalSkipped} duplicate${totalSkipped === 1 ? "" : "s"} skipped (${existing + raced} already in contacts, ${inFile} repeated in file).`
+        : `${imported} imported.` });
     } catch (e) {
       toast({ title: "Import failed", description: e.message, variant: "destructive" });
     }
