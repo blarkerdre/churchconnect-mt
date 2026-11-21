@@ -15,6 +15,7 @@ export function useSmsBilling(tenantId) {
     queryKey: ["sms-billing", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
+      try { await supabase.functions.invoke("verify-sms-topups", { body: { tenant_id: tenantId } }); } catch { /* best effort */ }
       const { data: t } = await supabase.from("tenants").select("sms_limit_monthly, sms_credit_balance, sms_low_threshold, sms_unit_price_override, pricing_plan_id, billing_currency").eq("id", tenantId).single();
       let plan = null;
       if (t?.pricing_plan_id) {
