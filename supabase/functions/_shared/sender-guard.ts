@@ -57,3 +57,31 @@ export function memberInUnits(churchUnit: unknown, units: string[]): boolean {
     .map((u) => u.trim())
     .some((u) => units.includes(u));
 }
+
+const LINK_RE = /\b(?:https?:\/\/|www\.)\S+|\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|net|org|co|uk|io|me|info|biz|xyz|link|ly|app|site|online|top|click|ng|ca|us)\b(?:\/\S*)?/gi;
+const SHORTENERS = /\b(?:bit\.ly|tinyurl\.com|t\.co|goo\.gl|ow\.ly|is\.gd|buff\.ly|rebrand\.ly|cutt\.ly|shorturl\.at|rb\.gy|tiny\.cc|t\.ly|s\.id)\b/i;
+const IP_LINK = /\b(?:https?:\/\/)?\d{1,3}(?:\.\d{1,3}){3}(?::\d+)?\b/;
+const CREDENTIAL_BAIT = /\b(?:send|reply(?: with)?|share|text|give|tell|confirm|enter|provide|forward)\b[^.!?\n]{0,30}\b(?:your|ur)\s+(?:password|passcode|pin|verification code|security code|one[- ]time code|otp|login code|bank details|account number|card number|card details|sort code|cvv)\b/i;
+
+/**
+ * Bounds what a church sender may put in a text. Returns a user-facing reason
+ * when the message is not allowed, otherwise null.
+ * - Only church admins may include web links; unit leaders and follow-up
+ *   workers send plain text only.
+ * - Nobody may send hidden-destination links (URL shorteners) or links to raw
+ *   IP addresses, which are typical of phishing.
+ * - Nobody may ask recipients to send passwords, codes or bank/card details.
+ */
+export function smsContentProblem(message: string, senderIsAdmin: boolean): string | null {
+  if (CREDENTIAL_BAIT.test(message)) {
+    return "Texts can't ask people for passwords, codes, PINs or bank/card details.";
+  }
+  if (SHORTENERS.test(message) || IP_LINK.test(message)) {
+    return "Shortened links and links to number-only addresses aren't allowed in texts. Use the full web address.";
+  }
+  LINK_RE.lastIndex = 0;
+  if (!senderIsAdmin && LINK_RE.test(message)) {
+    return "Only church admins can include web links in texts.";
+  }
+  return null;
+}

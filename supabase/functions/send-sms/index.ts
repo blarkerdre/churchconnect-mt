@@ -1,5 +1,5 @@
 import { senderNameFrom } from "../_shared/sms-sender.ts";
-import { callerMfaSatisfied, cleanMessageText, phoneKey, loadLeaderUnits, memberInUnits } from "../_shared/sender-guard.ts";
+import { callerMfaSatisfied, cleanMessageText, phoneKey, loadLeaderUnits, memberInUnits, smsContentProblem } from "../_shared/sender-guard.ts";
 import { loadTenantPhoneSet, isTenantPhone } from "../_shared/tenant-phones.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkSmsQuota, QuotaExceededError } from "../_shared/sms-quota.ts";
@@ -84,6 +84,8 @@ Deno.serve(async (req) => {
     const message = cleanMessageText(body.message);
     // When set, the caller may only message these phone keys (non-admins).
     let restrictedPhoneKeys: Set<string> | null = null;
+    // Internal callers send system-composed texts; signed-in callers are bounded below.
+    let senderIsAdmin = isInternalServiceCall;
 
     if (!tenant_id) {
       return new Response(JSON.stringify({ error: "tenant_id is required" }), {
@@ -110,6 +112,7 @@ Deno.serve(async (req) => {
 
       // Check tenant-scoped admin or unit_leader role
       const { data: isAdmin } = await serviceClient.rpc("is_admin", { _user_id: userId, _tenant_id: tenant_id });
+      senderIsAdmin = isAdmin === true;
       const { data: isLeader } = await serviceClient.rpc("has_role", {
         _user_id: userId,
         _role: "unit_leader",
@@ -306,6 +309,16 @@ Deno.serve(async (req) => {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    if (!isInternalServiceCall) {
+      const problem = smsContentProblem(message, senderIsAdmin);
+      if (problem) {
+        return new Response(JSON.stringify({ error: problem }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     if (message.length > 1600) {

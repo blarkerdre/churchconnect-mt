@@ -298,7 +298,7 @@ export default function MemberMilestoneReport() {
       if (g.list.length === 0) return;
       if (!firstSection) lines.push("");
       firstSection = false;
-      lines.push(`Centre: ${g.name} (${g.list.length} member${g.list.length !== 1 ? "s" : ""})`);
+      lines.push(csvSafeCell(`Centre: ${g.name} (${g.list.length} member${g.list.length !== 1 ? "s" : ""})`));
       const { headers, rows } = buildMemberCsvBlock(g.list);
       lines.push(headers.join(","));
       rows.forEach((r) => lines.push(r.join(",")));
@@ -376,7 +376,7 @@ export default function MemberMilestoneReport() {
       if (g.list.length === 0) return;
       if (!firstSection) lines.push("");
       firstSection = false;
-      lines.push(`Unit: ${g.name} (${g.list.length} member${g.list.length !== 1 ? "s" : ""})`);
+      lines.push(csvSafeCell(`Unit: ${g.name} (${g.list.length} member${g.list.length !== 1 ? "s" : ""})`));
       const { headers, rows } = buildMemberCsvBlock(g.list);
       lines.push(headers.join(","));
       rows.forEach((r) => lines.push(r.join(",")));

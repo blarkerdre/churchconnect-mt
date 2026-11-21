@@ -239,6 +239,13 @@
       "when": 1795285957439,
       "tag": "0033_permission_checks_answer_only_for_caller",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1795289194501,
+      "tag": "0034_suspended_church_hides_member_attendance",
+      "breakpoints": true
     }
   ]
 }

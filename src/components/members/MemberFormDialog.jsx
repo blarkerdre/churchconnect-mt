@@ -1,3 +1,4 @@
+import { functionErrorMessage } from "@/lib/function-error";
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
@@ -416,7 +417,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
             tenant_id: tenantId,
           },
         });
-        if (error) throw error;
+        if (error) throw new Error(await functionErrorMessage(error));
         if (data?.error) throw new Error(data.error);
         toast({ title: "Member registered with user account", description: `Account created for ${form.email}` });
       } else {

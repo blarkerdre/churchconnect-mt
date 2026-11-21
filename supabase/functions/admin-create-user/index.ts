@@ -114,14 +114,38 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Auth user could not be verified. The account may have been deleted." }, 400);
     }
 
-    await supabase.from("profiles").upsert({
-      user_id: userId,
-      email: normalizedEmail,
-      full_name: normalizedFullName,
-      ...(tenant_id ? { tenant_id } : {}),
-    }, {
-      onConflict: "user_id",
-    });
+    if (reusedExisting) {
+      // An account with this email already exists. A church admin must not take
+      // over someone else's account or add them to a church without consent:
+      // only proceed if the person already belongs to this church (or the caller
+      // is a platform super-admin). Otherwise they must accept an invitation.
+      if (!isSuperAdmin) {
+        const [{ data: inTenant }, { data: memberRow }] = await Promise.all([
+          supabase.from("tenant_memberships").select("id").eq("user_id", userId).eq("tenant_id", tenant_id).maybeSingle(),
+          supabase.from("members").select("id").eq("user_id", userId).eq("tenant_id", tenant_id).maybeSingle(),
+        ]);
+        if (!inTenant && !memberRow) {
+          return jsonResponse({
+            error: "This email already has an account. Send them an invitation from User Management so they can choose to join your church.",
+            code: "account_exists",
+          }, 409);
+        }
+      }
+      // Never overwrite an existing person's profile details; only fill a missing profile.
+      const { data: existingProfile } = await supabase.from("profiles").select("user_id").eq("user_id", userId).maybeSingle();
+      if (!existingProfile) {
+        await supabase.from("profiles").insert({ user_id: userId, email: normalizedEmail, full_name: normalizedFullName, tenant_id });
+      }
+    } else {
+      await supabase.from("profiles").upsert({
+        user_id: userId,
+        email: normalizedEmail,
+        full_name: normalizedFullName,
+        ...(tenant_id ? { tenant_id } : {}),
+      }, {
+        onConflict: "user_id",
+      });
+    }
 
     // Assign role (with tenant_id)
     if (role && userId) {

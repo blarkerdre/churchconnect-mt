@@ -1,3 +1,4 @@
+import { functionErrorMessage } from "@/lib/function-error";
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -236,7 +237,7 @@ export default function UserManagement() {
       const { data, error } = await supabase.functions.invoke("admin-create-user", {
         body: { email: formData.email, password: formData.password, full_name: formData.full_name, role: formData.role, tenant_id: tenantId },
       });
-      if (error) throw error;
+      if (error) throw new Error(await functionErrorMessage(error));
       if (data?.error) throw new Error(data.error);
       await logAudit("user_create", "profiles", null, { email: formData.email, full_name: formData.full_name, role: formData.role }, tenantId);
     },
