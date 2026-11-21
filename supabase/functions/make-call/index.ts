@@ -137,11 +137,27 @@ Deno.serve(async (req) => {
       // Custom voice provider
       const { data: customConfigRow } = await serviceClient
         .from("app_settings")
-        .select("value")
+        .select("value, updated_by")
         .eq("tenant_id", tenant_id)
         .eq("key", "custom_voice_provider_config")
         .maybeSingle();
       const customConfig = customConfigRow?.value as Record<string, string> | null;
+      // Only use a custom call provider that a platform super-admin set up.
+      // Church admins cannot point calls (and members' numbers) at their own address.
+      let approved = false;
+      if (customConfigRow?.updated_by) {
+        const { data: approverIsSuper } = await serviceClient.rpc("has_role", {
+          _user_id: customConfigRow.updated_by,
+          _role: "super_admin",
+        });
+        approved = approverIsSuper === true;
+      }
+      if (customConfig?.endpoint && !approved) {
+        return new Response(JSON.stringify({ error: "This church's custom call provider hasn't been approved by the platform team yet." }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       if (!customConfig?.endpoint) {
         return new Response(JSON.stringify({ error: "Custom voice provider not configured" }), {
           status: 400,

@@ -102,17 +102,32 @@ Deno.serve(async (req) => {
     const taskIds = tasks.map((t: any) => t.id);
 
     // Assignments + member info
-    const { data: rawAssignments = [] } = await supabase
+    const { data: assignmentRows = [] } = await supabase
       .from("unit_task_assignments")
       .select("id, task_id, user_id, member_id")
       .in("task_id", taskIds)
       .eq("tenant_id", group.tenant_id);
 
-    const memberIds = [...new Set((rawAssignments as any[]).map((a) => a.member_id).filter(Boolean))];
+    const memberIds = [...new Set((assignmentRows as any[]).map((a) => a.member_id).filter(Boolean))];
     const { data: memberRows = [] } = memberIds.length
-      ? await supabase.from("members").select("id, first_name, last_name, email, phone").in("id", memberIds)
+      ? await supabase.from("members").select("id, first_name, last_name, email, phone").in("id", memberIds).eq("tenant_id", group.tenant_id)
       : { data: [] as any[] };
     const memberById = new Map((memberRows as any[]).map((m) => [m.id, m]));
+
+    // Only people who belong to this church can appear on (or receive) its roster.
+    const assignedUserIds = [...new Set((assignmentRows as any[]).map((a) => a.user_id).filter(Boolean))];
+    const tenantUserIds = new Set<string>();
+    if (assignedUserIds.length) {
+      const [{ data: tmRows = [] }, { data: mRows = [] }] = await Promise.all([
+        supabase.from("tenant_memberships").select("user_id").eq("tenant_id", group.tenant_id).in("user_id", assignedUserIds),
+        supabase.from("members").select("user_id").eq("tenant_id", group.tenant_id).in("user_id", assignedUserIds),
+      ]);
+      [...(tmRows as any[]), ...(mRows as any[])].forEach((r) => r.user_id && tenantUserIds.add(r.user_id));
+    }
+    const rawAssignments = (assignmentRows as any[]).filter((a) =>
+      (!a.member_id || memberById.has(a.member_id)) &&
+      (!a.user_id || tenantUserIds.has(a.user_id))
+    );
     const taskById = new Map((tasks as any[]).map((t) => [t.id, t]));
 
     // Build roster lines

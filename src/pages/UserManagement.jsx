@@ -267,7 +267,11 @@ export default function UserManagement() {
       const { data, error } = await supabase.functions.invoke("admin-toggle-user", {
         body: { user_id: userId, disabled, tenant_id: tenantId },
       });
-      if (error) throw error;
+      if (error) {
+        let msg = null;
+        try { msg = (await error.context?.json?.())?.error; } catch { /* ignore */ }
+        throw new Error(msg || error.message);
+      }
       if (data?.error) throw new Error(data.error);
       await logAudit(disabled ? "user_disable" : "user_enable", "profiles", userId, { target_name: targetName }, tenantId);
       return { userId, disabled };

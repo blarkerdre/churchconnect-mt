@@ -42,6 +42,17 @@ Deno.serve(async (req) => {
       if (!targetBelongs) {
         return new Response(JSON.stringify({ error: "Target user is not a member of this tenant" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+      // Disabling is account-wide (it blocks sign-in to every church). A church
+      // admin may only do this for people who belong to their church alone;
+      // anyone who also belongs to another church needs a super-admin.
+      const [{ data: otherMemberships }, { data: otherMembers }, { data: otherRoles }] = await Promise.all([
+        supabase.from("tenant_memberships").select("tenant_id").eq("user_id", user_id).neq("tenant_id", tenant_id).limit(1),
+        supabase.from("members").select("tenant_id").eq("user_id", user_id).neq("tenant_id", tenant_id).limit(1),
+        supabase.from("user_roles").select("tenant_id").eq("user_id", user_id).not("tenant_id", "is", null).neq("tenant_id", tenant_id).limit(1),
+      ]);
+      if ((otherMemberships?.length || 0) > 0 || (otherMembers?.length || 0) > 0 || (otherRoles?.length || 0) > 0) {
+        return new Response(JSON.stringify({ error: "This person also belongs to another church, so only a platform super-admin can disable their account. You can remove them from your church instead." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
     }
 
     // Prevent self-disable

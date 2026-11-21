@@ -68,6 +68,16 @@ Deno.serve(async (req) => {
     const body = (await req.json()) as ReqBody;
     let { request_id, tenant_id, member_id, request_type, unit_name, wsf_centre_id } = body;
 
+    // Signed-in callers must point at a real join request; only the backend
+    // itself (service role) may describe a request inline.
+    if (callerUserId && !request_id) {
+      return new Response(JSON.stringify({ error: "request_id is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    let requestedBy: string | null = null;
     // If a request_id was provided, always derive trusted fields from the DB row
     // rather than trusting client-supplied tenant_id/member_id/unit_name/etc.
     if (request_id) {
@@ -87,6 +97,7 @@ Deno.serve(async (req) => {
       request_type = reqRow.request_type as "unit" | "home_cell";
       unit_name = reqRow.unit_name;
       wsf_centre_id = reqRow.wsf_centre_id;
+      requestedBy = reqRow.requested_by ?? null;
     }
 
     // Authorize: caller (if user JWT) must belong to the target tenant, or be
@@ -96,7 +107,7 @@ Deno.serve(async (req) => {
         _user_id: callerUserId,
         _tenant_id: tenant_id,
       });
-      let allowed = belongs === true;
+      let allowed = belongs === true || (!!requestedBy && requestedBy === callerUserId);
       if (!allowed && member_id) {
         const { data: m } = await supabase
           .from("members")
@@ -149,6 +160,18 @@ Deno.serve(async (req) => {
     // Resolve target label & approver user_ids
     let targetLabel = "your group";
     const approverUserIds = new Set<string>();
+
+    // Only use a unit name that actually exists for this church, and show the
+    // church's own spelling of it rather than free text from the request.
+    if (request_type === "unit" && unit_name) {
+      const wanted = String(unit_name).trim().toLowerCase();
+      const { data: units } = await supabase
+        .from("church_units")
+        .select("name")
+        .eq("tenant_id", tenant_id);
+      const match = (units || []).find((u: any) => (u.name || "").trim().toLowerCase() === wanted);
+      unit_name = match?.name ?? null;
+    }
 
     if (request_type === "unit" && unit_name) {
       targetLabel = unit_name;

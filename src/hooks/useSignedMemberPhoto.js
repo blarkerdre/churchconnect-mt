@@ -1,9 +1,26 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-const TTL_SECONDS = 3600;
-const REFRESH_BEFORE_MS = 5 * 60 * 1000; // refresh when within 5 min of expiry
+// Keep photo links short-lived so someone who loses access to a church can't
+// keep reusing a link they already had for long.
+const TTL_SECONDS = 300;
+const REFRESH_BEFORE_MS = 60 * 1000; // refresh when within 1 min of expiry
 const cache = new Map(); // path -> { url, expiresAt, promise }
+
+export function clearSignedMemberPhotoCache() {
+  cache.clear();
+}
+
+// Drop every cached link whenever the signed-in person changes or signs out,
+// so links are never reused across sessions.
+let lastUserId;
+supabase.auth.onAuthStateChange((event, session) => {
+  const uid = session?.user?.id ?? null;
+  if (event === "SIGNED_OUT" || (lastUserId !== undefined && uid !== lastUserId)) {
+    cache.clear();
+  }
+  lastUserId = uid;
+});
 
 function isHttpUrl(value) {
   return typeof value === "string" && /^https?:\/\//i.test(value);

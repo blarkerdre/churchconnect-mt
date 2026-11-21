@@ -1022,6 +1022,8 @@ function FaviconOgImageSection() {
 /* ─── Communications Settings (email sender name + provider config) ─── */
 function CommunicationsSection() {
   const qc = useQueryClient();
+  const { roles: myRoles = [] } = useAuth();
+  const canSetCustomVoice = myRoles.includes("super_admin");
   const { currentTenant, tenantId } = useTenant();
   const { withTenant } = useTenantQuery();
   const [saving, setSaving] = useState(false);
@@ -1177,7 +1179,11 @@ function CommunicationsSection() {
       toast({ title: "Custom SMS endpoint URL is required", variant: "destructive" });
       return;
     }
-    if (voiceProvider === "custom" && !customVoiceEndpoint.trim()) {
+    if (voiceProvider === "custom" && !canSetCustomVoice && !providerSettings?.custom_voice_provider_config?.endpoint) {
+      toast({ title: "Custom call provider needs the platform team", description: "Only a platform super-admin can set up a custom call provider for your church.", variant: "destructive" });
+      return;
+    }
+    if (voiceProvider === "custom" && canSetCustomVoice && !customVoiceEndpoint.trim()) {
       toast({ title: "Custom Voice endpoint URL is required", variant: "destructive" });
       return;
     }
@@ -1233,7 +1239,7 @@ function CommunicationsSection() {
           },
         });
       }
-      if (voiceProvider === "custom") {
+      if (voiceProvider === "custom" && canSetCustomVoice) {
         credentialPairs.push({
           key: "custom_voice_provider_config",
           value: {
@@ -1481,6 +1487,12 @@ function CommunicationsSection() {
         {voiceProvider === "custom" && (
           <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
             <p className="text-xs font-semibold text-muted-foreground">Custom Voice Provider</p>
+            {!canSetCustomVoice && (
+              <p className="text-xs text-muted-foreground">
+                For safety, only the platform team can set up or change a custom call provider. Contact them to have it added for your church.
+              </p>
+            )}
+            <fieldset disabled={!canSetCustomVoice} className="space-y-3 disabled:opacity-70">
             <div className="space-y-2">
               <Label className="text-sm">Provider Name</Label>
               <Input value={customVoiceName} onChange={(e) => setCustomVoiceName(e.target.value)} placeholder="e.g. Vonage, Plivo" />
@@ -1536,6 +1548,7 @@ function CommunicationsSection() {
                 Use placeholders: <code className="bg-muted px-1 rounded">{"{{to}}"}</code>, <code className="bg-muted px-1 rounded">{"{{from}}"}</code>
               </p>
             </div>
+            </fieldset>
           </div>
         )}
 

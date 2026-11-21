@@ -211,6 +211,13 @@
       "when": 1795190546352,
       "tag": "0029_erasure_member_scope_and_invite_email_lock",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1795280127591,
+      "tag": "0030_security_batch_nov21_roster_voice_guards",
+      "breakpoints": true
     }
   ]
 }
