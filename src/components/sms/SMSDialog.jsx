@@ -1,4 +1,5 @@
 import SmsCharCounter from "@/components/sms/SmsCharCounter";
+import { smsCycleStart } from "@/lib/sms-cycle";
 import SmsAvailability, { useSmsSendCheck } from "@/components/sms/SmsAvailability";
 import React, { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -150,7 +151,7 @@ export default function SMSDialog({
     try {
       const { data: tenant } = await supabase
         .from("tenants")
-        .select("sms_limit_monthly, whatsapp_limit_monthly")
+        .select("sms_limit_monthly, whatsapp_limit_monthly, sms_cycle_start")
         .eq("id", tenantId)
         .single();
 
@@ -158,9 +159,7 @@ export default function SMSDialog({
       const quota = tenant?.[limitField] || 0;
 
       if (quota > 0) {
-        const monthStart = new Date();
-        monthStart.setDate(1);
-        monthStart.setHours(0, 0, 0, 0);
+        const monthStart = smsCycleStart(tenant?.sms_cycle_start);
 
         const { count } = await supabase
           .from("sms_log")

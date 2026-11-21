@@ -1,5 +1,6 @@
 import { RenewalReminderSetting } from "@/components/billing/RenewalBanner";
 import SmsTopUpCard from "@/components/billing/SmsTopUpCard";
+import { smsCycleStart } from "@/lib/sms-cycle";
 import SubscriptionBankTransfer from "@/components/billing/SubscriptionBankTransfer";
 import ChurchInvoicesCard from "@/components/billing/ChurchInvoicesCard";
 import React, { useState, useEffect, useRef } from "react";
@@ -1073,10 +1074,8 @@ function CommunicationsSection() {
   const { data: msgUsage } = useQuery({
     queryKey: ["msg-usage", tenantId],
     queryFn: async () => {
-      const monthStart = new Date();
-      monthStart.setDate(1);
-      monthStart.setHours(0, 0, 0, 0);
-      const ms = monthStart.toISOString();
+      const { data: tc } = await supabase.from("tenants").select("sms_cycle_start").eq("id", tenantId).maybeSingle();
+      const ms = smsCycleStart(tc?.sms_cycle_start).toISOString();
       const [{ count: sms }, { count: wa }] = await Promise.all([
         supabase.from("sms_log").select("*", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("channel", "sms").neq("status", "failed").gte("created_at", ms),
         supabase.from("sms_log").select("*", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("channel", "whatsapp").neq("status", "failed").gte("created_at", ms),

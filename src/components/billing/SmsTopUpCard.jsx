@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { MessageSquare, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { smsCycleStart } from "@/lib/sms-cycle";
 
 const PACKS = [100, 500, 1000, 5000];
 
@@ -16,13 +17,13 @@ export function useSmsBilling(tenantId) {
     enabled: !!tenantId,
     queryFn: async () => {
       try { await supabase.functions.invoke("verify-sms-topups", { body: { tenant_id: tenantId } }); } catch { /* best effort */ }
-      const { data: t } = await supabase.from("tenants").select("sms_limit_monthly, sms_credit_balance, sms_low_threshold, sms_unit_price_override, pricing_plan_id, billing_currency").eq("id", tenantId).single();
+      const { data: t } = await supabase.from("tenants").select("sms_limit_monthly, sms_cycle_start, sms_credit_balance, sms_low_threshold, sms_unit_price_override, pricing_plan_id, billing_currency").eq("id", tenantId).single();
       let plan = null;
       if (t?.pricing_plan_id) {
         const { data } = await supabase.from("pricing_plans").select("overage_price_sms, currency, allow_overage_sms").eq("id", t.pricing_plan_id).maybeSingle();
         plan = data;
       }
-      const start = new Date(); start.setUTCDate(1); start.setUTCHours(0, 0, 0, 0);
+      const start = smsCycleStart(t?.sms_cycle_start);
       const { count } = await supabase.from("sms_log").select("*", { count: "exact", head: true })
         .eq("tenant_id", tenantId).eq("channel", "sms").neq("status", "failed").gte("created_at", start.toISOString());
       const { data: bank } = await supabase.rpc("get_billing_bank_details");
@@ -31,7 +32,7 @@ export function useSmsBilling(tenantId) {
       const currency = t?.billing_currency || "GBP";
       const planMatches = (plan?.currency || "GBP").toUpperCase() === currency;
       const unitPrice = override !== null && override !== undefined ? Number(override) : (planMatches ? Number(plan?.overage_price_sms || 0) : 0);
-      return { tenant: t, plan, used: count || 0, topups: topups || [], bank: bank || "", unitPrice, currency, planMatches };
+      return { tenant: t, cycleStart: start, plan, used: count || 0, topups: topups || [], bank: bank || "", unitPrice, currency, planMatches };
     },
   });
 }
@@ -86,14 +87,14 @@ export default function SmsTopUpCard({ tenantId, canBuy, isSuperAdmin = false })
     <div className="p-4 bg-muted/50 rounded-lg space-y-3 text-sm">
       <p className="font-semibold flex items-center gap-2"><MessageSquare className="h-4 w-4 text-accent" /> Text messages (SMS)</p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-        <div><p className="text-xs text-muted-foreground">Texts this month</p><p className="font-medium">{data.used.toLocaleString()} of {limit > 0 ? limit.toLocaleString() : "unlimited"}</p></div>
+        <div><p className="text-xs text-muted-foreground">Texts since {format(data.cycleStart, "d MMM")}</p><p className="font-medium">{data.used.toLocaleString()} of {limit > 0 ? limit.toLocaleString() : "unlimited"}</p></div>
         <div><p className="text-xs text-muted-foreground">Top-up balance</p><p className="font-medium">{Number(data.tenant?.sms_credit_balance || 0).toLocaleString()} texts</p></div>
         <div><p className="text-xs text-muted-foreground">Price per text</p><p className="font-medium">{data.unitPrice > 0 ? money(data.unitPrice, data.currency) : "Not set"}</p></div>
       </div>
       <p className="text-xs text-muted-foreground">
         When monthly texts run out, top-up texts are used first.
         {data.plan?.allow_overage_sms ? " After that, extra texts are added to your next invoice." : " After that, sending stops until you buy more."}
-        {" "}Top-up texts carry over to next month.
+        {" "}Monthly texts restart each time your subscription payment is confirmed. Top-up texts carry over.
       </p>
       {canBuy && limit > 0 && (() => {
         const current = Number(data.tenant?.sms_low_threshold ?? 20);

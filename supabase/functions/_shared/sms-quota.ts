@@ -1,7 +1,8 @@
 // Shared tenant SMS / WhatsApp quota helper.
 //
 // Reads tenants.sms_limit_monthly / whatsapp_limit_monthly and counts rows in
-// sms_log (excluding outright failures) for the current calendar month.
+// sms_log (excluding outright failures) since tenants.sms_cycle_start (set when a
+// subscription payment is confirmed), or the 1st of the month if never set.
 // A limit of 0 means "unlimited" (no enforcement).
 
 export type SmsChannel = "sms" | "whatsapp";
@@ -46,7 +47,7 @@ export async function checkSmsQuota(
 
   const { data: tenant, error: tenantErr } = await client
     .from("tenants")
-    .select(`${limitField}, sms_credit_balance, pricing_plan_id`)
+    .select(`${limitField}, sms_credit_balance, pricing_plan_id, sms_cycle_start`)
     .eq("id", tenantId)
     .single();
 
@@ -62,9 +63,8 @@ export async function checkSmsQuota(
     return { allowed: true, limit: 0, usage: 0, remaining: Number.POSITIVE_INFINITY };
   }
 
-  const monthStart = new Date();
-  monthStart.setUTCDate(1);
-  monthStart.setUTCHours(0, 0, 0, 0);
+  const now = new Date();
+  const monthStart = tenant?.sms_cycle_start ? new Date(tenant.sms_cycle_start) : new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 
   const { count } = await client
     .from("sms_log")

@@ -260,6 +260,13 @@
       "when": 1795294712882,
       "tag": "0036_stripe_payment_once",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1795296044228,
+      "tag": "0037_sms_cycle_on_subscription_payment",
+      "breakpoints": true
     }
   ]
 }

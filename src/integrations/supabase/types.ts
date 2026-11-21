@@ -5993,6 +5993,7 @@ export type Database = {
           setup_complete: boolean
           slug: string
           sms_credit_balance: number
+          sms_cycle_start: string | null
           sms_limit_monthly: number
           sms_low_threshold: number
           sms_unit_price_override: number | null
@@ -6021,6 +6022,7 @@ export type Database = {
           setup_complete?: boolean
           slug: string
           sms_credit_balance?: number
+          sms_cycle_start?: string | null
           sms_limit_monthly?: number
           sms_low_threshold?: number
           sms_unit_price_override?: number | null
@@ -6049,6 +6051,7 @@ export type Database = {
           setup_complete?: boolean
           slug?: string
           sms_credit_balance?: number
+          sms_cycle_start?: string | null
           sms_limit_monthly?: number
           sms_low_threshold?: number
           sms_unit_price_override?: number | null
@@ -8758,6 +8761,7 @@ export type Database = {
       }
       send_renewal_reminders: { Args: never; Returns: number }
       set_billing_bank_details: { Args: { _text: string }; Returns: undefined }
+      sms_cycle_start_for: { Args: { _tenant_id: string }; Returns: string }
       sms_unit_price_for_tenant: {
         Args: { _tenant_id: string }
         Returns: number
