@@ -11,9 +11,10 @@ import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 import { money as formatMoney } from "@/lib/money";
 
 const PACKS = [60, 300, 600, 1200];
-const STATUS = { paid: "Paid", pending: "Not completed", cancelled: "Cancelled" };
+const STATUS = { paid: "Paid", pending: "Not completed", awaiting_transfer: "Awaiting bank transfer", cancelled: "Cancelled" };
 
-export default function CallTopUpCard({ tenantId, canBuy }) {
+export default function CallTopUpCard({ tenantId, canBuy, isSuperAdmin = false }) {
+  const [busy, setBusy] = useState(null);
   const { toast } = useToast();
   const qc = useQueryClient();
   const confirmPw = useConfirmDelete();
@@ -29,10 +30,11 @@ export default function CallTopUpCard({ tenantId, canBuy }) {
       if (t?.pricing_plan_id) ({ data: plan } = await supabase.from("pricing_plans").select("overage_price_call_minute, currency").eq("id", t.pricing_plan_id).maybeSingle());
       const { data: used } = await supabase.rpc("call_minutes_used", { _tenant_id: tenantId });
       const { data: topups } = await supabase.from("call_minute_topups").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(10);
+      const { data: bank } = await supabase.rpc("get_billing_bank_details");
       const currency = t?.billing_currency || "GBP";
       const unitPrice = t?.call_minute_price_override != null ? Number(t.call_minute_price_override)
         : ((plan?.currency || "GBP").toUpperCase() === currency ? Number(plan?.overage_price_call_minute || 0) : 0);
-      return { t, used: Number(used || 0), topups: topups || [], currency, unitPrice };
+      return { bank: bank || "", t, used: Number(used || 0), topups: topups || [], currency, unitPrice };
     },
   });
   if (!data) return null;
@@ -56,6 +58,18 @@ export default function CallTopUpCard({ tenantId, canBuy }) {
     } finally { setLoading(false); }
   };
 
+  const rpc = async (key, name, args, ok) => {
+    setBusy(key);
+    const { error } = await supabase.rpc(name, args);
+    setBusy(null);
+    if (error) { toast({ title: "Couldn't complete", description: error.message, variant: "destructive" }); return; }
+    toast({ title: ok }); qc.invalidateQueries({ queryKey: ["call-billing", tenantId] });
+  };
+  const requestBank = async () => {
+    if (!(await confirmPw({ title: "Confirm bank transfer request", description: `Request ${Number(qty)} minutes by bank transfer.`, confirmLabel: "Continue" }))) return;
+    rpc("bank", "request_call_bank_topup", { _tenant_id: tenantId, _minutes: Number(qty) }, "Bank transfer request created - use the reference shown below");
+  };
+
   return (
     <div className="p-4 bg-muted/50 rounded-lg space-y-3 text-sm">
       <p className="font-semibold flex items-center gap-2"><Phone className="h-4 w-4 text-accent" /> Phone call minutes</p>
@@ -76,15 +90,32 @@ export default function CallTopUpCard({ tenantId, canBuy }) {
             {loading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
             Pay by card {formatMoney(total, data.currency)}
           </Button>
+          <Button size="sm" variant="outline" className="ml-2" onClick={requestBank} disabled={busy === "bank" || Number(qty) < 10}>
+            {busy === "bank" ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+            Pay by bank transfer
+          </Button>
+          <p className="text-xs text-muted-foreground">Bank transfer minutes are added once the payment is confirmed as received.</p>
         </div>
       )}
       {data.topups.length > 0 && (
         <div className="space-y-1">
           <p className="text-xs font-medium">Minute top-up history</p>
           {data.topups.map((t) => (
-            <div key={t.id} className="text-xs border-b border-border/50 pb-1 flex flex-wrap justify-between gap-1">
-              <span>{format(new Date(t.created_at), "d MMM yyyy")} - {t.minutes} min</span>
-              <span>{formatMoney(Number(t.amount), t.currency)} - {STATUS[t.status] || t.status}</span>
+            <div key={t.id} className="text-xs border-b border-border/50 pb-1 space-y-1">
+              <div className="flex flex-wrap justify-between gap-1">
+                <span>{format(new Date(t.created_at), "d MMM yyyy")} - {t.minutes} min{t.method === "bank_transfer" ? " (bank transfer)" : ""}</span>
+                <span>{formatMoney(Number(t.amount), t.currency)} - {STATUS[t.status] || t.status}</span>
+              </div>
+              {t.status === "awaiting_transfer" && (
+                <div className="bg-background rounded p-2 space-y-1">
+                  <p>Pay <strong>{formatMoney(Number(t.amount), t.currency)}</strong> using reference <strong className="font-mono">{t.reference}</strong></p>
+                  {data.bank ? <p className="whitespace-pre-line text-muted-foreground">{data.bank}</p> : <p className="text-muted-foreground">Bank details will be sent by your administrator.</p>}
+                  <div className="flex gap-2">
+                    {isSuperAdmin && <Button size="sm" className="h-7" disabled={!!busy} onClick={async () => { if (await confirmPw({ title: "Mark payment received", description: "Minutes will be added to this church.", confirmLabel: "Mark as received" })) rpc(t.id, "confirm_call_bank_topup", { _topup_id: t.id }, "Payment confirmed - minutes added"); }}>{busy === t.id ? "Confirming..." : "Mark as received"}</Button>}
+                    {(canBuy || isSuperAdmin) && <Button size="sm" variant="ghost" className="h-7" disabled={!!busy} onClick={async () => { if (await confirmPw({ title: "Cancel top-up request", description: "This bank transfer request will be cancelled.", confirmLabel: "Cancel request" })) rpc("c" + t.id, "cancel_call_bank_topup", { _topup_id: t.id }, "Request cancelled"); }}>Cancel</Button>}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

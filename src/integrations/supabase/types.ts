@@ -708,12 +708,15 @@ export type Database = {
       call_minute_topups: {
         Row: {
           amount: number
+          confirmed_by: string | null
           created_at: string
           created_by: string | null
           currency: string
           id: string
+          method: string
           minutes: number
           paid_at: string | null
+          reference: string | null
           status: string
           stripe_session_id: string | null
           tenant_id: string
@@ -721,12 +724,15 @@ export type Database = {
         }
         Insert: {
           amount?: number
+          confirmed_by?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
           id?: string
+          method?: string
           minutes: number
           paid_at?: string | null
+          reference?: string | null
           status?: string
           stripe_session_id?: string | null
           tenant_id: string
@@ -734,12 +740,15 @@ export type Database = {
         }
         Update: {
           amount?: number
+          confirmed_by?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
           id?: string
+          method?: string
           minutes?: number
           paid_at?: string | null
+          reference?: string | null
           status?: string
           stripe_session_id?: string | null
           tenant_id?: string
@@ -8061,6 +8070,10 @@ export type Database = {
       auto_manage_exam_sessions: { Args: never; Returns: undefined }
       auto_manage_wofbi_sessions: { Args: never; Returns: undefined }
       call_cycle_start: { Args: { _tenant_id: string }; Returns: string }
+      call_minute_price_for_tenant: {
+        Args: { _tenant_id: string }
+        Returns: number
+      }
       call_minutes_used: { Args: { _tenant_id: string }; Returns: number }
       can_admin_member_photo_folder: {
         Args: { _folder: string }
@@ -8074,6 +8087,10 @@ export type Database = {
       can_view_member_photo_folder: {
         Args: { _folder: string }
         Returns: boolean
+      }
+      cancel_call_bank_topup: {
+        Args: { _topup_id: string }
+        Returns: undefined
       }
       cancel_sms_bank_topup: { Args: { _topup_id: string }; Returns: undefined }
       cancel_subscription_bank_payment: {
@@ -8137,6 +8154,7 @@ export type Database = {
         }
         Returns: Json
       }
+      confirm_call_bank_topup: { Args: { _topup_id: string }; Returns: number }
       confirm_sms_bank_topup: {
         Args: { _notes?: string; _topup_id: string }
         Returns: number
@@ -8782,6 +8800,31 @@ export type Database = {
       remove_member_unit: {
         Args: { _member: string; _unit: string }
         Returns: undefined
+      }
+      request_call_bank_topup: {
+        Args: { _minutes: number; _tenant_id: string }
+        Returns: {
+          amount: number
+          confirmed_by: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          method: string
+          minutes: number
+          paid_at: string | null
+          reference: string | null
+          status: string
+          stripe_session_id: string | null
+          tenant_id: string
+          unit_price: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "call_minute_topups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       request_sms_bank_topup: {
         Args: { _quantity: number; _tenant_id: string }

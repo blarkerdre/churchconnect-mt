@@ -139,6 +139,7 @@ function NotificationPreferencesSection() {
 function BillingSection() {
   const { tenantId } = useTenantQuery();
   const { isTenantOwner, isTenantAdmin: isTAdmin } = useTenant();
+  const { roles } = useAuth();
   const smsOn = useTenantFeatureEnabled("/sms");
   const callOn = useTenantFeatureEnabled("/phone-call");
   const [payLoading, setPayLoading] = useState(false);
@@ -242,7 +243,7 @@ function BillingSection() {
       <CardContent className="space-y-4">
         {(isTenantOwner || isTAdmin) && <RenewalReminderSetting tenantId={tenantId} />}
         {smsOn && <SmsTopUpCard tenantId={tenantId} canBuy={isTenantOwner || isTAdmin} />}
-        {callOn && <CallTopUpCard tenantId={tenantId} canBuy={isTenantOwner || isTAdmin} />}
+        {callOn && <CallTopUpCard tenantId={tenantId} canBuy={isTenantOwner || isTAdmin} isSuperAdmin={roles?.includes?.("super_admin")} />}
         {subLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading...</div>
         ) : !subscription ? (
