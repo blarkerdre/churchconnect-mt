@@ -16,6 +16,8 @@ import { normalizePhone } from "@/lib/phone-utils";
 import { logAudit } from "@/lib/audit";
 import SmsCharCounter from "@/components/sms/SmsCharCounter";
 import SmsAvailability, { useSmsSendCheck } from "@/components/sms/SmsAvailability";
+import SmsPictureAttach, { uploadSmsPicture } from "@/components/sms/SmsPictureAttach";
+import { MMS_UNITS } from "@/lib/sms-coverage";
 import InvalidRecipientsPreview from "@/components/sms/InvalidRecipientsPreview";
 
 /**
@@ -45,6 +47,7 @@ export default function MessageFilteredMembersDialog({
   const [channel, setChannel] = useState("email");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
+  const [picture, setPicture] = useState(null);
   const [sending, setSending] = useState(false);
 
   // Recipient summaries per channel
@@ -59,7 +62,7 @@ export default function MessageFilteredMembersDialog({
     const linkedAccounts = members.filter((m) => m.user_id);
     return { withEmail, phoneList, invalidPhone, linkedAccounts };
   }, [members]);
-  const smsCheck = useSmsSendCheck(tenantId, message, channel === "sms" ? summary.phoneList.length : 0);
+  const smsCheck = useSmsSendCheck(tenantId, message, channel === "sms" ? summary.phoneList.length : 0, picture && channel === "sms" ? MMS_UNITS : 1);
 
   const reset = () => {
     setSubject("");
@@ -145,6 +148,7 @@ export default function MessageFilteredMembersDialog({
       const data = await sendSmsBatched({
         recipients,
         message: message.replace(/\{first_name\}/g, "there"),
+        media_path: smsChannel === "sms" ? await uploadSmsPicture(tenantId, picture) : undefined,
         sms_type: "bulk",
         channel: smsChannel,
         tenant_id: tenantId,
@@ -281,6 +285,7 @@ export default function MessageFilteredMembersDialog({
               rows={4}
               maxLength={1600}
             />
+            {channel === "sms" && <SmsPictureAttach picture={picture} onChange={setPicture} recipientCount={summary.phoneList.length} />}
             <SmsCharCounter text={message} />
             <SmsAvailability check={smsCheck} />
             <InvalidRecipientsPreview invalidRecipients={summary.invalidPhone} />

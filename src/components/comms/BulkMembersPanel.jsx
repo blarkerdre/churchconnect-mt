@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Send } from "lucide-react";
 import { normalizePhone } from "@/lib/phone-utils";
 import { logAudit } from "@/lib/audit";
+import SmsPictureAttach, { uploadSmsPicture } from "@/components/sms/SmsPictureAttach";
+import { MMS_UNITS } from "@/lib/sms-coverage";
 import InvalidRecipientsPreview from "@/components/sms/InvalidRecipientsPreview";
 import AudienceFilter from "./AudienceFilter";
 
@@ -24,6 +26,7 @@ export default function BulkMembersPanel({ churchName, senderName }) {
   const [channel, setChannel] = useState("email");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
+  const [picture, setPicture] = useState(null);
   const [sending, setSending] = useState(false);
 
   const { data: members = [] } = useQuery({
@@ -69,7 +72,7 @@ export default function BulkMembersPanel({ churchName, senderName }) {
     : channel === "in_app" ? inAppRecipients.length
     : phoneValid.length;
 
-  const smsCheck = useSmsSendCheck(tenantId, message, channel === "sms" ? targetCount : 0);
+  const smsCheck = useSmsSendCheck(tenantId, message, channel === "sms" ? targetCount : 0, picture && channel === "sms" ? MMS_UNITS : 1);
   const handleSend = async () => {
     if (!message.trim()) { toast({ title: "Message required", variant: "destructive" }); return; }
     if ((channel === "email" || channel === "in_app") && !subject.trim()) {
@@ -105,6 +108,7 @@ export default function BulkMembersPanel({ churchName, senderName }) {
       } else if (channel === "sms" || channel === "whatsapp") {
         const data = await sendSmsBatched({
           recipients: phoneValid.map(r => ({ phone: r.phone, member_id: r.id })),
+          media_path: channel === "sms" ? await uploadSmsPicture(tenantId, picture) : undefined,
           message: message.trim(),
           sms_type: "bulk_member",
           reference_id: null,
@@ -131,7 +135,7 @@ export default function BulkMembersPanel({ churchName, senderName }) {
       }
       await logAudit("direct_message_sent", "members", null, { mode: "bulk_members", channel, filters, sent, failed }, tenantId);
       toast({ title: "Send complete", description: `${sent} sent${failed ? `, ${failed} failed` : ""}.` });
-      setMessage(""); setSubject("");
+      setMessage(""); setSubject(""); setPicture(null);
     } catch (e) {
       toast({ title: "Send failed", description: e.message, variant: "destructive" });
     } finally {
@@ -160,6 +164,7 @@ export default function BulkMembersPanel({ churchName, senderName }) {
         <Input placeholder={channel === "email" ? "Subject" : "Title"} value={subject} onChange={e => setSubject(e.target.value)} maxLength={200} />
       )}
       <Textarea rows={5} placeholder="Message..." value={message} onChange={e => setMessage(e.target.value)} maxLength={channel === "sms" || channel === "whatsapp" ? 1600 : 4000} />
+      {channel === "sms" && <SmsPictureAttach picture={picture} onChange={setPicture} recipientCount={targetCount} />}
       {channel === "sms" && <SmsCharCounter text={message} />}
       {channel === "sms" && <SmsAvailability check={smsCheck} />}
 

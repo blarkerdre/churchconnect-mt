@@ -19,6 +19,8 @@ import { z } from "zod";
 import { normalizePhone } from "@/lib/phone-utils";
 import { logAudit } from "@/lib/audit";
 import ContactsManager from "./ContactsManager";
+import SmsPictureAttach, { uploadSmsPicture } from "@/components/sms/SmsPictureAttach";
+import { MMS_UNITS } from "@/lib/sms-coverage";
 import InvalidRecipientsPreview from "@/components/sms/InvalidRecipientsPreview";
 
 const WhatsAppIcon = ({ className }) => (
@@ -40,7 +42,8 @@ function IndividualSend({ tenantId, churchName, senderName }) {
   const [channel, setChannel] = useState("email");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
-  const indCheck = useSmsSendCheck(tenantId, message, channel === "sms" ? 1 : 0);
+  const [picture, setPicture] = useState(null);
+  const indCheck = useSmsSendCheck(tenantId, message, channel === "sms" ? 1 : 0, picture && channel === "sms" ? MMS_UNITS : 1);
   const [sending, setSending] = useState(false);
 
   const { data: searchResults = [] } = useQuery({
@@ -144,12 +147,14 @@ function IndividualSend({ tenantId, churchName, senderName }) {
         if (!normalized) throw new Error("Invalid phone number");
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData?.session?.access_token;
+        const media_path = channel === "sms" ? await uploadSmsPicture(tenantId, picture) : undefined;
         const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-sms`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             recipients: [{ phone: normalized, member_id: recipient.type === "member" ? recipient.id : null }],
             message: message.trim(),
+            media_path,
             sms_type: "direct",
             reference_id: null,
             channel,
@@ -174,7 +179,7 @@ function IndividualSend({ tenantId, churchName, senderName }) {
       await logAudit("direct_message_sent", "members", recipient.id || null, {
         channel, recipient_type: recipient.type, mode: "individual",
       }, tenantId);
-      setSubject(""); setMessage("");
+      setSubject(""); setMessage(""); setPicture(null);
     } catch (e) {
       toast({ title: "Send failed", description: e.message, variant: "destructive" });
     } finally {
@@ -250,6 +255,7 @@ function IndividualSend({ tenantId, churchName, senderName }) {
         <Input placeholder={channel === "email" ? "Subject" : "Title"} value={subject} onChange={e => setSubject(e.target.value)} maxLength={200} />
       )}
       <Textarea rows={5} placeholder="Message..." value={message} onChange={e => setMessage(e.target.value)} maxLength={channel === "sms" || channel === "whatsapp" ? 1600 : 4000} />
+      {channel === "sms" && <SmsPictureAttach picture={picture} onChange={setPicture} recipientCount={1} />}
       {channel === "sms" && <SmsCharCounter text={message} />}
       {channel === "sms" && <SmsAvailability check={indCheck} />}
 
@@ -268,6 +274,7 @@ function BulkNonMembers({ tenantId, churchName, senderName }) {
   const [channel, setChannel] = useState("email");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
+  const [picture, setPicture] = useState(null);
   const [sending, setSending] = useState(false);
 
   const { data: contacts = [] } = useQuery({
@@ -321,7 +328,7 @@ function BulkNonMembers({ tenantId, churchName, senderName }) {
   }, [pool]);
 
   const targetCount = channel === "email" ? emailRecipients.length : phoneValid.length;
-  const smsCheck = useSmsSendCheck(tenantId, message, channel === "sms" ? targetCount : 0);
+  const smsCheck = useSmsSendCheck(tenantId, message, channel === "sms" ? targetCount : 0, picture && channel === "sms" ? MMS_UNITS : 1);
 
   const handleSend = async () => {
     if (!message.trim()) { toast({ title: "Message required", variant: "destructive" }); return; }
@@ -356,6 +363,7 @@ function BulkNonMembers({ tenantId, churchName, senderName }) {
       } else {
         const data = await sendSmsBatched({
           recipients: phoneValid.map(r => ({ phone: r.phone, member_id: null })),
+          media_path: channel === "sms" ? await uploadSmsPicture(tenantId, picture) : undefined,
           message: message.trim(),
           sms_type: "bulk_nonmember",
           reference_id: null,
@@ -367,7 +375,7 @@ function BulkNonMembers({ tenantId, churchName, senderName }) {
       }
       await logAudit("direct_message_sent", "contacts", null, { channel, mode: "bulk_nonmember", source, sent, failed }, tenantId);
       toast({ title: "Send complete", description: `${sent} sent${failed ? `, ${failed} failed` : ""}.` });
-      setMessage(""); setSubject("");
+      setMessage(""); setSubject(""); setPicture(null);
     } catch (e) {
       toast({ title: "Send failed", description: e.message, variant: "destructive" });
     } finally {
@@ -417,6 +425,7 @@ function BulkNonMembers({ tenantId, churchName, senderName }) {
         <Input placeholder="Subject" value={subject} onChange={e => setSubject(e.target.value)} maxLength={200} />
       )}
       <Textarea rows={5} placeholder="Message..." value={message} onChange={e => setMessage(e.target.value)} maxLength={channel === "sms" || channel === "whatsapp" ? 1600 : 4000} />
+      {channel === "sms" && <SmsPictureAttach picture={picture} onChange={setPicture} recipientCount={targetCount} />}
       {channel === "sms" && <SmsCharCounter text={message} />}
       {channel === "sms" && <SmsAvailability check={smsCheck} />}
 
