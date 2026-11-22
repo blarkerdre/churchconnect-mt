@@ -8550,6 +8550,10 @@ export type Database = {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      is_pastoral_staff: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_registered_bible_school_student: {
         Args: { _course_id: string; _tenant_id: string; _user_id: string }
         Returns: boolean

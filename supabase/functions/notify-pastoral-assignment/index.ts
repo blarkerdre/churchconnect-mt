@@ -88,11 +88,18 @@ Deno.serve(async (req) => {
     const description = pcRecord.description;
 
     if (!isServiceRole && callerUserId) {
-      const [{ data: isAdmin }, { data: isTenantLeader }] = await Promise.all([
+      // Only church admins, super-admins or Pastoral Care unit leaders may trigger these notices.
+      const [{ data: isAdmin }, { data: isSuper }, { data: isTenantLeader }, { data: leaderUnits }] = await Promise.all([
         svcClient.rpc("is_admin", { _user_id: callerUserId, _tenant_id: tenant_id }),
+        svcClient.rpc("has_role", { _user_id: callerUserId, _role: "super_admin" }),
         svcClient.rpc("has_role", { _user_id: callerUserId, _role: "unit_leader", _tenant_id: tenant_id }),
+        svcClient.from("unit_leader_assignments").select("unit_name")
+          .eq("user_id", callerUserId).eq("tenant_id", tenant_id),
       ]);
-      if (!isAdmin && !isTenantLeader) {
+      const leadsPastoral = !!isTenantLeader && (leaderUnits || []).some(
+        (u: { unit_name: string | null }) => (u.unit_name || "").replace(/\s+/g, "").toLowerCase() === "pastoralcare",
+      );
+      if (!isAdmin && !isSuper && !leadsPastoral) {
         return new Response(JSON.stringify({ error: "Forbidden" }), {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -119,6 +126,22 @@ Deno.serve(async (req) => {
     });
     if (!assigneeInTenant) {
       return new Response(JSON.stringify({ message: "Assignee not in this church" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // The assignee must be pastoral staff: admin, super-admin, Pastoral Care leader or unit member.
+    const [{ data: aAdmin }, { data: aSuper }, { data: aLead }, { data: aMember }] = await Promise.all([
+      supabase.rpc("is_admin", { _user_id: assigned_to, _tenant_id: tenant_id }),
+      supabase.rpc("has_role", { _user_id: assigned_to, _role: "super_admin" }),
+      supabase.from("unit_leader_assignments").select("unit_name").eq("user_id", assigned_to).eq("tenant_id", tenant_id),
+      supabase.from("members").select("church_unit").eq("user_id", assigned_to).eq("tenant_id", tenant_id),
+    ]);
+    const norm = (v: string | null | undefined) => (v || "").replace(/\s+/g, "").toLowerCase();
+    const isPastoralStaff = !!aAdmin || !!aSuper
+      || (aLead || []).some((u: { unit_name: string | null }) => norm(u.unit_name) === "pastoralcare")
+      || (aMember || []).some((m: { church_unit: string | null }) => norm(m.church_unit).includes("pastoralcare"));
+    if (!isPastoralStaff) {
+      return new Response(JSON.stringify({ message: "Assignee is not on the Pastoral Care team" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

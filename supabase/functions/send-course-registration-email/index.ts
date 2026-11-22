@@ -45,6 +45,31 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Authorization: allow service-role server-to-server calls, OR an authenticated
+    // tenant admin. Admin-only for this flow (no self-send). The caller is
+    // verified BEFORE any database lookup so unknown callers learn nothing.
+    const isServiceRole = authHeader === `Bearer ${serviceRoleKey}`;
+    let callerId: string | null = null;
+    if (!isServiceRole) {
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const anonClient = createClient(Deno.env.get("SUPABASE_URL")!, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const { data: userData, error: userErr } = await anonClient.auth.getUser();
+      if (userErr || !userData?.user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      callerId = userData.user.id;
+    }
+    const forbidden = () => new Response(JSON.stringify({ error: "Forbidden" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
     const body = await req.json();
     let { email, first_name, course_name, tenant_id, registration_id, student_number } = body ?? {};
 
@@ -64,10 +89,18 @@ Deno.serve(async (req) => {
         .eq("id", registration_id)
         .maybeSingle();
       if (regErr || !reg) {
+        if (!isServiceRole) return forbidden();
         return new Response(JSON.stringify({ error: "Registration not found" }), {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
+      }
+      if (!isServiceRole) {
+        const { data: isAdmin } = await supabase.rpc("is_admin", {
+          _user_id: callerId,
+          _tenant_id: reg.tenant_id,
+        });
+        if (!isAdmin) return forbidden();
       }
       const memberRow = Array.isArray((reg as any).members) ? (reg as any).members[0] : (reg as any).members;
       const courseRow = Array.isArray((reg as any).exam_titles) ? (reg as any).exam_titles[0] : (reg as any).exam_titles;
@@ -89,9 +122,6 @@ Deno.serve(async (req) => {
 
     const normalizedEmail = normalizeEmail(email);
 
-    // Authorization: allow service-role server-to-server calls, OR an authenticated
-    // tenant admin. Admin-only for this flow (no self-send).
-    const isServiceRole = authHeader === `Bearer ${serviceRoleKey}`;
     if (!isServiceRole && registrationRow && !registrationEmail) {
       // Signed-in callers may only email the address saved on the member record.
       return new Response(JSON.stringify({ error: "This person has no email address saved. Add one to their member record first." }), {
@@ -106,35 +136,6 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (!isServiceRole) {
-      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-      const anonClient = createClient(Deno.env.get("SUPABASE_URL")!, anonKey, {
-        global: { headers: { Authorization: authHeader } },
-        auth: { autoRefreshToken: false, persistSession: false },
-      });
-      const { data: userData, error: userErr } = await anonClient.auth.getUser();
-      if (userErr || !userData?.user) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      let allowed = false;
-      if (tenant_id) {
-        const { data: isAdmin } = await supabase.rpc("is_admin", {
-          _user_id: userData.user.id,
-          _tenant_id: tenant_id,
-        });
-        allowed = !!isAdmin;
-      }
-      if (!allowed) {
-        return new Response(JSON.stringify({ error: "Forbidden" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
-
     // Fetch tenant sender name
     let senderName = SITE_NAME;
     if (tenant_id) {

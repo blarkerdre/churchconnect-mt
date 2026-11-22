@@ -421,6 +421,20 @@
       "when": 1795315740355,
       "tag": "0059_hide_sms_cycle_lookup",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1795332246849,
+      "tag": "0060_lock_subscription_course_approval_pastoral_assignee",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1795332380539,
+      "tag": "0061_fix_guard_caller_detection",
+      "breakpoints": true
     }
   ]
 }
