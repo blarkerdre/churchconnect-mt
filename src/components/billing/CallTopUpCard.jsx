@@ -78,7 +78,7 @@ export default function CallTopUpCard({ tenantId, canBuy, isSuperAdmin = false }
   const saveThr = async () => {
     const n = Math.min(10000, Math.max(0, Math.floor(Number(thrVal) || 0)));
     setThrState("saving");
-    const next = { enabled: n > 0, threshold: n > 0 ? n : (Number(ls.threshold) || 30), channels: { bell: true, email: false, sms: false }, recipients: { owner: true, admin: true }, template: "" };
+    const next = { enabled: n > 0, threshold: n > 0 ? n : (Number(ls.threshold) || 30), channels: ["in_app"], recipients: ["owner", "admin"], template: "" };
     const { error } = await supabase.from("tenants").update({ call_low_alert_settings: next }).eq("id", tenantId);
     if (error) { setThrState("idle"); toast({ title: "Couldn't save", description: error.message, variant: "destructive" }); return; }
     setThrState("saved"); setThr(null);
