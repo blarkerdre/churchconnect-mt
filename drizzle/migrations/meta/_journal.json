@@ -407,6 +407,13 @@
       "when": 1795315248806,
       "tag": "0057_require_confirmed_email_for_invites_and_checkin",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1795315673758,
+      "tag": "0058_hide_call_price_lookup",
+      "breakpoints": true
     }
   ]
 }

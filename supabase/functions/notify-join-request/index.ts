@@ -2,6 +2,7 @@ import { resolveSmsFrom } from "../_shared/sms-sender.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkSmsQuota } from "../_shared/sms-quota.ts";
 import { sendRawManagedEmail } from "../_shared/managed-email.ts";
+import { emailSentRecently, notificationSentRecently, smsSentRecently } from "../_shared/notice-dedupe.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -83,12 +84,18 @@ Deno.serve(async (req) => {
     if (request_id) {
       const { data: reqRow, error: reqErr } = await supabase
         .from("unit_join_requests")
-        .select("id, tenant_id, member_id, request_type, unit_name, wsf_centre_id, requested_by")
+        .select("id, tenant_id, member_id, request_type, unit_name, wsf_centre_id, requested_by, status")
         .eq("id", request_id)
         .maybeSingle();
       if (reqErr || !reqRow) {
         return new Response(JSON.stringify({ error: "Join request not found" }), {
           status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Only still-open requests need a leader's attention.
+      if (reqRow.status !== "pending") {
+        return new Response(JSON.stringify({ message: "Request is no longer pending" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -100,14 +107,11 @@ Deno.serve(async (req) => {
       requestedBy = reqRow.requested_by ?? null;
     }
 
-    // Authorize: caller (if user JWT) must belong to the target tenant, or be
-    // the member the request is about, or the person who filed the request.
+    // Authorize: a signed-in caller must be the person who filed the request,
+    // the member the request is about, or an admin of that church. Simply
+    // belonging to the church is not enough.
     if (callerUserId) {
-      const { data: belongs } = await supabase.rpc("user_belongs_to_tenant", {
-        _user_id: callerUserId,
-        _tenant_id: tenant_id,
-      });
-      let allowed = belongs === true || (!!requestedBy && requestedBy === callerUserId);
+      let allowed = !!requestedBy && requestedBy === callerUserId;
       if (!allowed && member_id) {
         const { data: m } = await supabase
           .from("members")
@@ -116,6 +120,26 @@ Deno.serve(async (req) => {
           .eq("tenant_id", tenant_id)
           .maybeSingle();
         if (m?.user_id === callerUserId) allowed = true;
+      }
+      if (!allowed) {
+        const { data: adminRole } = await supabase
+          .from("user_roles")
+          .select("role, tenant_id")
+          .eq("user_id", callerUserId)
+          .in("role", ["admin", "super_admin"]);
+        allowed = (adminRole || []).some(
+          (r: any) => r.role === "super_admin" || r.tenant_id === tenant_id,
+        );
+      }
+      if (!allowed) {
+        const { data: ownerMem } = await supabase
+          .from("tenant_memberships")
+          .select("role")
+          .eq("user_id", callerUserId)
+          .eq("tenant_id", tenant_id)
+          .in("role", ["owner", "admin"])
+          .maybeSingle();
+        allowed = !!ownerMem;
       }
       if (!allowed) {
         return new Response(JSON.stringify({ error: "Forbidden" }), {
@@ -224,7 +248,14 @@ Deno.serve(async (req) => {
     }
 
     // 1. Create in-app notifications for each approver
-    const notifRows = Array.from(approverUserIds).map((uid) => ({
+    // Skip anyone who already got a bell alert about this request today, so
+    // repeating the call cannot flood leaders.
+    const freshApprovers: string[] = [];
+    for (const uid of approverUserIds) {
+      if (request_id && await notificationSentRecently(supabase, uid, "unit_join_request", request_id)) continue;
+      freshApprovers.push(uid);
+    }
+    const notifRows = freshApprovers.map((uid) => ({
       user_id: uid,
       tenant_id,
       title: "New Join Request",
@@ -286,6 +317,7 @@ Deno.serve(async (req) => {
       // Email
       if (recipientEmail) {
         const messageId = `join-req-${request_id || crypto.randomUUID()}-${uid}`;
+        const emailRepeat = request_id ? await emailSentRecently(supabase, messageId) : false;
         const html = `
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
@@ -314,7 +346,7 @@ Deno.serve(async (req) => {
 </body></html>`;
         const text = `Hi ${recipientName},\n\n${memberName} is requesting to join ${targetLabel} (${request_type === "unit" ? "Unit" : "Home Cell"}).\n\nPlease log in to approve or decline.\n\n${churchName}`;
 
-        try {
+        if (!emailRepeat) try {
           await sendRawManagedEmail({
             supabase,
             to: recipientEmail,
@@ -338,7 +370,10 @@ Deno.serve(async (req) => {
         if (!cleaned.startsWith("+")) cleaned = "+" + cleaned;
         if (/^\+[1-9]\d{6,14}$/.test(cleaned)) {
           const smsBody = `Hi ${recipientName}, ${memberName} is requesting to join ${targetLabel}. Please review on your dashboard. - ${churchShortName}`;
-          try {
+          const smsRepeat = request_id
+            ? await smsSentRecently(supabase, "join-request-notification", request_id, cleaned)
+            : false;
+          if (!smsRepeat) try {
             const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
             const __quota = await checkSmsQuota(supabase, tenant_id, "sms", 1);
             if (!__quota.allowed) {
