@@ -8,7 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Phone, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
-import { money as formatMoney } from "@/lib/money";
+import { money as formatMoney, moneyDown } from "@/lib/money";
 
 const PACKS = [60, 300, 600, 1200];
 const STATUS = { paid: "Paid", pending: "Not completed", awaiting_transfer: "Awaiting bank transfer", cancelled: "Cancelled" };
@@ -44,7 +44,7 @@ export default function CallTopUpCard({ tenantId, canBuy, isSuperAdmin = false }
   const total = data.unitPrice * Number(qty || 0);
 
   const buy = async () => {
-    if (!(await confirmPw({ title: "Confirm call minutes payment", description: `Pay ${formatMoney(total, data.currency)} for ${Number(qty)} minutes.`, confirmLabel: "Continue to payment" }))) return;
+    if (!(await confirmPw({ title: "Confirm call minutes payment", description: `Pay ${moneyDown(total, data.currency)} for ${Number(qty)} minutes.`, confirmLabel: "Continue to payment" }))) return;
     setLoading(true);
     try {
       const { data: res, error } = await supabase.functions.invoke("create-call-topup-checkout", { body: { tenant_id: tenantId, minutes: Number(qty) } });
@@ -103,7 +103,7 @@ export default function CallTopUpCard({ tenantId, canBuy, isSuperAdmin = false }
           </div>
           <Button size="sm" onClick={buy} disabled={loading || Number(qty) < 10}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-            Pay by card {formatMoney(total, data.currency)}
+            Pay by card {moneyDown(total, data.currency)}
           </Button>
           <Button size="sm" variant="outline" className="ml-2" onClick={requestBank} disabled={busy === "bank" || Number(qty) < 10}>
             {busy === "bank" ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}

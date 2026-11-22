@@ -9,6 +9,7 @@ import { MessageSquare, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { smsCycleStart } from "@/lib/sms-cycle";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import { moneyDown } from "@/lib/money";
 
 const PACKS = [100, 500, 1000, 5000];
 
@@ -72,7 +73,7 @@ export default function SmsTopUpCard({ tenantId, canBuy, isSuperAdmin = false })
   const limit = Number(data.tenant?.sms_limit_monthly || 0);
 
   const buy = async () => {
-    if (!(await askPw("Confirm text payment", `Pay ${money(data.unitPrice * Number(qty || 0), data.currency)} for ${Number(qty)} texts.`, "Continue to payment"))) return;
+    if (!(await askPw("Confirm text payment", `Pay ${moneyDown(data.unitPrice * Number(qty || 0), data.currency)} for ${Number(qty)} texts.`, "Continue to payment"))) return;
     setLoading(true);
     try {
       const { data: res, error } = await supabase.functions.invoke("create-sms-topup-checkout", { body: { tenant_id: tenantId, quantity: Number(qty) } });
@@ -128,7 +129,7 @@ export default function SmsTopUpCard({ tenantId, canBuy, isSuperAdmin = false })
           </div>
           <Button size="sm" onClick={buy} disabled={loading || Number(qty) < 10}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-            Pay by card {money(data.unitPrice * Number(qty || 0), data.currency)}
+            Pay by card {moneyDown(data.unitPrice * Number(qty || 0), data.currency)}
           </Button>
           <Button size="sm" variant="outline" onClick={requestBank} disabled={busy === "bank" || Number(qty) < 10} className="ml-2">
             {busy === "bank" ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}

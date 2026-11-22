@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
     }
     const unitPrice = resolveSmsUnitPrice(tenant?.sms_unit_price_override, planPrice, planCurrency, currency);
     if (unitPrice <= 0) return json({ error: "No price per text is set for your church yet. Please contact support." }, 400);
-    const amountMinor = Math.round(unitPrice * quantity * 100);
+    const amountMinor = Math.floor(unitPrice * quantity * 100 + 1e-9); // never rounds up
     if (amountMinor < 50) return json({ error: "Top-up total is too small. Choose more texts." }, 400);
 
     const { data: sub } = await admin.from("tenant_subscriptions").select("stripe_customer_id").eq("tenant_id", tenantId).maybeSingle();

@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
       if ((plan?.currency || "GBP").toUpperCase() === currency.toUpperCase()) unitPrice = Number(plan?.overage_price_call_minute || 0);
     }
     if (!(unitPrice > 0)) return json({ error: "No price per minute is set for your church yet. Please contact support." }, 400);
-    const amountMinor = Math.round(unitPrice * minutes * 100);
+    const amountMinor = Math.floor(unitPrice * minutes * 100 + 1e-9); // never rounds up
     if (amountMinor < 50) return json({ error: "Top-up total is too small. Choose more minutes." }, 400);
 
     const { data: sub } = await admin.from("tenant_subscriptions").select("stripe_customer_id").eq("tenant_id", tenantId).maybeSingle();
