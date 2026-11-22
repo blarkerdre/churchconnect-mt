@@ -38,6 +38,7 @@ export function useSmsBilling(tenantId) {
 }
 
 const money = (n, c) => new Intl.NumberFormat("en-GB", { style: "currency", currency: c || "GBP" }).format(n);
+const unitMoney = (n, c) => new Intl.NumberFormat("en-GB", { style: "currency", currency: c || "GBP", minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(n);
 
 const STATUS = { paid: "Paid", pending: "Not completed", awaiting_transfer: "Awaiting bank transfer", cancelled: "Cancelled" };
 
@@ -92,7 +93,7 @@ export default function SmsTopUpCard({ tenantId, canBuy, isSuperAdmin = false })
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <div><p className="text-xs text-muted-foreground">Texts since {format(data.cycleStart, "d MMM")}</p><p className="font-medium">{data.used.toLocaleString()} of {limit > 0 ? limit.toLocaleString() : "unlimited"}</p></div>
         <div><p className="text-xs text-muted-foreground">Top-up balance</p><p className="font-medium">{Number(data.tenant?.sms_credit_balance || 0).toLocaleString()} texts</p></div>
-        <div><p className="text-xs text-muted-foreground">Price per text</p><p className="font-medium">{data.unitPrice > 0 ? money(data.unitPrice, data.currency) : "Not set"}</p></div>
+        <div><p className="text-xs text-muted-foreground">Price per text</p><p className="font-medium">{data.unitPrice > 0 ? unitMoney(data.unitPrice, data.currency) : "Not set"}</p></div>
       </div>
       <p className="text-xs text-muted-foreground">
         When monthly texts run out, top-up texts are used first.
