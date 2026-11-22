@@ -5050,6 +5050,7 @@ export type Database = {
           delivery_updated_at: string | null
           error_message: string | null
           id: string
+          media_url: string | null
           message: string
           message_sid: string | null
           recipient_member_id: string | null
@@ -5059,6 +5060,7 @@ export type Database = {
           sms_type: string
           status: string
           tenant_id: string | null
+          units: number
         }
         Insert: {
           channel?: string
@@ -5067,6 +5069,7 @@ export type Database = {
           delivery_updated_at?: string | null
           error_message?: string | null
           id?: string
+          media_url?: string | null
           message: string
           message_sid?: string | null
           recipient_member_id?: string | null
@@ -5076,6 +5079,7 @@ export type Database = {
           sms_type?: string
           status?: string
           tenant_id?: string | null
+          units?: number
         }
         Update: {
           channel?: string
@@ -5084,6 +5088,7 @@ export type Database = {
           delivery_updated_at?: string | null
           error_message?: string | null
           id?: string
+          media_url?: string | null
           message?: string
           message_sid?: string | null
           recipient_member_id?: string | null
@@ -5093,6 +5098,7 @@ export type Database = {
           sms_type?: string
           status?: string
           tenant_id?: string | null
+          units?: number
         }
         Relationships: [
           {
@@ -8845,6 +8851,10 @@ export type Database = {
       sms_cycle_start_for: { Args: { _tenant_id: string }; Returns: string }
       sms_unit_price_for_tenant: {
         Args: { _tenant_id: string }
+        Returns: number
+      }
+      sms_units_used: {
+        Args: { _channel: string; _since: string; _tenant_id: string }
         Returns: number
       }
       start_trivia_attempt: {

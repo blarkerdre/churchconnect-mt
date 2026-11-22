@@ -23,6 +23,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { MMS_UNITS } from "@/lib/sms-coverage";
+import { ImagePlus, X } from "lucide-react";
 
 export default function SMSDialog({
   open,
@@ -49,6 +51,7 @@ export default function SMSDialog({
   const [scheduleMode, setScheduleMode] = useState(false);
   const [scheduleDate, setScheduleDate] = useState(null);
   const [scheduleTime, setScheduleTime] = useState("09:00");
+  const [picture, setPicture] = useState(null); // { file, preview }
 
   React.useEffect(() => {
     if (open) {
@@ -59,6 +62,7 @@ export default function SMSDialog({
       setScheduleMode(false);
       setScheduleDate(null);
       setScheduleTime("09:00");
+      setPicture(null);
     }
   }, [open, prefillMessage, defaultChannel]);
 
@@ -97,7 +101,14 @@ export default function SMSDialog({
   }, [directRecipients, members]);
 
   const validCount = validRecipients.length;
-  const smsCheck = useSmsSendCheck(tenantId, message, channel === "sms" ? validCount : 0);
+  const smsCheck = useSmsSendCheck(tenantId, message, channel === "sms" ? validCount : 0, picture && channel === "sms" ? MMS_UNITS : 1);
+
+  const pickPicture = (file) => {
+    if (!file) return;
+    if (!/^image\/(jpeg|png|gif)$/.test(file.type)) { toast({ title: "Use a JPG, PNG or GIF picture", variant: "destructive" }); return; }
+    if (file.size > 5 * 1024 * 1024) { toast({ title: "Picture must be under 5 MB", variant: "destructive" }); return; }
+    setPicture({ file, preview: URL.createObjectURL(file) });
+  };
   const segments = Math.ceil((message.length || 1) / 160);
 
   const handleSend = async () => {
@@ -169,8 +180,10 @@ export default function SMSDialog({
           .neq("status", "failed")
           .gte("created_at", monthStart.toISOString());
 
-        const remaining = quota - (count || 0);
-        if (validCount > remaining) {
+        const { data: usedUnits } = await supabase.rpc("sms_units_used", { _tenant_id: tenantId, _channel: channel, _since: monthStart.toISOString() });
+        const remaining = quota - Number(usedUnits ?? count ?? 0);
+        const unitsNeeded = validCount * (picture && channel === "sms" ? MMS_UNITS : 1);
+        if (channel !== "sms" && unitsNeeded > remaining) {
           toast({
             title: `${channel === "whatsapp" ? "WhatsApp" : "SMS"} quota exceeded`,
             description: `You have ${Math.max(remaining, 0)} messages remaining this month (limit: ${quota}). Trying to send ${validCount}.`,
@@ -196,8 +209,16 @@ export default function SMSDialog({
         member_id: r.member_id || r.id,
       }));
 
+      let media_path;
+      if (picture) {
+        const ext = picture.file.type === "image/png" ? "png" : picture.file.type === "image/gif" ? "gif" : "jpg";
+        media_path = `${tenantId}/${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("sms-media").upload(media_path, picture.file, { contentType: picture.file.type });
+        if (upErr) throw new Error("Couldn't upload the picture: " + upErr.message);
+      }
       const data = await sendSmsBatched({
         recipients,
+        media_path,
         message: message.trim(),
         sms_type: smsType,
         reference_id: referenceId,
@@ -266,6 +287,22 @@ export default function SMSDialog({
                 placeholder={`Type your ${channelLabel} message...`}
                 maxLength={1600}
               />
+              {!scheduleMode && (
+                <div className="mt-2 flex items-center gap-2">
+                  {picture ? (
+                    <div className="relative">
+                      <img src={picture.preview} alt="Attached picture" className="h-20 w-20 rounded object-cover border" />
+                      <button type="button" aria-label="Remove picture" onClick={() => setPicture(null)} className="absolute -right-2 -top-2 rounded-full bg-background border p-0.5"><X className="h-3 w-3" /></button>
+                    </div>
+                  ) : (
+                    <label className="inline-flex cursor-pointer items-center gap-1 rounded border px-2 py-1 text-xs text-muted-foreground hover:bg-muted">
+                      <ImagePlus className="h-4 w-4" /> Add picture or flyer
+                      <input type="file" accept="image/jpeg,image/png,image/gif" className="hidden" onChange={e => pickPicture(e.target.files?.[0])} />
+                    </label>
+                  )}
+                  {picture && channel === "sms" && <span className="text-xs text-muted-foreground">Picture texts use {MMS_UNITS} units per person.</span>}
+                </div>
+              )}
               {channel === "sms" && <div className="mt-1"><SmsCharCounter text={message} /><div className="mt-1"><SmsAvailability check={smsCheck} /></div></div>}
             </div>
 

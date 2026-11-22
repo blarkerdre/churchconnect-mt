@@ -25,15 +25,14 @@ export function useSmsBilling(tenantId) {
         plan = data;
       }
       const start = smsCycleStart(t?.sms_cycle_start);
-      const { count } = await supabase.from("sms_log").select("*", { count: "exact", head: true })
-        .eq("tenant_id", tenantId).eq("channel", "sms").neq("status", "failed").gte("created_at", start.toISOString());
+      const { data: count } = await supabase.rpc("sms_units_used", { _tenant_id: tenantId, _channel: "sms", _since: start.toISOString() });
       const { data: bank } = await supabase.rpc("get_billing_bank_details");
       const { data: topups } = await supabase.from("sms_topups").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(10);
       const override = t?.sms_unit_price_override;
       const currency = t?.billing_currency || "GBP";
       const planMatches = (plan?.currency || "GBP").toUpperCase() === currency;
       const unitPrice = override !== null && override !== undefined ? Number(override) : (planMatches ? Number(plan?.overage_price_sms || 0) : 0);
-      return { tenant: t, cycleStart: start, plan, used: count || 0, topups: topups || [], bank: bank || "", unitPrice, currency, planMatches };
+      return { tenant: t, cycleStart: start, plan, used: Number(count || 0), topups: topups || [], bank: bank || "", unitPrice, currency, planMatches };
     },
   });
 }

@@ -5,6 +5,9 @@
 // subscription payment is confirmed), or the 1st of the month if never set.
 // A limit of 0 means "unlimited" (no enforcement).
 
+// A picture/flyer message (MMS) costs this many text units per person.
+export const MMS_UNITS = 3;
+
 export type SmsChannel = "sms" | "whatsapp";
 
 export interface QuotaResult {
@@ -66,14 +69,11 @@ export async function checkSmsQuota(
   const now = new Date();
   const monthStart = tenant?.sms_cycle_start ? new Date(tenant.sms_cycle_start) : new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 
-  const { count } = await client
-    .from("sms_log")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenantId)
-    .eq("channel", channel)
-    .neq("status", "failed")
-    .gte("created_at", monthStart.toISOString());
-
+  // Sum units (picture messages use more than one) since the cycle start.
+  const { data: usedUnits } = await client.rpc("sms_units_used", {
+    _tenant_id: tenantId, _channel: channel, _since: monthStart.toISOString(),
+  });
+  const count = Number(usedUnits || 0);
   const usage = count || 0;
   const remaining = Math.max(limit - usage, 0);
   if (usage + Math.max(requested, 1) <= limit || channel !== "sms") {

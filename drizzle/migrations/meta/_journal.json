@@ -330,6 +330,13 @@
       "when": 1795303740221,
       "tag": "0046_call_minute_topups_and_sms_adjust",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1795305733973,
+      "tag": "0047_sms_picture_messages",
+      "breakpoints": true
     }
   ]
 }

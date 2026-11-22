@@ -2,7 +2,7 @@ import { senderNameFrom } from "../_shared/sms-sender.ts";
 import { callerMfaSatisfied, cleanMessageText, phoneKey, loadLeaderUnits, memberInUnits, smsContentProblem, tenantSuspended, SUSPENDED_MESSAGE, NON_ADMIN_DAILY_SMS_LIMIT, smsSentBySenderLastDay, phonesAlreadySentMessage } from "../_shared/sender-guard.ts";
 import { loadTenantPhoneSet, isTenantPhone } from "../_shared/tenant-phones.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { checkSmsQuota, QuotaExceededError } from "../_shared/sms-quota.ts";
+import { checkSmsQuota, QuotaExceededError, MMS_UNITS } from "../_shared/sms-quota.ts";
 import { writeAudit } from "../_shared/audit.ts";
 import { validateOutboundUrl, validateMethod } from "../_shared/url-validator.ts";
 
@@ -314,8 +314,28 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Optional picture / flyer, uploaded by the app to this church's folder.
+    let mediaPath: string | null = null;
+    let mediaUrl: string | null = null;
+    if (body.media_path) {
+      const mp = String(body.media_path);
+      if (!new RegExp(`^${tenant_id}/[A-Za-z0-9._-]{1,120}\\.(jpe?g|png|gif)$`, "i").test(mp)) {
+        return new Response(JSON.stringify({ error: "Invalid picture" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (smsProvider !== "twilio") {
+        return new Response(JSON.stringify({ error: "Pictures can only be sent with the Twilio text provider." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { data: signed, error: signErr } = await serviceClient.storage.from("sms-media").createSignedUrl(mp, 60 * 60 * 24 * 3);
+      if (signErr || !signed?.signedUrl) {
+        return new Response(JSON.stringify({ error: "Picture not found. Please attach it again." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      mediaPath = mp;
+      mediaUrl = signed.signedUrl;
+    }
+    const unitsPerMessage = mediaPath && msgChannel === "sms" ? MMS_UNITS : 1;
+
     // ── Quota enforcement (shared helper) ──
-    const quotaResult = await checkSmsQuota(serviceClient, tenant_id, msgChannel as any, recipients.length);
+    const quotaResult = await checkSmsQuota(serviceClient, tenant_id, msgChannel as any, recipients.length * unitsPerMessage);
     const quota = quotaResult.limit;
     let currentUsage = quotaResult.usage;
     if (!quotaResult.allowed) {
@@ -527,7 +547,7 @@ Deno.serve(async (req) => {
           if (msgChannel === "sms" && normalized.startsWith("+1") && naFrom && /^\+1\d{10}$/.test(naFrom)) {
             fromForThis = naFrom;
           }
-          const senderName = msgChannel === "sms" && !normalized.startsWith("+1") ? senderNameFrom(tenantSettings) : null;
+          const senderName = msgChannel === "sms" && !mediaUrl && !normalized.startsWith("+1") ? senderNameFrom(tenantSettings) : null;
           const sendOnce = async (from: string) => fetch(`${TWILIO_GATEWAY_URL}/Messages.json`, {
             method: "POST",
             headers: {
@@ -535,7 +555,11 @@ Deno.serve(async (req) => {
               "X-Connection-Api-Key": TWILIO_API_KEY,
               "Content-Type": "application/x-www-form-urlencoded",
             },
-            body: new URLSearchParams({ To: toNumber, From: from, Body: message, StatusCallback: webhookUrl }),
+            body: (() => {
+              const p = new URLSearchParams({ To: toNumber, From: from, Body: message, StatusCallback: webhookUrl });
+              if (mediaUrl) p.append("MediaUrl", mediaUrl);
+              return p;
+            })(),
           });
           response = await sendOnce(senderName || fromForThis);
           data = await response.json();
@@ -563,6 +587,8 @@ Deno.serve(async (req) => {
           channel: msgChannel,
           message_sid: data.sid || null,
           delivery_status: "queued",
+          units: unitsPerMessage,
+          media_url: mediaPath,
           ...(tenant_id ? { tenant_id } : {}),
         });
       } catch (err) {
