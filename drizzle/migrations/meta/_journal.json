@@ -365,6 +365,13 @@
       "when": 1795309956377,
       "tag": "0051_require_current_membership",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1795310650584,
+      "tag": "0052_lock_member_email_for_leaders",
+      "breakpoints": true
     }
   ]
 }

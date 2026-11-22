@@ -228,6 +228,10 @@ Deno.serve(async (req) => {
     .not('email', 'is', null)
     .neq('email', '')
     .eq('tenant_id', tenant_id)
+  // Unit leaders can't email addresses a non-admin typed in themselves (only
+  // admins or the member can confirm an email), so a leader can't point a
+  // member row at an outside address and use the church to email it.
+  if (!isAdmin) query = query.eq('email_added_by_leader', false)
 
   if (Array.isArray(member_ids) && member_ids.length > 0) {
     // Explicit member-id targeting (used by report-driven sends)

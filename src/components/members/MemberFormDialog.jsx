@@ -544,7 +544,18 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5"><Label>First Name *</Label><Input value={form.first_name} onChange={(e) => set("first_name", e.target.value)} /></div>
               <div className="space-y-1.5"><Label>Last Name *</Label><Input value={form.last_name} onChange={(e) => set("last_name", e.target.value)} /></div>
-              <div className="space-y-1.5"><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} /></div>
+              <div className="space-y-1.5">
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => set("email", e.target.value)}
+                  disabled={!!member && !isAdmin && member.user_id !== currentUser?.id}
+                />
+                {!!member && !isAdmin && member.user_id !== currentUser?.id && (
+                  <p className="text-xs text-muted-foreground">Only a church admin or the member can change this email.</p>
+                )}
+              </div>
               <div className="space-y-1.5">
                 <div className="flex items-center gap-1.5">
                   <Label>Phone</Label>

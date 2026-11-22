@@ -3805,6 +3805,7 @@ export type Database = {
           data_retention_reviewed_at: string | null
           date_of_birth: string | null
           email: string | null
+          email_added_by_leader: boolean
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           first_name: string
@@ -3858,6 +3859,7 @@ export type Database = {
           data_retention_reviewed_at?: string | null
           date_of_birth?: string | null
           email?: string | null
+          email_added_by_leader?: boolean
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           first_name: string
@@ -3911,6 +3913,7 @@ export type Database = {
           data_retention_reviewed_at?: string | null
           date_of_birth?: string | null
           email?: string | null
+          email_added_by_leader?: boolean
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           first_name?: string
