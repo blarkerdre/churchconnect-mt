@@ -351,6 +351,13 @@
       "when": 1795309355271,
       "tag": "0049_lock_call_cycle_start",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1795309677648,
+      "tag": "0050_revoke_roles_on_removal",
+      "breakpoints": true
     }
   ]
 }
