@@ -414,6 +414,13 @@
       "when": 1795315673758,
       "tag": "0058_hide_call_price_lookup",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1795315740355,
+      "tag": "0059_hide_sms_cycle_lookup",
+      "breakpoints": true
     }
   ]
 }
