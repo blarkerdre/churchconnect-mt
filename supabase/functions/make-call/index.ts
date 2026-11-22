@@ -155,6 +155,20 @@ Deno.serve(async (req) => {
       });
     }
 
+    // A member can only be recorded against the call if they belong to this church.
+    let safeMemberId: string | null = null;
+    if (member_id) {
+      const { data: memberRow } = await serviceClient
+        .from("members").select("id").eq("id", member_id).eq("tenant_id", tenant_id).maybeSingle();
+      if (!memberRow) {
+        return new Response(JSON.stringify({ error: "That member is not part of this church" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      safeMemberId = memberRow.id;
+    }
+
     // Get tenant settings for provider
     const { data: tenantRow } = await serviceClient
       .from("tenants")
@@ -328,7 +342,7 @@ Deno.serve(async (req) => {
     await serviceClient.from("call_log").insert({
       tenant_id,
       caller_id: user.id,
-      member_id: member_id || null,
+      member_id: safeMemberId,
       recipient_phone: phone,
       call_type: "outbound",
       status: callStatus,

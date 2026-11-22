@@ -460,6 +460,23 @@ Deno.serve(async (req) => {
     }
     const seenThisBatch = new Set<string>();
 
+    // Only record a member against a text when that member belongs to this
+    // church; anything else is dropped so logs can't point at another church.
+    const validMemberIds = new Set<string>();
+    {
+      const ids = Array.from(new Set(recipients
+        .map((r: any) => (typeof r?.member_id === "string" ? r.member_id : ""))
+        .filter((v: string) => /^[0-9a-f-]{36}$/i.test(v))));
+      for (let i = 0; i < ids.length; i += 200) {
+        const { data: rows } = await serviceClient
+          .from("members").select("id").eq("tenant_id", tenant_id).in("id", ids.slice(i, i + 200));
+        for (const r of rows || []) validMemberIds.add(String((r as any).id));
+      }
+    }
+    for (const r of recipients as any[]) {
+      if (r && r.member_id && !validMemberIds.has(String(r.member_id))) r.member_id = null;
+    }
+
     for (const recipient of recipients) {
       let normalized = normalizeE164(recipient.phone?.trim() || "");
       if (normalized && applyRepeatCheck) {
