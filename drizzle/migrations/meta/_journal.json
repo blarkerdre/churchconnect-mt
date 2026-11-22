@@ -435,6 +435,13 @@
       "when": 1795332380539,
       "tag": "0061_fix_guard_caller_detection",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1795332609176,
+      "tag": "0062_block_self_awarded_results_and_approvals",
+      "breakpoints": true
     }
   ]
 }
