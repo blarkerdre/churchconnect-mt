@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { notifyTourCompletion } from "@/hooks/useTourCompletion";
 import { resolveSteps, TOURS } from "./tours";
+import { useTenant } from "@/contexts/TenantContext";
+import { isTenantFeatureEnabled } from "@/hooks/useSubFeature";
 
 const TourCtx = createContext(null);
 export const useTour = () => useContext(TourCtx);
@@ -198,6 +200,7 @@ export function TourProvider({ children }) {
   const { user, isAdmin, isTenantAdmin, isTenantOwner, isUnitLeader, isWSFLeader, isReportsOfficer, roles = [] } = auth;
   const isSuperAdmin = roles.includes?.("super_admin");
   const isLeader = !!(isUnitLeader || isWSFLeader);
+  const { currentTenant } = useTenant() || {};
   const [active, setActive] = useState(null); // { tourId, steps }
   // In-session set of tour ids the user dismissed/completed. Prevents
   // auto-run from re-triggering after Skip/Close/Finish even if the
@@ -215,7 +218,8 @@ export function TourProvider({ children }) {
     isWSFLeader: !!isWSFLeader,
     isReportsOfficer: !!isReportsOfficer,
     isLeader,
-  }), [isAdmin, isTenantAdmin, isTenantOwner, isSuperAdmin, isUnitLeader, isWSFLeader, isReportsOfficer, isLeader]);
+    isFeatureEnabled: (path) => isTenantFeatureEnabled(currentTenant, path),
+  }), [currentTenant, isAdmin, isTenantAdmin, isTenantOwner, isSuperAdmin, isUnitLeader, isWSFLeader, isReportsOfficer, isLeader]);
 
   // `manual` = user explicitly clicked the "?" Tour button; bypass the
   // dismissed-in-this-session guard so they can always replay on demand.

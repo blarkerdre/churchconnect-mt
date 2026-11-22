@@ -1,3 +1,4 @@
+import { useTenantFeatureEnabled } from "@/hooks/useSubFeature";
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,6 +19,7 @@ import { toast } from "@/components/ui/use-toast";
 export default function MyData() {
   const { user } = useAuth();
   const { tenantId, tenantSlug } = useTenant();
+  const pastoralOn = useTenantFeatureEnabled("/pastoral-care");
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [exporting, setExporting] = useState(false);
@@ -221,9 +223,9 @@ export default function MyData() {
                 <Button asChild variant="outline">
                   <Link to={tenantSlug ? `/t/${tenantSlug}/my-profile` : "/my-profile"}>Edit my profile</Link>
                 </Button>
-                <Button asChild variant="outline">
+                {pastoralOn && <Button asChild variant="outline">
                   <Link to={tenantSlug ? `/t/${tenantSlug}/pastoral-care` : "/pastoral-care"}>Contact pastoral team</Link>
-                </Button>
+                </Button>}
               </div>
             </CardContent>
           </Card>

@@ -1,3 +1,4 @@
+import { useTenantFeatureEnabled } from "@/hooks/useSubFeature";
 import React, { useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 
@@ -150,6 +151,8 @@ export default function MyProfile() {
   const { user, roles, isAdmin, isUnitLeader, isWSFLeader } = useAuth();
   const { tenantId } = useTenantQuery();
   const { currentTenant } = useTenant();
+  const homeCellOn = useTenantFeatureEnabled("/wsf");
+  const certificatesOn = useTenantFeatureEnabled("/certificates-report");
   const { data: churchUnitsData = [] } = useChurchUnits();
   const CHURCH_UNITS = churchUnitsData.map(u => u.name);
   const queryClient = useQueryClient();
@@ -533,14 +536,14 @@ export default function MyProfile() {
                         <div className="space-y-3">
                           <SwitchRow id="water_baptism" label="Water Baptism" checked={form.water_baptism} onChange={v => set("water_baptism", v)} />
                           <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={v => set("holy_spirit_baptism", v)} />
-                          <SwitchRow id="winners_satellite" label="Home Cell Fellowship" checked={form.winners_satellite} onChange={v => {
+                          {homeCellOn && <SwitchRow id="winners_satellite" label="Home Cell Fellowship" checked={form.winners_satellite} onChange={v => {
                             set("winners_satellite", v);
                             if (v && !form.wsf_centre_id) {
                               const best = suggestClosestWSFCentre(wsfCentres, form);
                               if (best) set("wsf_centre_id", best.id);
                             }
-                          }} />
-                          {form.winners_satellite && (
+                          }} />}
+                          {homeCellOn && form.winners_satellite && (
                             <div className="space-y-1.5 pl-4">
                                <Label>Home Cell Centre</Label>
                                <Select value={form.wsf_centre_id || ""} onValueChange={v => set("wsf_centre_id", v)}>
@@ -664,9 +667,9 @@ export default function MyProfile() {
               <BoolBadge value={member.bcc_completed} label="BCC Completed" />
               <BoolBadge value={member.lcc_completed} label="LCC Completed" />
               <BoolBadge value={member.ldc_completed} label="LDC Completed" />
-              <BoolBadge value={member.winners_satellite} label="Home Cell" />
+              {homeCellOn && <BoolBadge value={member.winners_satellite} label="Home Cell" />}
             </div>
-            {member.wsf_centres?.name && (
+            {homeCellOn && member.wsf_centres?.name && (
               <p className="text-sm text-muted-foreground mt-3">Home Cell Centre: <span className="text-foreground font-medium">{member.wsf_centres.name}</span></p>
             )}
           </CardContent>
@@ -684,7 +687,7 @@ export default function MyProfile() {
       )}
 
       {/* Certificates */}
-      {!editing && <MyCertificates memberId={member.id} hiddenCourseNames={hiddenCourseNames} />}
+      {!editing && certificatesOn && <MyCertificates memberId={member.id} hiddenCourseNames={hiddenCourseNames} />}
 
       {/* Security */}
       {!editing && <TwoFactorSection />}

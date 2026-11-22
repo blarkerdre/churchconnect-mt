@@ -1,3 +1,4 @@
+import { isTenantFeatureEnabled } from "@/hooks/useSubFeature";
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,7 +55,8 @@ const referenceRoutes = {
 export default function NotificationBell() {
   const { user, isTenantAdmin, isTenantOwner, roles } = useAuth();
   const { tenantId } = useTenantQuery();
-  const { tenantSlug } = useTenant();
+  const { tenantSlug, currentTenant } = useTenant();
+  const routeOn = (r) => isTenantFeatureEnabled(currentTenant, r === "/teens-attendance" ? "/children-church" : r);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -209,7 +211,7 @@ export default function NotificationBell() {
       }
     }
 
-    if (route) {
+    if (route && routeOn(route)) {
       const fullRoute = tenantSlug ? `/t/${tenantSlug}${route}` : route;
       setSelected(null);
       setOpen(false);
@@ -234,7 +236,7 @@ export default function NotificationBell() {
   const hasRoute = selected && (
     selectedRefType === "unit_join_request"
       ? (!selected.tenant_id || selected.tenant_id === tenantId)
-      : (selectedRefType && referenceRoutes[selectedRefType] && (!selected.tenant_id || selected.tenant_id === tenantId))
+      : (selectedRefType && referenceRoutes[selectedRefType] && routeOn(referenceRoutes[selectedRefType]) && (!selected.tenant_id || selected.tenant_id === tenantId))
   );
 
   return (

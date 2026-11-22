@@ -25,7 +25,7 @@ export const TOURS = {
       { selector: '[data-tour="my-profile-help"]', title: "Your profile", body: "This is your personal space - keep your contact details, photo, and preferences up to date." },
       { selector: '[data-tour="profile-completion"]', title: "Complete your profile", body: "The completion banner shows what's still missing (photo, phone, birthday, address). A complete profile helps your leaders serve you better." },
       { selector: '[data-tour="profile-feed"]', title: "Your feed", body: "See announcements aimed at you, messages, and reactions." },
-      { selector: '[data-tour="my-certificates"]', title: "Certificates", body: "Any training certificates issued to you appear here - download them any time." },
+      { selector: '[data-tour="my-certificates"]', feature: "/certificates-report", title: "Certificates", body: "Any training certificates issued to you appear here - download them any time." },
     ],
   },
 
@@ -245,8 +245,24 @@ export const TOURS = {
   },
 };
 
+// Feature page each tour belongs to; tours for switched-off features are skipped.
+export const TOUR_FEATURES = {
+  "members-v1": "/members", "events-v1": "/events", "church-unit-v1": "/church-unit",
+  "attendance-v1": "/attendance", "church-attendance-v1": "/church-attendance",
+  "followups-v1": "/followups", "pastoral-care-v1": "/pastoral-care",
+  "communications-v1": "/communications", "transportation-v1": "/transportation",
+  "analytics-v1": "/analytics", "exam-management-v1": "/exam-management",
+  "training-reports-v1": "/training-reports", "wsf-v1": "/wsf",
+  "sermon-notes-v1": "/sermon-notes", "testimony-v1": "/testimony",
+  "unit-tasks-v1": "/unit-tasks", "inventory-v1": "/inventory", "reports-v1": "/reports",
+  "user-management-v1": "/user-management", "my-family-v1": "/my-family",
+  "children-church-v1": "/children-church",
+};
+
 export function resolveSteps(tourId, ctx = {}) {
   const t = TOURS[tourId];
   if (!t) return [];
-  return t.steps.filter((s) => (typeof s.when === "function" ? s.when(ctx) : true));
+  const on = typeof ctx.isFeatureEnabled === "function" ? ctx.isFeatureEnabled : () => true;
+  if (!on(t.feature || TOUR_FEATURES[tourId])) return [];
+  return t.steps.filter((s) => (!s.feature || on(s.feature)) && (typeof s.when === "function" ? s.when(ctx) : true));
 }

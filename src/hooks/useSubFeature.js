@@ -80,8 +80,8 @@ const TENANT_FEATURE_TO_ROUTES = {
  * Hook to check if a module route is enabled at the tenant level.
  * Returns true if the feature is enabled or if no tenant context is available.
  */
-export function useTenantFeatureEnabled(routePath) {
-  const { currentTenant } = useTenant();
+export function isTenantFeatureEnabled(currentTenant, routePath) {
+  if (!routePath) return true;
 
   // Check disabled_features array first
   const disabledFeatures = currentTenant?.settings?.disabled_features || [];
@@ -96,6 +96,11 @@ export function useTenantFeatureEnabled(routePath) {
     }
   }
   return true;
+}
+
+export function useTenantFeatureEnabled(routePath) {
+  const { currentTenant } = useTenant();
+  return isTenantFeatureEnabled(currentTenant, routePath);
 }
 
 /**

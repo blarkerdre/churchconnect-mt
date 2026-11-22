@@ -1,3 +1,4 @@
+import { useTenantFeatureEnabled } from "@/hooks/useSubFeature";
 import { functionErrorMessage } from "@/lib/function-error";
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -65,6 +66,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
   );
   const { tenantId, withTenant, scopeQuery } = useTenantQuery();
   const { currentTenant } = useTenant();
+  const homeCellOn = useTenantFeatureEnabled("/wsf");
   const isSuperAdmin = currentUserRoles.includes("super_admin");
   const canAssignAdminRole = isSuperAdmin || isTenantOwner;
   const queryClient = useQueryClient();
@@ -730,14 +732,14 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
               <div className="space-y-3">
                 <SwitchRow id="water_baptism" label="Water Baptism" checked={form.water_baptism} onChange={(v) => set("water_baptism", v)} />
                 <SwitchRow id="holy_spirit_baptism" label="Holy Spirit Baptism" checked={form.holy_spirit_baptism} onChange={(v) => set("holy_spirit_baptism", v)} />
-                <SwitchRow id="winners_satellite" label="Home Cell Fellowship" checked={form.winners_satellite} onChange={(v) => {
+                {homeCellOn && <SwitchRow id="winners_satellite" label="Home Cell Fellowship" checked={form.winners_satellite} onChange={(v) => {
                   set("winners_satellite", v);
                   if (v && !form.wsf_centre_id) {
                     const best = suggestClosestWSFCentre(wsfCentres, form);
                     if (best) set("wsf_centre_id", best.id);
                   }
-                }} />
-                {form.winners_satellite && (
+                }} />}
+                {homeCellOn && form.winners_satellite && (
                   <div className="space-y-1.5 pl-4">
                     <Label>Home Cell Centre {form.wsf_centre_id && wsfCentres.find(c => c.id === form.wsf_centre_id) ? <span className="text-xs text-muted-foreground font-normal ml-1">(auto-suggested by location)</span> : null}</Label>
                     <Select value={form.wsf_centre_id || ""} onValueChange={(v) => set("wsf_centre_id", v)}>

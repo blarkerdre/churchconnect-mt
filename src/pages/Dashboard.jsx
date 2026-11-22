@@ -1,3 +1,4 @@
+import { isTenantFeatureEnabled } from "@/hooks/useSubFeature";
 import React from "react";
 import { Users, CalendarDays, HeartHandshake, Heart, TrendingUp, UserPlus, Loader2, Cake } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -126,7 +127,7 @@ export default function Dashboard() {
   });
 
   // Early returns AFTER all hooks
-  if (!authLoading && !isAdmin && isWSFLeader) {
+  if (!authLoading && !isAdmin && isWSFLeader && isTenantFeatureEnabled(currentTenant, "/wsf")) {
     return <WSFLeaderDashboard />;
   }
   if (!authLoading && !isAdmin && isUnitLeader) {

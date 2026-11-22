@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, CalendarDays, Heart, Car, UserCircle } from "lucide-react";
 import { useTenant } from "@/contexts/TenantContext";
+import { isTenantFeatureEnabled } from "@/hooks/useSubFeature";
 
 const tabs = [
   { name: "Home", icon: LayoutDashboard, path: "/" },
@@ -12,7 +13,7 @@ const tabs = [
 
 export default function MobileBottomNav() {
   const { pathname } = useLocation();
-  const { tenantSlug } = useTenant();
+  const { tenantSlug, currentTenant } = useTenant();
   const tenantPrefix = tenantSlug ? `/t/${tenantSlug}` : "";
   const barePath = tenantSlug && pathname.startsWith(`/t/${tenantSlug}`)
     ? pathname.replace(`/t/${tenantSlug}`, "") || "/"
@@ -21,7 +22,7 @@ export default function MobileBottomNav() {
   return (
     <nav className="fixed bottom-0 inset-x-0 z-50 bg-card border-t border-border lg:hidden pb-[env(safe-area-inset-bottom)]">
       <div className="flex items-center justify-around h-16">
-        {tabs.map(({ name, icon: Icon, path }) => {
+        {tabs.filter((t) => isTenantFeatureEnabled(currentTenant, t.path)).map(({ name, icon: Icon, path }) => {
           const active = barePath === path;
           return (
             <Link
