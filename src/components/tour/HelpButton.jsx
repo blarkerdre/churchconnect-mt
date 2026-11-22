@@ -1,4 +1,5 @@
 import React from "react";
+import { useTenantFeatureEnabled } from "@/hooks/useSubFeature";
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
 import { useTour } from "./TourProvider";
@@ -9,7 +10,8 @@ import { useTour } from "./TourProvider";
  */
 export default function HelpButton({ tourId, ctx, className = "", label = "Take the tour", dataTour }) {
   const tour = useTour();
-  if (!tour) return null;
+  const tourOn = useTenantFeatureEnabled("/tour");
+  if (!tour || !tourOn) return null;
   return (
     <Button
       type="button"

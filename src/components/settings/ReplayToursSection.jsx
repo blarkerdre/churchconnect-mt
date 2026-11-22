@@ -1,4 +1,5 @@
 import React from "react";
+import { useTenantFeatureEnabled } from "@/hooks/useSubFeature";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
@@ -8,6 +9,7 @@ import { toast } from "sonner";
 export default function ReplayToursSection() {
   const tour = useTour();
   const [busy, setBusy] = React.useState(false);
+  const tourOn = useTenantFeatureEnabled("/tour");
   const handle = async () => {
     if (!tour) return;
     setBusy(true);
@@ -20,6 +22,7 @@ export default function ReplayToursSection() {
       setBusy(false);
     }
   };
+  if (!tourOn) return null;
   return (
     <Card data-tour="settings-restart-tours">
       <CardHeader>

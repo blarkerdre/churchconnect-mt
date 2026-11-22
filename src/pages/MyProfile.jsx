@@ -152,7 +152,7 @@ export default function MyProfile() {
   const { tenantId } = useTenantQuery();
   const { currentTenant } = useTenant();
   const homeCellOn = useTenantFeatureEnabled("/wsf");
-  const certificatesOn = useTenantFeatureEnabled("/certificates-report");
+  const certificatesOn = useTenantFeatureEnabled("/certificates");
   const { data: churchUnitsData = [] } = useChurchUnits();
   const CHURCH_UNITS = churchUnitsData.map(u => u.name);
   const queryClient = useQueryClient();

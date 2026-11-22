@@ -225,12 +225,13 @@ export function TourProvider({ children }) {
   // dismissed-in-this-session guard so they can always replay on demand.
   const startTour = useCallback((tourId, ctx = {}, { manual = false } = {}) => {
     if (!tourId) return;
+    if (!isTenantFeatureEnabled(currentTenant, "/tour")) return;
     if (activeRef.current?.tourId === tourId) return;
     if (!manual && dismissedRef.current.has(tourId)) return;
     const steps = resolveSteps(tourId, { ...baseCtx, ...ctx });
     if (!steps.length) return;
     setActive({ tourId, steps });
-  }, [baseCtx]);
+  }, [baseCtx, currentTenant]);
 
   const stopTour = useCallback(() => setActive(null), []);
 

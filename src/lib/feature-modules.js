@@ -27,6 +27,7 @@ export const FEATURE_MODULES = [
   { key: "my-family", label: "My Family", description: "Family profile, children and teens registered by parents" },
   { key: "dashboard-slideshow", label: "Dashboard Slideshow", description: "Banner and Book of the Month carousel on the dashboard" },
   { key: "billing", label: "Plan & Billing", description: "Subscription, payments, SMS and call minute top-ups" },
+  { key: "tour", label: "Guided Tour", description: "Step-by-step help tours on each page" },
   { key: "trivia", label: "Bible Trivia", description: "Daily and weekly scripture quizzes with streaks and leaderboards" },
 
 ];

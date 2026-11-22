@@ -17,9 +17,16 @@ describe("church feature switches", () => {
     expect(resolveSteps("testimony-v1", { isFeatureEnabled: (p) => isTenantFeatureEnabled(t, p) })).toHaveLength(0);
   });
   it("certificates step is skipped when certificates are off", () => {
-    const t = off(["/certificates-report"]);
+    const t = off(["/certificates"]);
     const steps = resolveSteps("my-profile-v1", { isFeatureEnabled: (p) => isTenantFeatureEnabled(t, p) });
     expect(steps.some((s) => s.title === "Certificates")).toBe(false);
     expect(steps.length).toBeGreaterThan(0);
+  });
+});
+
+describe("guided tour switch", () => {
+  it("tour switch off reports /tour as off", () => {
+    expect(isTenantFeatureEnabled(off(["/tour"]), "/tour")).toBe(false);
+    expect(isTenantFeatureEnabled(off([]), "/tour")).toBe(true);
   });
 });

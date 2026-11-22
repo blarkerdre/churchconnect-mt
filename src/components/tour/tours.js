@@ -25,7 +25,7 @@ export const TOURS = {
       { selector: '[data-tour="my-profile-help"]', title: "Your profile", body: "This is your personal space - keep your contact details, photo, and preferences up to date." },
       { selector: '[data-tour="profile-completion"]', title: "Complete your profile", body: "The completion banner shows what's still missing (photo, phone, birthday, address). A complete profile helps your leaders serve you better." },
       { selector: '[data-tour="profile-feed"]', title: "Your feed", body: "See announcements aimed at you, messages, and reactions." },
-      { selector: '[data-tour="my-certificates"]', feature: "/certificates-report", title: "Certificates", body: "Any training certificates issued to you appear here - download them any time." },
+      { selector: '[data-tour="my-certificates"]', feature: "/certificates", title: "Certificates", body: "Any training certificates issued to you appear here - download them any time." },
     ],
   },
 
