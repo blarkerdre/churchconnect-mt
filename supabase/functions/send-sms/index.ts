@@ -413,6 +413,16 @@ Deno.serve(async (req) => {
     if (!isInternalServiceCall) {
       const { data: capSuper } = await serviceClient.rpc("has_role", { _user_id: userId, _role: "super_admin" });
       applyRecipientCap = capSuper !== true;
+    } else if (sms_type === "scheduled") {
+      // Scheduled texts were written by a person, so the same cap applies,
+      // judged by who wrote them (super-admins exempt).
+      const authorId = typeof body.author_id === "string" ? body.author_id : null;
+      let authorSuper = false;
+      if (authorId) {
+        const { data } = await serviceClient.rpc("has_role", { _user_id: authorId, _role: "super_admin" });
+        authorSuper = data === true;
+      }
+      applyRecipientCap = !authorSuper;
     }
     if (applyRecipientCap) {
       const candidatePhones = Array.from(new Set(recipients

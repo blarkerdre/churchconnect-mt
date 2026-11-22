@@ -358,6 +358,13 @@
       "when": 1795309677648,
       "tag": "0050_revoke_roles_on_removal",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1795309956377,
+      "tag": "0051_require_current_membership",
+      "breakpoints": true
     }
   ]
 }

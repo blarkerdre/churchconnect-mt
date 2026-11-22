@@ -295,6 +295,41 @@ Deno.serve(async (req) => {
     })
   }
 
+  // One person can't receive more than MAX_ALERTS_PER_RECIPIENT_PER_DAY church
+  // email alerts in 24 hours (any wording), so a church login can't bombard
+  // someone. Platform super-admins are exempt.
+  const MAX_ALERTS_PER_RECIPIENT_PER_DAY = 3
+  const alertCounts = new Map<string, number>()
+  if (callerIsSuper !== true) {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const emails = Array.from(new Set(members.map((m: { email: string | null }) => String(m.email || '').toLowerCase()).filter(Boolean)))
+    for (let i = 0; i < emails.length; i += 200) {
+      const { data: recent, error: recentErr } = await serviceClient
+        .from('email_send_log')
+        .select('recipient_email, message_id')
+        .eq('tenant_id', tenant_id)
+        .eq('template_name', 'email-alert')
+        .neq('status', 'failed')
+        .gte('created_at', since)
+        .in('recipient_email', emails.slice(i, i + 200))
+        .limit(10000)
+      if (recentErr) {
+        return new Response(JSON.stringify({ error: 'Could not check recent emails' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      const seen = new Set<string>()
+      for (const r of recent || []) {
+        const k = String((r as { recipient_email: string }).recipient_email || '').toLowerCase()
+        const key = `${k}|${(r as { message_id: string }).message_id}`
+        if (seen.has(key)) continue // several status rows per email
+        seen.add(key)
+        alertCounts.set(k, (alertCounts.get(k) || 0) + 1)
+      }
+    }
+  }
+
   // Check suppressed emails
   const { data: suppressed } = await serviceClient
     .from('suppressed_emails')
@@ -338,7 +373,7 @@ Deno.serve(async (req) => {
   for (const member of members) {
     if (!member.email) continue
     const emailLower = member.email.toLowerCase()
-    if (suppressedSet.has(emailLower)) {
+    if (suppressedSet.has(emailLower) || (alertCounts.get(emailLower) || 0) >= MAX_ALERTS_PER_RECIPIENT_PER_DAY) {
       skipped++
       continue
     }

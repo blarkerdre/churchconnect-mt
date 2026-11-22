@@ -133,6 +133,7 @@ Deno.serve(async (req) => {
               recipients: recipients.slice(i, i + 500),
               message: item.message,
               sms_type: 'scheduled',
+              author_id: item.created_by ?? null,
               channel: item.channel,
               tenant_id: item.tenant_id,
             }),
