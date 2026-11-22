@@ -393,6 +393,13 @@
       "when": 1795313311186,
       "tag": "0055_call_bank_topups",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1795314959471,
+      "tag": "0056_join_church_only_after_email_confirmed",
+      "breakpoints": true
     }
   ]
 }

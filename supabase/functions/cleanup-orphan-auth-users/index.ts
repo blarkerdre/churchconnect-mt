@@ -49,6 +49,13 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // Unconfirmed sign-ups only join their church once they confirm, so
+        // give them a week to do that before treating them as orphans.
+        if (!u.email_confirmed_at && now - createdAtMs < 7 * CUTOFF_MS) {
+          skipped++;
+          continue;
+        }
+
         // Skip if the user still belongs to any tenant
         const { count: membershipCount } = await supabase
           .from("tenant_memberships")
