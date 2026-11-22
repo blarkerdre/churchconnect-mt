@@ -9,7 +9,6 @@ import { Phone, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 import { money as formatMoney } from "@/lib/money";
-import CallLowAlertSettings from "./CallLowAlertSettings";
 
 const PACKS = [60, 300, 600, 1200];
 const STATUS = { paid: "Paid", pending: "Not completed", awaiting_transfer: "Awaiting bank transfer", cancelled: "Cancelled" };
@@ -21,6 +20,8 @@ export default function CallTopUpCard({ tenantId, canBuy, isSuperAdmin = false }
   const confirmPw = useConfirmDelete();
   const [qty, setQty] = useState(300);
   const [loading, setLoading] = useState(false);
+  const [thr, setThr] = useState(null);
+  const [thrState, setThrState] = useState("idle");
   const { data } = useQuery({
     queryKey: ["call-billing", tenantId],
     enabled: !!tenantId,
@@ -71,6 +72,19 @@ export default function CallTopUpCard({ tenantId, canBuy, isSuperAdmin = false }
     rpc("bank", "request_call_bank_topup", { _tenant_id: tenantId, _minutes: Number(qty) }, "Bank transfer request created - use the reference shown below");
   };
 
+  const ls = data.t?.call_low_alert_settings || {};
+  const currentThr = ls.enabled === false ? 0 : Number(ls.threshold ?? 30);
+  const thrVal = thr ?? currentThr;
+  const saveThr = async () => {
+    const n = Math.min(10000, Math.max(0, Math.floor(Number(thrVal) || 0)));
+    setThrState("saving");
+    const next = { enabled: n > 0, threshold: n > 0 ? n : (Number(ls.threshold) || 30), channels: { bell: true, email: false, sms: false }, recipients: { owner: true, admin: true }, template: "" };
+    const { error } = await supabase.from("tenants").update({ call_low_alert_settings: next }).eq("id", tenantId);
+    if (error) { setThrState("idle"); toast({ title: "Couldn't save", description: error.message, variant: "destructive" }); return; }
+    setThrState("saved"); setThr(null);
+    qc.invalidateQueries({ queryKey: ["call-billing", tenantId] }); qc.invalidateQueries({ queryKey: ["call-low", tenantId] });
+  };
+
   return (
     <div className="p-4 bg-muted/50 rounded-lg space-y-3 text-sm">
       <p className="font-semibold flex items-center gap-2"><Phone className="h-4 w-4 text-accent" /> Phone call minutes</p>
@@ -98,7 +112,18 @@ export default function CallTopUpCard({ tenantId, canBuy, isSuperAdmin = false }
           <p className="text-xs text-muted-foreground">Bank transfer minutes are added once the payment is confirmed as received.</p>
         </div>
       )}
-      {canBuy && lim > 0 && <CallLowAlertSettings tenantId={tenantId} initial={data.t?.call_low_alert_settings} />}
+      {canBuy && lim > 0 && (
+        <div className="flex flex-wrap items-end gap-2">
+          <div>
+            <Label className="text-xs">Warn me when minutes left fall to</Label>
+            <Input type="number" min={0} max={10000} value={thrVal} onChange={(e) => { setThr(e.target.value); setThrState("idle"); }} className="w-28 h-9" />
+          </div>
+          <Button size="sm" variant={Number(thrVal) !== currentThr ? "default" : "secondary"} disabled={Number(thrVal) === currentThr || thrState === "saving"} onClick={saveThr}>
+            {thrState === "saving" ? "Saving..." : thrState === "saved" ? "Saved ✓" : "Save"}
+          </Button>
+          <p className="text-xs text-muted-foreground w-full">Admins see a top-up reminder and get a notification at this level. Set 0 to turn off.</p>
+        </div>
+      )}
       {data.topups.length > 0 && (
         <div className="space-y-1">
           <p className="text-xs font-medium">Minute top-up history</p>
