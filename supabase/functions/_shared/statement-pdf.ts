@@ -4,6 +4,7 @@
 // Uses jsPDF (pure JS, works in Deno via npm: specifier).
 
 import { jsPDF } from "npm:jspdf@2.5.1";
+import { IMAGE_FETCH_TIMEOUT_MS, MAX_IMAGE_BYTES, ownStorageImageUrl } from "./storage-image-url.ts";
 
 const LETTER_GRADE_BANDS_DEFAULT = [
   { letter: "A+", label: "Excellent", min: 90, max: 100 },
@@ -84,11 +85,20 @@ export async function fetchImageAsDataUrl(
   url: string | null | undefined,
 ): Promise<{ dataUrl: string; format: "PNG" | "JPEG" } | null> {
   if (!url) return null;
+  const safeUrl = ownStorageImageUrl(url);
+  if (!safeUrl) return null;
   try {
-    const res = await fetch(url);
+    const res = await fetch(safeUrl, {
+      redirect: "error",
+      signal: AbortSignal.timeout(IMAGE_FETCH_TIMEOUT_MS),
+    });
     if (!res.ok) return null;
-    const ct = res.headers.get("content-type") || "";
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    if (!ct.startsWith("image/")) return null;
+    const declared = Number(res.headers.get("content-length") || "0");
+    if (declared > MAX_IMAGE_BYTES) return null;
     const buf = new Uint8Array(await res.arrayBuffer());
+    if (buf.length > MAX_IMAGE_BYTES) return null;
     // base64 encode
     let bin = "";
     for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
