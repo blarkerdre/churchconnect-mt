@@ -7,7 +7,7 @@ import {
 import { fetchCourseTemplate, resolveTemplateImages, signIfPrivate } from "./certificate-template.ts";
 
 const BUCKET = "exam-statements";
-const SIGNED_URL_EXPIRES_IN = 60 * 60 * 24 * 30; // 30 days
+const SIGNED_URL_EXPIRES_IN = 5 * 60; // 5 minutes - only for an immediate download
 
 export { renderStatementOnDoc };
 

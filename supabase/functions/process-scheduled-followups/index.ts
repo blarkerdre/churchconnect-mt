@@ -455,6 +455,17 @@ async function sendEmail(
     if (followup?.followup_type) followupType = followup.followup_type;
   }
 
+  // Name the person who wrote it, so the email can't pass as an anonymous notice.
+  let senderName = "";
+  if (msg.created_by) {
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("user_id", msg.created_by)
+      .maybeSingle();
+    senderName = String(prof?.full_name || "").replace(/[\u0000-\u001F\u007F<>]/g, "").trim().slice(0, 120);
+  }
+
   // Send via managed email helper.
   const result = await sendLoggedTemplateEmail({
     supabase,
@@ -466,6 +477,7 @@ async function sendEmail(
       churchName,
       message: msg.message,
       followupType,
+      senderName,
     },
   });
 

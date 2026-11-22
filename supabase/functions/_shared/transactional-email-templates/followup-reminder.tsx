@@ -12,9 +12,10 @@ interface FollowupReminderProps {
   churchName?: string
   message?: string
   followupType?: string
+  senderName?: string
 }
 
-const FollowupReminderEmail = ({ recipientName, churchName, message, followupType }: FollowupReminderProps) => (
+const FollowupReminderEmail = ({ recipientName, churchName, message, followupType, senderName }: FollowupReminderProps) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>{followupType ? `${followupType} Follow-up` : 'Follow-up'} from {churchName || SITE_NAME}</Preview>
@@ -32,7 +33,10 @@ const FollowupReminderEmail = ({ recipientName, churchName, message, followupTyp
         )}
         <Hr style={hr} />
         <Text style={footer}>
-          Warm regards,{'\n'}The {churchName || SITE_NAME} Team
+          Warm regards,{'\n'}{senderName ? `${senderName} - ${churchName || SITE_NAME}` : `The ${churchName || SITE_NAME} Team`}
+        </Text>
+        <Text style={notice}>
+          {`This message was written by ${senderName || 'a member of the church team'} at ${churchName || SITE_NAME}. ${churchName || SITE_NAME} will never ask you for passwords, codes, PINs or bank details by email. If anything here looks wrong, please contact the church directly.`}
         </Text>
       </Container>
     </Body>
@@ -60,3 +64,4 @@ const h1 = { fontSize: '24px', fontWeight: 'bold' as const, color: '#1a2d4d', ma
 const text = { fontSize: '15px', color: '#4a5568', lineHeight: '1.6', margin: '0 0 20px' }
 const hr = { borderColor: '#e2e8f0', margin: '28px 0' }
 const footer = { fontSize: '13px', color: '#94a3b8', margin: '0', whiteSpace: 'pre-line' as const }
+const notice = { fontSize: '12px', color: '#94a3b8', lineHeight: '1.5', margin: '12px 0 0' }

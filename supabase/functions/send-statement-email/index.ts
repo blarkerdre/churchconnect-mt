@@ -88,6 +88,9 @@ async function sendForMember(
   const memberName = `${member.first_name || ""} ${member.last_name || ""}`.trim() || "Student";
   const senderName = tenant.settings?.email_sender_name || tenant.name || "mychurchconnect";
   const tenantSiteUrl = tenant.slug ? `https://${ROOT_DOMAIN}/t/${tenant.slug}` : `https://${ROOT_DOMAIN}`;
+  // Link to the signed-in results page, never to the file itself: an emailed
+  // file link works for anyone who has it, even after the person leaves.
+  const resultsUrl = `${tenantSiteUrl}/exam-management`;
   const statusColor = passed ? "#38a169" : "#e53e3e";
   const statusText = passed ? "PASSED" : "NOT YET PASSED";
   const sessionLabel = formatSessionLabel(pdfResult.session_label_source);
@@ -119,21 +122,14 @@ async function sendForMember(
     </table>
 
     <p style="margin:0 0 18px;color:#4a5568;font-size:14px;line-height:1.55;">
-      Your official Statement of Result is attached as a PDF. Click below to download it.
+      Your official Statement of Result is ready. Sign in to view and download it.
     </p>
 
     <div style="text-align:center;margin:20px 0 8px;">
-      <a href="${escHtml(pdfResult.signed_url)}"
+      <a href="${escHtml(resultsUrl)}"
          style="background:#1a2d4d;border-radius:6px;color:#fff;display:inline-block;font-size:15px;font-weight:600;padding:14px 32px;text-decoration:none;">
-        Download Statement of Result (PDF)
+        Sign in to download
       </a>
-    </div>
-    <p style="text-align:center;margin:0 0 20px;color:#718096;font-size:12px;">
-      Download link is valid for 30 days.
-    </p>
-
-    <div style="text-align:center;margin:12px 0 0;">
-      <a href="${escHtml(tenantSiteUrl)}/auth" style="color:#1a2d4d;font-size:13px;text-decoration:underline;">View in your profile</a>
     </div>
   </div>
   <div style="padding:20px 32px;text-align:center;">
@@ -149,8 +145,8 @@ Overall Result: ${overallClassification || "-"}
 Status: ${statusText}
 Pass mark: ${passMark}%
 
-Download your PDF (valid 30 days):
-${pdfResult.signed_url}
+Sign in to view and download your statement:
+${resultsUrl}
 `;
 
   const messageId = `statement-${crypto.randomUUID()}`;
