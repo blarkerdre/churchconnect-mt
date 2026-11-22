@@ -1,5 +1,5 @@
 import { senderNameFrom } from "../_shared/sms-sender.ts";
-import { callerMfaSatisfied, cleanMessageText, phoneKey, loadLeaderUnits, memberInUnits, smsContentProblem, tenantSuspended, SUSPENDED_MESSAGE, NON_ADMIN_DAILY_SMS_LIMIT, smsSentBySenderLastDay, phonesAlreadySentMessage } from "../_shared/sender-guard.ts";
+import { callerMfaSatisfied, cleanMessageText, phoneKey, loadLeaderUnits, memberInUnits, smsContentProblem, tenantSuspended, SUSPENDED_MESSAGE, NON_ADMIN_DAILY_SMS_LIMIT, smsSentBySenderLastDay, phonesAlreadySentMessage, authorIsChurchAdmin } from "../_shared/sender-guard.ts";
 import { loadTenantPhoneSet, isTenantPhone } from "../_shared/tenant-phones.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkSmsQuota, QuotaExceededError, MMS_UNITS } from "../_shared/sms-quota.ts";
@@ -140,6 +140,7 @@ Deno.serve(async (req) => {
             .from("members")
             .select("phone, church_unit")
             .eq("tenant_id", tenant_id)
+            .eq("phone_added_by_leader", false)
             .not("phone", "is", null)
             .limit(20000);
           for (const m of unitMembers || []) {
@@ -159,11 +160,11 @@ Deno.serve(async (req) => {
           if (fu?.member_id) {
             const { data: person } = await serviceClient
               .from("members")
-              .select("phone")
+              .select("phone, phone_added_by_leader")
               .eq("id", fu.member_id)
               .eq("tenant_id", tenant_id)
               .maybeSingle();
-            const k = phoneKey(person?.phone);
+            const k = person?.phone_added_by_leader ? "" : phoneKey(person?.phone);
             if (k.length >= 7) restrictedPhoneKeys.add(k);
           }
         }
@@ -390,7 +391,14 @@ Deno.serve(async (req) => {
     // Build the webhook URL for delivery status callbacks
     const webhookUrl = `${supabaseUrl}/functions/v1/twilio-webhook`;
 
-    const allowedPhones = await loadTenantPhoneSet(serviceClient, tenant_id);
+    // Non-admin senders (and scheduled texts written by non-admins) can't
+    // reach member numbers a non-admin typed in that nobody has confirmed.
+    let excludeLeaderTyped = !senderIsAdmin;
+    if (isInternalServiceCall && sms_type === "scheduled") {
+      const schedAuthor = typeof body.author_id === "string" ? body.author_id : null;
+      excludeLeaderTyped = !(await authorIsChurchAdmin(serviceClient, schedAuthor, tenant_id));
+    }
+    const allowedPhones = await loadTenantPhoneSet(serviceClient, tenant_id, { excludeLeaderTyped });
 
     // People-written texts: never send the exact same message to the same
     // person twice within 24 hours (stops repeat blasts at members).

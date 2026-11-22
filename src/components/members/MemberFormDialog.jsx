@@ -575,7 +575,11 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
                   value={form.phone}
                   onChange={(e) => set("phone", e.target.value)}
                   placeholder="+44 XXXXXXXX"
+                  disabled={!!member && !isAdmin && member.user_id !== currentUser?.id}
                 />
+                {!!member && !isAdmin && member.user_id !== currentUser?.id && (
+                  <p className="text-xs text-muted-foreground">Only a church admin or the member can change this phone number.</p>
+                )}
                 {form.phone && !normalizePhone(form.phone) && (
                   <p className="text-[11px] text-destructive">Invalid format. Use +country code then number, e.g. +44 XXXXXXXX</p>
                 )}
@@ -914,7 +918,7 @@ export default function MemberFormDialog({ open, onOpenChange, member, onSaved, 
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Emergency Contact</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5"><Label>Contact Name (Optional)</Label><Input value={form.emergency_contact_name} onChange={(e) => set("emergency_contact_name", e.target.value)} /></div>
-                <div className="space-y-1.5"><Label>Contact Phone (Optional)</Label><Input value={form.emergency_contact_phone} onChange={(e) => set("emergency_contact_phone", e.target.value)} /></div>
+                <div className="space-y-1.5"><Label>Contact Phone (Optional)</Label><Input value={form.emergency_contact_phone} onChange={(e) => set("emergency_contact_phone", e.target.value)} disabled={!!member && !isAdmin && member.user_id !== currentUser?.id} /></div>
               </div>
             </div>
           )}

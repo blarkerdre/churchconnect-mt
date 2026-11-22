@@ -4,7 +4,15 @@
 
 const key = (p: string) => (p || "").replace(/\D/g, "").slice(-9);
 
-export async function loadTenantPhoneSet(client: any, tenantId: string): Promise<Set<string>> {
+// When `excludeLeaderTyped` is set (non-admin senders), member numbers typed
+// in by a non-admin and not yet confirmed by an admin or the member are left
+// out, so a leader can't point a member row at an outside number and use the
+// church to text or call it.
+export async function loadTenantPhoneSet(
+  client: any,
+  tenantId: string,
+  opts: { excludeLeaderTyped?: boolean } = {},
+): Promise<Set<string>> {
   const set = new Set<string>();
   const add = (rows: any[] | null, cols: string[]) => {
     for (const r of rows || []) for (const c of cols) {
@@ -13,7 +21,9 @@ export async function loadTenantPhoneSet(client: any, tenantId: string): Promise
     }
   };
   const [m, f, c, t] = await Promise.all([
-    client.from("members").select("phone, emergency_contact_phone").eq("tenant_id", tenantId).limit(20000),
+    (opts.excludeLeaderTyped
+      ? client.from("members").select("phone, emergency_contact_phone").eq("tenant_id", tenantId).eq("phone_added_by_leader", false)
+      : client.from("members").select("phone, emergency_contact_phone").eq("tenant_id", tenantId)).limit(20000),
     client.from("first_timers").select("phone").eq("tenant_id", tenantId).limit(20000),
     client.from("contacts").select("phone").eq("tenant_id", tenantId).limit(20000),
     client.from("transportation").select("driver_phone").eq("tenant_id", tenantId).limit(20000),

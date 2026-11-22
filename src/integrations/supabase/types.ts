@@ -3825,6 +3825,7 @@ export type Database = {
           notes: string | null
           occupation: string | null
           phone: string | null
+          phone_added_by_leader: boolean
           photo_url: string | null
           postcode: string | null
           preferred_contact_modes: string | null
@@ -3879,6 +3880,7 @@ export type Database = {
           notes?: string | null
           occupation?: string | null
           phone?: string | null
+          phone_added_by_leader?: boolean
           photo_url?: string | null
           postcode?: string | null
           preferred_contact_modes?: string | null
@@ -3933,6 +3935,7 @@ export type Database = {
           notes?: string | null
           occupation?: string | null
           phone?: string | null
+          phone_added_by_leader?: boolean
           photo_url?: string | null
           postcode?: string | null
           preferred_contact_modes?: string | null

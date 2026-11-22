@@ -372,6 +372,13 @@
       "when": 1795310650584,
       "tag": "0052_lock_member_email_for_leaders",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1795310987963,
+      "tag": "0053_lock_member_phone_for_leaders",
+      "breakpoints": true
     }
   ]
 }

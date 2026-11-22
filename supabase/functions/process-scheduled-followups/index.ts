@@ -131,11 +131,19 @@ Deno.serve(async (req) => {
         }
         const { data: person } = await supabase
           .from("members")
-          .select("first_name, last_name, phone, email")
+          .select("first_name, last_name, phone, email, phone_added_by_leader, email_added_by_leader")
           .eq("id", fu.member_id)
           .eq("tenant_id", msg.tenant_id)
           .maybeSingle();
         if (!person) throw new Error("Follow-up recipient could not be verified");
+        // A phone number or email typed in by a non-admin (and not yet confirmed
+        // by an admin or the member) can only be used by a church admin's message.
+        if ((msg.channel === "sms" && person.phone_added_by_leader) ||
+            (msg.channel === "email" && person.email_added_by_leader)) {
+          if (!(await authorIsChurchAdmin(supabase, msg.created_by ?? null, msg.tenant_id))) {
+            throw new Error("This person's contact details need to be confirmed by a church admin first");
+          }
+        }
         msg.member_id = fu.member_id;
         msg.recipient_phone = person.phone || null;
         msg.recipient_email = person.email || null;

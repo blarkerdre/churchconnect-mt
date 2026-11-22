@@ -147,7 +147,7 @@ Deno.serve(async (req) => {
     }
 
     // Only call numbers already recorded for this church.
-    const allowedPhones = await loadTenantPhoneSet(serviceClient, tenant_id);
+    const allowedPhones = await loadTenantPhoneSet(serviceClient, tenant_id, { excludeLeaderTyped: !isAdmin && !isSuper });
     if (!isTenantPhone(allowedPhones, phone)) {
       return new Response(JSON.stringify({ error: "This number is not on record for your church" }), {
         status: 403,
