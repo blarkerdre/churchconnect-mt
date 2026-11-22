@@ -543,7 +543,7 @@ export default function Layout({ children }) {
         <PWAUpdateBanner />
         {tenantId && (isTenantAdmin || isTenantOwner) && !disabledFeatures.includes("/billing") && subscriptionStatus !== "past_due" && <RenewalBanner tenantId={tenantId} tenantSlug={tenantSlug} />}
         {tenantId && (isTenantAdmin || isTenantOwner) && !disabledFeatures.includes("/billing") && !disabledFeatures.includes("/sms") && <LowSmsBanner tenantId={tenantId} tenantSlug={tenantSlug} />}
-        {tenantId && (isTenantAdmin || isTenantOwner) && !disabledFeatures.includes("/billing") && <LowCallBanner tenantId={tenantId} tenantSlug={tenantSlug} />}
+        {tenantId && (isTenantAdmin || isTenantOwner) && !disabledFeatures.includes("/billing") && !disabledFeatures.includes("/phone-call") && <LowCallBanner tenantId={tenantId} tenantSlug={tenantSlug} />}
         <main className="flex-1 p-3 lg:p-8 pb-20 lg:pb-8">
           {children}
         </main>

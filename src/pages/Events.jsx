@@ -19,7 +19,7 @@ import { logAudit } from "@/lib/audit";
 import SMSDialog from "@/components/sms/SMSDialog";
 import { useAppSetting } from "@/hooks/useAppSetting";
 import { useChurchUnits } from "@/hooks/useChurchUnits";
-import { useSubFeature } from "@/hooks/useSubFeature";
+import { useSubFeature, useTenantFeatureEnabled } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import { renderTextWithLinks } from "@/lib/linkify";
 import PasswordConfirmDialog from "@/components/shared/PasswordConfirmDialog";
@@ -72,6 +72,7 @@ export default function Events() {
 
   const { enabled: canCreateEvent } = useSubFeature("events.create");
   const { enabled: canSmsAttendees } = useSubFeature("events.sms");
+  const smsOn = useTenantFeatureEnabled("/sms");
 
   const { data: churchUnitsData = [] } = useChurchUnits();
 
@@ -373,7 +374,7 @@ export default function Events() {
                     </div>
                     {canManage && (
                       <div className="flex items-center gap-1">
-                        {canSmsAttendees && (
+                        {canSmsAttendees && smsOn && (
                           <Button variant="ghost" size="icon" title="Notify via SMS"
                             onClick={(ev) => { ev.stopPropagation(); setSmsEvent(e); }}>
                             <MessageSquare className="h-4 w-4 text-primary" />

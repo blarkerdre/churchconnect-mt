@@ -1,3 +1,4 @@
+import { useTenantFeatureEnabled } from "@/hooks/useSubFeature";
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import TenantDialogHeader from "@/components/ui/TenantDialogHeader";
@@ -35,6 +36,9 @@ export default function FollowupMessageDialog({
   existingMessage = null,
   onSaved,
 }) {
+  const smsOn = useTenantFeatureEnabled("/sms");
+  const callOn = useTenantFeatureEnabled("/phone-call");
+  const waOn = useTenantFeatureEnabled("/whatsapp");
   const { tenantId, withTenant } = useTenantQuery();
   const { user } = useAuth();
 
@@ -205,22 +209,22 @@ export default function FollowupMessageDialog({
                 )}
                 {hasPhone && (
                   <>
-                    <Button
+                    {smsOn && <Button
                       type="button"
                       size="sm"
                       variant={channel === "sms" ? "default" : "outline"}
                       onClick={() => setChannel("sms")}
                     >
                       <MessageSquare className="h-3.5 w-3.5 mr-1" /> SMS
-                    </Button>
-                    <Button
+                    </Button>}
+                    {callOn && <Button
                       type="button"
                       size="sm"
                       variant={channel === "phone" ? "default" : "outline"}
                       onClick={() => setChannel("phone")}
                     >
                       <PhoneCall className="h-3.5 w-3.5 mr-1" /> Call
-                    </Button>
+                    </Button>}
                   </>
                 )}
               </div>

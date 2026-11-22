@@ -1,7 +1,7 @@
 import { loadTenantPhoneSet, isTenantPhone } from "../_shared/tenant-phones.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { validateOutboundUrl, validateMethod } from "../_shared/url-validator.ts";
-import { tenantSuspended, NON_ADMIN_DAILY_CALL_LIMIT, callsByCallerLastDay } from "../_shared/sender-guard.ts";
+import { tenantSuspended, featureDisabled, NON_ADMIN_DAILY_CALL_LIMIT, callsByCallerLastDay } from "../_shared/sender-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -105,6 +105,13 @@ Deno.serve(async (req) => {
     const { data: isSuper } = await serviceClient.rpc("has_role", { _user_id: user.id, _role: "super_admin" });
     if (!isSuper && await tenantSuspended(serviceClient, tenant_id)) {
       return new Response(JSON.stringify({ error: "This church's account is suspended. Calls can't be placed until billing is sorted out." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!isSuper && await featureDisabled(serviceClient, tenant_id, "/phone-call")) {
+      return new Response(JSON.stringify({ error: "Phone calls are switched off for this church." }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

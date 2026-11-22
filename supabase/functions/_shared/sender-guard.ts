@@ -112,6 +112,20 @@ export async function tenantSuspended(serviceClient: any, tenantId: string): Pro
   return String(data?.subscription_status || "").toLowerCase() === "suspended";
 }
 
+/** True when a feature (e.g. "/sms", "/phone-call", "/whatsapp") is switched off for the church. */
+export function featureOffIn(settings: any, path: string): boolean {
+  const list = settings?.disabled_features;
+  return Array.isArray(list) && list.includes(path);
+}
+
+/** Looks up the church and says whether the feature is switched off (fails closed). */
+// deno-lint-ignore no-explicit-any
+export async function featureDisabled(serviceClient: any, tenantId: string, path: string): Promise<boolean> {
+  const { data, error } = await serviceClient.from("tenants").select("settings").eq("id", tenantId).maybeSingle();
+  if (error) { console.error("[sender-guard] feature check failed", error.message); return true; }
+  return featureOffIn(data?.settings, path);
+}
+
 export const SUSPENDED_MESSAGE = "This church's account is suspended. Messages can't be sent until billing is sorted out.";
 
 /** How many texts a non-admin may send in 24 hours (on top of the church's own limit). */

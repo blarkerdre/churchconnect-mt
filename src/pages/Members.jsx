@@ -17,7 +17,7 @@ import IssueCertificateDialog from "@/components/certificates/IssueCertificateDi
 import DangerConfirmDialog from "@/components/exams/DangerConfirmDialog";
 import { logAudit } from "@/lib/audit";
 import { useAuth } from "@/hooks/useAuth";
-import { useSubFeature } from "@/hooks/useSubFeature";
+import { useSubFeature, useTenantFeatureEnabled } from "@/hooks/useSubFeature";
 import { useTenantQuery } from "@/hooks/useTenantQuery";
 import ModuleTour from "@/components/tour/ModuleTour";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
@@ -105,7 +105,9 @@ export default function Members() {
   const { enabled: canAddMember } = useSubFeature("members.add_member");
   const { enabled: canBulkImport } = useSubFeature("members.bulk_import");
   const { enabled: canQrCode } = useSubFeature("members.qr_code");
-  const { enabled: canCertificate } = useSubFeature("members.certificate");
+  const { enabled: canCertificateSub } = useSubFeature("members.certificate");
+  const certModuleOn = useTenantFeatureEnabled("/certificates");
+  const canCertificate = canCertificateSub && certModuleOn;
   const { enabled: canCsvExport } = useSubFeature("members.csv_export");
 
   const { data: members = [], isLoading } = useQuery({

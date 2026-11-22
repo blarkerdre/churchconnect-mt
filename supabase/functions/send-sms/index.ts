@@ -1,5 +1,5 @@
 import { senderNameFrom } from "../_shared/sms-sender.ts";
-import { callerMfaSatisfied, cleanMessageText, phoneKey, loadLeaderUnits, memberInUnits, smsContentProblem, tenantSuspended, SUSPENDED_MESSAGE, NON_ADMIN_DAILY_SMS_LIMIT, smsSentBySenderLastDay, phonesAlreadySentMessage, authorIsChurchAdmin } from "../_shared/sender-guard.ts";
+import { callerMfaSatisfied, cleanMessageText, phoneKey, loadLeaderUnits, memberInUnits, smsContentProblem, tenantSuspended, featureDisabled, SUSPENDED_MESSAGE, NON_ADMIN_DAILY_SMS_LIMIT, smsSentBySenderLastDay, phonesAlreadySentMessage, authorIsChurchAdmin } from "../_shared/sender-guard.ts";
 import { loadTenantPhoneSet, isTenantPhone } from "../_shared/tenant-phones.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { checkSmsQuota, QuotaExceededError, MMS_UNITS } from "../_shared/sms-quota.ts";
@@ -257,6 +257,17 @@ Deno.serve(async (req) => {
     }
 
     const msgChannel = channel === "whatsapp" ? "whatsapp" : "sms";
+
+    // The feature must be switched on for the church (super-admins excepted).
+    {
+      const { data: superCaller } = userId ? await serviceClient.rpc("has_role", { _user_id: userId, _role: "super_admin" }) : { data: false };
+      if (superCaller !== true && await featureDisabled(serviceClient, tenant_id, msgChannel === "whatsapp" ? "/whatsapp" : "/sms")) {
+        return new Response(JSON.stringify({ error: `${msgChannel === "whatsapp" ? "WhatsApp" : "Text messaging"} is switched off for this church.` }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     // Resolve per-tenant settings and provider
     let fromNumber = TWILIO_FROM;

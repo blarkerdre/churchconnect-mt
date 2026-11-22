@@ -1,3 +1,4 @@
+import { useTenantFeatureEnabled } from "@/hooks/useSubFeature";
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,6 +45,7 @@ const ERROR_MESSAGES = {
 
 // mode: 'choose' | 'parent' | 'parent-pin' | 'self-pick' | 'self-pin' | 'self-wait' | 'self-setpin'
 export default function PreteensCheckin() {
+  const familyOn = useTenantFeatureEnabled("/my-family");
   const { token } = useParams();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -311,7 +313,7 @@ export default function PreteensCheckin() {
               </p>
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => setError(null)}>Back</Button>
-                {user && (
+                {user && familyOn && (
                   <Button className="flex-1" onClick={() => navigate("/my-family")}>Open My Family</Button>
                 )}
               </div>
@@ -553,9 +555,9 @@ export default function PreteensCheckin() {
                       </p>
                     </div>
                   </div>
-                  <Button size="sm" className="w-full" onClick={() => navigate("/my-family")}>
+                  {familyOn && <Button size="sm" className="w-full" onClick={() => navigate("/my-family")}>
                     Manage consent
-                  </Button>
+                  </Button>}
                 </div>
               )}
               <div className="space-y-2">

@@ -1,3 +1,4 @@
+import { useTenantFeatureEnabled } from "@/hooks/useSubFeature";
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -49,6 +50,9 @@ const priorityColors = {
 };
 
 export default function FollowupDetailPanel({ followup, onClose, onUpdate, currentUser, onConverted, isAdmin, isUnitLeader, canManage = false, profileMap = {}, followupUnitMembers = [], onOpenMessageDialog }) {
+  const smsOn = useTenantFeatureEnabled("/sms");
+  const callOn = useTenantFeatureEnabled("/phone-call");
+  const waOn = useTenantFeatureEnabled("/whatsapp");
   const [progressNote, setProgressNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [converting, setConverting] = useState(false);
@@ -419,16 +423,16 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
                 )}
                 {followup.person_phone && (
                   <>
-                    <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
+                    {smsOn && <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
                       onClick={() => onOpenMessageDialog?.("sms")}>
                       <MessageSquare className="h-3.5 w-3.5 mr-1" /> Send SMS
-                    </Button>
-                    <Button size="sm" variant="outline" className="text-accent border-accent/20 hover:bg-accent/10"
+                    </Button>}
+                    {callOn && <Button size="sm" variant="outline" className="text-accent border-accent/20 hover:bg-accent/10"
                       onClick={handleMakeCall}
                       disabled={callingPhone}>
                       {callingPhone ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <PhoneCall className="h-3.5 w-3.5 mr-1" />}
                       Make Call
-                    </Button>
+                    </Button>}
                   </>
                 )}
               </div>
@@ -459,16 +463,16 @@ export default function FollowupDetailPanel({ followup, onClose, onUpdate, curre
                 )}
                 {followup.person_phone && (
                   <>
-                    <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
+                    {smsOn && <Button size="sm" variant="outline" className="text-primary border-primary/20 hover:bg-primary/10"
                       onClick={() => onOpenMessageDialog?.("sms")}>
                       <MessageSquare className="h-3.5 w-3.5 mr-1" /> Send SMS
-                    </Button>
-                    <Button size="sm" variant="outline" className="text-accent border-accent/20 hover:bg-accent/10"
+                    </Button>}
+                    {callOn && <Button size="sm" variant="outline" className="text-accent border-accent/20 hover:bg-accent/10"
                       onClick={handleMakeCall}
                       disabled={callingPhone}>
                       {callingPhone ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <PhoneCall className="h-3.5 w-3.5 mr-1" />}
                       Make Call
-                    </Button>
+                    </Button>}
                   </>
                 )}
               </div>

@@ -1,3 +1,4 @@
+import { useTenantFeatureEnabled } from "@/hooks/useSubFeature";
 import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +35,9 @@ const customSchema = z.object({
 });
 
 function IndividualSend({ tenantId, churchName, senderName }) {
+  const smsOn = useTenantFeatureEnabled("/sms");
+  const callOn = useTenantFeatureEnabled("/phone-call");
+  const waOn = useTenantFeatureEnabled("/whatsapp");
   const { toast } = useToast();
   const [mode, setMode] = useState("search"); // "search" | "custom"
   const [query, setQuery] = useState("");
@@ -244,8 +248,8 @@ function IndividualSend({ tenantId, churchName, senderName }) {
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="email" disabled={channelDisabled("email")}>Email</SelectItem>
-            <SelectItem value="sms" disabled={channelDisabled("sms")}>SMS</SelectItem>
-            <SelectItem value="whatsapp" disabled={channelDisabled("whatsapp")}>WhatsApp</SelectItem>
+            {smsOn && <SelectItem value="sms" disabled={channelDisabled("sms")}>SMS</SelectItem>}
+            {waOn && <SelectItem value="whatsapp" disabled={channelDisabled("whatsapp")}>WhatsApp</SelectItem>}
             <SelectItem value="in_app" disabled={channelDisabled("in_app")}>In-App (members only)</SelectItem>
           </SelectContent>
         </Select>
@@ -268,6 +272,9 @@ function IndividualSend({ tenantId, churchName, senderName }) {
 }
 
 function BulkNonMembers({ tenantId, churchName, senderName }) {
+  const smsOn = useTenantFeatureEnabled("/sms");
+  const callOn = useTenantFeatureEnabled("/phone-call");
+  const waOn = useTenantFeatureEnabled("/whatsapp");
   const { toast } = useToast();
   const [source, setSource] = useState("both"); // contacts | first_timers | both
   const [tag, setTag] = useState("all");
@@ -415,8 +422,8 @@ function BulkNonMembers({ tenantId, churchName, senderName }) {
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="email">Email</SelectItem>
-            <SelectItem value="sms">SMS</SelectItem>
-            <SelectItem value="whatsapp">WhatsApp</SelectItem>
+            {smsOn && <SelectItem value="sms">SMS</SelectItem>}
+            {waOn && <SelectItem value="whatsapp">WhatsApp</SelectItem>}
           </SelectContent>
         </Select>
       </div>

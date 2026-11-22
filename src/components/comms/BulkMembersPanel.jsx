@@ -1,3 +1,4 @@
+import { useTenantFeatureEnabled } from "@/hooks/useSubFeature";
 import React, { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +21,9 @@ import InvalidRecipientsPreview from "@/components/sms/InvalidRecipientsPreview"
 import AudienceFilter from "./AudienceFilter";
 
 export default function BulkMembersPanel({ churchName, senderName }) {
+  const smsOn = useTenantFeatureEnabled("/sms");
+  const callOn = useTenantFeatureEnabled("/phone-call");
+  const waOn = useTenantFeatureEnabled("/whatsapp");
   const { tenantId } = useTenantQuery();
   const { toast } = useToast();
   const [filters, setFilters] = useState({ status: "all", unit: "all", gender: "all", wsfCentreId: "all", dateFrom: null, dateTo: null, account: "all" });
@@ -153,8 +157,8 @@ export default function BulkMembersPanel({ churchName, senderName }) {
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="email">Email</SelectItem>
-            <SelectItem value="sms">SMS</SelectItem>
-            <SelectItem value="whatsapp">WhatsApp</SelectItem>
+            {smsOn && <SelectItem value="sms">SMS</SelectItem>}
+            {waOn && <SelectItem value="whatsapp">WhatsApp</SelectItem>}
             <SelectItem value="in_app">In-App</SelectItem>
           </SelectContent>
         </Select>
