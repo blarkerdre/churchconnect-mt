@@ -111,11 +111,20 @@ Deno.serve(async (req) => {
     const normalizedEmail = email.toLowerCase().trim();
 
     // Check if user already exists
-    const { data: existingProfile } = await supabase
+    const { data: foundProfile } = await supabase
       .from("profiles")
       .select("user_id")
       .eq("email", normalizedEmail)
       .maybeSingle();
+
+    // Only add an existing account straight away if its email is confirmed.
+    // Otherwise someone could have registered this address first, so send a
+    // normal invitation that only the real mailbox owner can accept.
+    let existingProfile = foundProfile;
+    if (foundProfile?.user_id) {
+      const { data: authUser } = await supabase.auth.admin.getUserById(foundProfile.user_id);
+      if (!authUser?.user?.email_confirmed_at) existingProfile = null;
+    }
 
     if (existingProfile) {
       // Check if already a member of this tenant

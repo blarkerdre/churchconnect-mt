@@ -400,6 +400,13 @@
       "when": 1795314959471,
       "tag": "0056_join_church_only_after_email_confirmed",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1795315248806,
+      "tag": "0057_require_confirmed_email_for_invites_and_checkin",
+      "breakpoints": true
     }
   ]
 }
