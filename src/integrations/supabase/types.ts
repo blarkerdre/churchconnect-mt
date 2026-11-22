@@ -705,6 +705,41 @@ export type Database = {
           },
         ]
       }
+      call_minute_alerts: {
+        Row: {
+          created_at: string
+          delivered_at: string | null
+          id: string
+          kind: string
+          minutes_left: number
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          kind: string
+          minutes_left: number
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          kind?: string
+          minutes_left?: number
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_minute_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       call_minute_topups: {
         Row: {
           amount: number
@@ -6061,6 +6096,9 @@ export type Database = {
           archived_at: string | null
           archived_by: string | null
           billing_currency: string
+          call_empty_alert_sent_at: string | null
+          call_low_alert_sent_at: string | null
+          call_low_alert_settings: Json
           call_minute_price_override: number | null
           call_minutes_balance: number
           call_minutes_limit_monthly: number
@@ -6093,6 +6131,9 @@ export type Database = {
           archived_at?: string | null
           archived_by?: string | null
           billing_currency?: string
+          call_empty_alert_sent_at?: string | null
+          call_low_alert_sent_at?: string | null
+          call_low_alert_settings?: Json
           call_minute_price_override?: number | null
           call_minutes_balance?: number
           call_minutes_limit_monthly?: number
@@ -6125,6 +6166,9 @@ export type Database = {
           archived_at?: string | null
           archived_by?: string | null
           billing_currency?: string
+          call_empty_alert_sent_at?: string | null
+          call_low_alert_sent_at?: string | null
+          call_low_alert_settings?: Json
           call_minute_price_override?: number | null
           call_minutes_balance?: number
           call_minutes_limit_monthly?: number

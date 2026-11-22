@@ -9,6 +9,7 @@ import { Phone, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 import { money as formatMoney } from "@/lib/money";
+import CallLowAlertSettings from "./CallLowAlertSettings";
 
 const PACKS = [60, 300, 600, 1200];
 const STATUS = { paid: "Paid", pending: "Not completed", awaiting_transfer: "Awaiting bank transfer", cancelled: "Cancelled" };
@@ -25,7 +26,7 @@ export default function CallTopUpCard({ tenantId, canBuy, isSuperAdmin = false }
     enabled: !!tenantId,
     queryFn: async () => {
       try { await supabase.functions.invoke("verify-call-topups", { body: { tenant_id: tenantId } }); } catch { /* best effort */ }
-      const { data: t } = await supabase.from("tenants").select("call_minutes_limit_monthly, call_minutes_balance, call_minute_price_override, pricing_plan_id, billing_currency").eq("id", tenantId).single();
+      const { data: t } = await supabase.from("tenants").select("call_minutes_limit_monthly, call_minutes_balance, call_low_alert_settings, call_minute_price_override, pricing_plan_id, billing_currency").eq("id", tenantId).single();
       let plan = null;
       if (t?.pricing_plan_id) ({ data: plan } = await supabase.from("pricing_plans").select("overage_price_call_minute, currency").eq("id", t.pricing_plan_id).maybeSingle());
       const { data: used } = await supabase.rpc("call_minutes_used", { _tenant_id: tenantId });
@@ -97,6 +98,7 @@ export default function CallTopUpCard({ tenantId, canBuy, isSuperAdmin = false }
           <p className="text-xs text-muted-foreground">Bank transfer minutes are added once the payment is confirmed as received.</p>
         </div>
       )}
+      {canBuy && lim > 0 && <CallLowAlertSettings tenantId={tenantId} initial={data.t?.call_low_alert_settings} />}
       {data.topups.length > 0 && (
         <div className="space-y-1">
           <p className="text-xs font-medium">Minute top-up history</p>

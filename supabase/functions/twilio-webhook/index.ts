@@ -157,6 +157,18 @@ Deno.serve(async (req) => {
         console.error("Failed to update call_log:", error);
       } else {
         console.log(`call_log updated for CallSID=${callSid} to status=${mappedStatus}`);
+        if (updateData.duration_seconds) {
+          const { data: row } = await supabase.from("call_log").select("tenant_id").eq("provider_call_id", callSid).maybeSingle();
+          if (row?.tenant_id) {
+            const p = fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-low-call-minutes`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+              body: JSON.stringify({ tenant_id: row.tenant_id }),
+            }).catch((e) => console.error("low-minute alert failed", e));
+            // deno-lint-ignore no-explicit-any
+            (globalThis as any).EdgeRuntime?.waitUntil?.(p);
+          }
+        }
       }
 
       return new Response("<Response></Response>", {
