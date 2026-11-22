@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { isKnownPushEndpoint } from "../_shared/push-endpoint.ts";
 import webpush from "npm:web-push@3.6.7";
 
 const corsHeaders = {
@@ -107,6 +108,10 @@ Deno.serve(async (req) => {
     const toDelete: string[] = [];
 
     await Promise.all(subs.map(async (s) => {
+      if (!isKnownPushEndpoint(s.endpoint)) {
+        toDelete.push(s.id);
+        return;
+      }
       try {
         await webpush.sendNotification(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
