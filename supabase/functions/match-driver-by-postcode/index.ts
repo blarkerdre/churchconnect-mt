@@ -118,6 +118,20 @@ Deno.serve(async (req) => {
         .limit(1);
       if (leader && leader.length) authorized = true;
     }
+    let passengerSelf = false;
+    // A passenger may trigger matching for their own new, unassigned, Pending booking.
+    if (!authorized && booking_ids.length === 1) {
+      const { data: own } = await supabase
+        .from("transportation")
+        .select("id")
+        .eq("id", booking_ids[0])
+        .eq("tenant_id", tenant_id)
+        .eq("user_id", userId)
+        .eq("status", "Pending")
+        .is("driver_user_id", null)
+        .maybeSingle();
+      if (own) { authorized = true; passengerSelf = true; }
+    }
     if (!authorized) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -259,7 +273,7 @@ Deno.serve(async (req) => {
           driver_user_id: chosen.driver_user_id,
           assigned_to: chosen.driver_user_id,
           assigned_driver: driverName || null,
-          status: "Confirmed",
+          status: passengerSelf ? "Pending" : "Confirmed",
           assigned_at: new Date().toISOString(),
           auto_matched: true,
         })
