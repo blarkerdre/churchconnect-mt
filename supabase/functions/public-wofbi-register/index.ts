@@ -306,9 +306,17 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (existingApp) {
-      const msg = "We couldn't submit this application. If you have already applied, the church will be in touch.";
-      return new Response(JSON.stringify({ error: msg }), {
-        status: 409,
+      // Only the signed-in owner of this email is told they've already
+      // applied. Everyone else gets the normal success reply, so the form
+      // can't be used to find out who has applied. Nothing new is stored.
+      const callerOwnsEmail = !!authUserId && !!authEmail && authEmail === email;
+      if (callerOwnsEmail) {
+        return new Response(JSON.stringify({ error: "You have already applied for this course. The church will be in touch." }), {
+          status: 409,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ success: true, course_name: course.name }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

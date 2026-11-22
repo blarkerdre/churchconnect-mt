@@ -403,6 +403,43 @@ Deno.serve(async (req) => {
         .filter((p: string | null): p is string => !!p);
       alreadySent = await phonesAlreadySentMessage(serviceClient, tenant_id, message, candidatePhones);
     }
+    // People-written texts: one person can't receive more than
+    // MAX_TEXTS_PER_RECIPIENT_PER_DAY texts (any wording) from the church in
+    // 24 hours, so a church login can't be used to bombard someone.
+    // Platform super-admins and automatic system texts are exempt.
+    const MAX_TEXTS_PER_RECIPIENT_PER_DAY = 5;
+    const recipientCounts = new Map<string, number>();
+    let applyRecipientCap = false;
+    if (!isInternalServiceCall) {
+      const { data: capSuper } = await serviceClient.rpc("has_role", { _user_id: userId, _role: "super_admin" });
+      applyRecipientCap = capSuper !== true;
+    }
+    if (applyRecipientCap) {
+      const candidatePhones = Array.from(new Set(recipients
+        .map((r: any) => normalizeE164(String(r?.phone || "").trim()))
+        .filter((p: string | null): p is string => !!p)));
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      for (let i = 0; i < candidatePhones.length; i += 200) {
+        const chunk = candidatePhones.slice(i, i + 200);
+        const { data: recent, error: recentErr } = await serviceClient
+          .from("sms_log")
+          .select("recipient_phone")
+          .eq("tenant_id", tenant_id)
+          .neq("status", "failed")
+          .gte("created_at", since)
+          .in("recipient_phone", chunk)
+          .limit(5000);
+        if (recentErr) {
+          return new Response(JSON.stringify({ error: "Could not check recent messages" }), {
+            status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        for (const r of recent || []) {
+          const k = String((r as any).recipient_phone || "");
+          recipientCounts.set(k, (recipientCounts.get(k) || 0) + 1);
+        }
+      }
+    }
     const seenThisBatch = new Set<string>();
 
     for (const recipient of recipients) {
@@ -413,6 +450,10 @@ Deno.serve(async (req) => {
           continue;
         }
         seenThisBatch.add(normalized);
+      }
+      if (normalized && applyRecipientCap && (recipientCounts.get(normalized) || 0) >= MAX_TEXTS_PER_RECIPIENT_PER_DAY) {
+        skippedRepeat++;
+        continue;
       }
       // Only message numbers already recorded for this church.
       if (normalized && !isTenantPhone(allowedPhones, normalized)) normalized = null;

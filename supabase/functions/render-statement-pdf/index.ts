@@ -40,12 +40,30 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Only people who still belong to this church (or platform super-admins)
+    // may generate statements. Removing someone from the church removes this
+    // access even if their member record is still linked to their login.
+    const { data: isSuper } = await admin.rpc("has_role", {
+      _user_id: userId,
+      _role: "super_admin",
+    });
+    const { data: stillMember } = await admin.rpc("user_belongs_to_tenant", {
+      _user_id: userId,
+      _tenant_id: tenant_id,
+    });
+    if (isSuper !== true && stillMember !== true) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { data: isAdmin } = await admin.rpc("is_admin", {
       _user_id: userId,
       _tenant_id: tenant_id,
     });
 
-    let allowed = !!isAdmin;
+    let allowed = isSuper === true || !!isAdmin;
     if (!allowed) {
       const { data: selfMember } = await admin
         .from("members")
@@ -65,19 +83,28 @@ Deno.serve(async (req) => {
 
     const result = await generateAndUploadStatement(admin, tenant_id, course_id, member_id);
 
+    // The app downloads the file straight away, so hand back a short-lived
+    // link rather than the long-lived one used for emailed statements.
+    const DOWNLOAD_LINK_SECONDS = 5 * 60;
+    const { data: shortLink, error: shortErr } = await admin.storage
+      .from("exam-statements")
+      .createSignedUrl(result.path, DOWNLOAD_LINK_SECONDS);
+    if (shortErr || !shortLink?.signedUrl) throw new Error("Could not prepare download");
+    const expiresAt = new Date(Date.now() + DOWNLOAD_LINK_SECONDS * 1000).toISOString();
+
     return new Response(
       JSON.stringify({
         success: true,
         path: result.path,
-        signed_url: result.signed_url,
-        expires_at: result.expires_at,
+        signed_url: shortLink.signedUrl,
+        expires_at: expiresAt,
         student_number: result.student_number,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
     console.error("render-statement-pdf error:", err);
-    return new Response(JSON.stringify({ error: (err as Error).message || "error" }), {
+    return new Response(JSON.stringify({ error: "Could not create the statement. Please try again." }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
