@@ -10,6 +10,7 @@ interface Props {
   subject?: string
   body?: string
   senderName?: string
+  senderIsAdmin?: boolean
 }
 
 function applyVars(text: string, data: Props): string {
@@ -43,6 +44,11 @@ const DirectMessageEmail = (props: Props) => {
           <Text style={footer}>
             {props.senderName ? `${props.senderName} - ${churchName}` : churchName}
           </Text>
+          {props.senderIsAdmin ? (
+            <Text style={notice}>
+              {`This message was written by ${props.senderName || 'a church admin'} at ${churchName}. ${churchName} will never ask you for passwords, codes, PINs or bank details by email. If anything here looks wrong, please contact the church directly.`}
+            </Text>
+          ) : null}
         </Container>
       </Body>
     </Html>
@@ -72,3 +78,4 @@ const h1 = { fontSize: '22px', fontWeight: 'bold' as const, color: '#1a2d4d', ma
 const text = { fontSize: '15px', color: '#4a5568', lineHeight: '1.6', margin: '0 0 12px' }
 const hr = { borderColor: '#c5a028', margin: '28px 0', borderWidth: '1px' }
 const footer = { fontSize: '13px', color: '#94a3b8', margin: '0' }
+const notice = { fontSize: '12px', color: '#94a3b8', lineHeight: '1.5', margin: '12px 0 0' }

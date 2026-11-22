@@ -943,12 +943,18 @@ async function deliverCertificate(
   if (opts.email === false || !member?.email || !filePath) return;
 
   try {
-    const { data: signedUrl } = await supabase.storage
-      .from("church-documents")
-      .createSignedUrl(filePath, 60 * 60 * 24 * 7, { download: `${certificateNumber}.png` }); // 7 days
+    // No open download link in the email: anyone holding it could fetch the file,
+    // even after the person leaves the church. Point to the signed-in profile page,
+    // where access is re-checked on every download.
+    let profileUrl = "https://app.churchmanagementsuite.org/my-profile";
+    try {
+      const { data: t } = await supabase.from("tenants").select("slug").eq("id", tenantId).maybeSingle();
+      if (t?.slug) profileUrl = `https://app.churchmanagementsuite.org/t/${t.slug}/my-profile`;
+    } catch (_) { /* fall back to the generic profile link */ }
+    const signedUrl = { signedUrl: profileUrl };
 
     const messageId = `cert-${crypto.randomUUID()}`;
-    const plainText = `Congratulations, ${member.first_name}!\n\nYou have successfully completed ${trainingType} at ${churchName}.\n\nYour certificate number is: ${certificateNumber}\n\n${signedUrl?.signedUrl ? `Download your certificate: ${signedUrl.signedUrl}\n\n` : ""}You can also download your certificate anytime from your profile page.`;
+    const plainText = `Congratulations, ${member.first_name}!\n\nYou have successfully completed ${trainingType} at ${churchName}.\n\nYour certificate number is: ${certificateNumber}\n\nSign in to download your certificate: ${signedUrl.signedUrl}\n\nIt stays available in your profile page.`;
 
     const html = `
 <!DOCTYPE html>
@@ -964,8 +970,8 @@ async function deliverCertificate(
           <h2 style="margin:0 0 16px;color:${bgColor};font-size:22px;">Congratulations, ${escapeXml(member.first_name || "")}! 🎉</h2>
           <p style="margin:0 0 12px;color:#333;font-size:15px;line-height:1.6;">You have successfully completed <strong>${escapeXml(trainingType)}</strong> at ${escapeXml(churchName)}.</p>
           <p style="margin:0 0 24px;color:#333;font-size:15px;">Your certificate number is: <strong>${escapeXml(certificateNumber)}</strong></p>
-          ${signedUrl?.signedUrl ? `<p style="text-align:center;"><a href="${signedUrl.signedUrl}" style="display:inline-block;padding:12px 24px;background-color:${bgColor};color:white;text-decoration:none;border-radius:6px;font-weight:600;">Download Certificate</a></p>` : ""}
-          <p style="margin:24px 0 0;color:#888;font-size:12px;">You can also download your certificate anytime from your profile page.</p>
+          ${signedUrl?.signedUrl ? `<p style="text-align:center;"><a href="${signedUrl.signedUrl}" style="display:inline-block;padding:12px 24px;background-color:${bgColor};color:white;text-decoration:none;border-radius:6px;font-weight:600;">Sign in to download</a></p>` : ""}
+          <p style="margin:24px 0 0;color:#888;font-size:12px;">Your certificate stays available in your profile page.</p>
         </td></tr>
       </table>
     </td></tr>

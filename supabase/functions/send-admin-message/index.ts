@@ -17,6 +17,9 @@ const TEMPLATE_NAME = 'admin-direct-message'
 const MAX_PER_RECIPIENT_PER_DAY = 3
 // Most direct emails one church admin may send in 24 hours.
 const ADMIN_DAILY_DIRECT_EMAIL_LIMIT = 2000
+// Direct emails are short personal notes, not newsletters.
+const MAX_SUBJECT = 200
+const MAX_BODY = 5000
 
 // Strip control characters and HTML tags; keep newlines only where allowed.
 function cleanText(v: string, max: number, keepNewlines = false): string {
@@ -81,12 +84,12 @@ Deno.serve(async (req) => {
   if (!tenantId) {
     return json({ error: 'tenant_id is required' }, 400)
   }
-  const subject = cleanText(String(templateData.subject || ''), 300).replace(/[\r\n]+/g, ' ')
-  const messageBody = cleanText(String(templateData.body || ''), 20000, true)
+  const subject = cleanText(String(templateData.subject || ''), MAX_SUBJECT).replace(/[\r\n]+/g, ' ')
+  const messageBody = cleanText(String(templateData.body || ''), MAX_BODY, true)
   if (!subject || !messageBody) {
     return json({ error: 'subject and body are required' }, 400)
   }
-  if (subject.length > 300 || messageBody.length > 20000) {
+  if (subject.length > MAX_SUBJECT || messageBody.length > MAX_BODY) {
     return json({ error: 'Message is too long' }, 400)
   }
 
@@ -218,8 +221,11 @@ Deno.serve(async (req) => {
         recipientName,
         churchName,
         senderName,
-        subject,
+        // The church's name always leads the subject, so a direct email can't
+        // pass itself off as coming from a bank, a delivery firm or the app.
+        subject: subject.toLowerCase().startsWith(churchName.toLowerCase()) ? subject : `${churchName}: ${subject}`,
         body: messageBody,
+        senderIsAdmin: !!userId,
       },
       idempotencyKey,
       tenantId,

@@ -379,6 +379,13 @@
       "when": 1795310987963,
       "tag": "0053_lock_member_phone_for_leaders",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1795311938769,
+      "tag": "0054_verify_email_before_linking_and_owner_invite_guard",
+      "breakpoints": true
     }
   ]
 }
