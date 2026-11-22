@@ -35,20 +35,27 @@ export default function MyCertificates({ memberId, hiddenCourseNames = [] }) {
     const ext = path.endsWith(".png") ? "png" : path.endsWith(".svg") ? "svg" : "pdf";
     const filename = `${completion.certificate_number || "certificate"}.${ext}`;
 
-    const trySign = async (p) =>
-      supabase.storage.from("church-documents").createSignedUrl(p, 60 * 5, { download: filename });
+    // Fetch the file with the member's own sign-in so access is checked at the
+    // moment of download; no shareable link is ever created.
+    const tryFetch = async (p) => supabase.storage.from("church-documents").download(p);
 
     try {
-      let { data, error } = await trySign(path);
+      let { data, error } = await tryFetch(path);
       // Backward compatibility: older rows were saved without the tenant_id/ prefix
-      if ((error || !data?.signedUrl) && tenantId && !path.startsWith(`${tenantId}/`)) {
-        const alt = `${tenantId}/${path}`;
-        const retry = await trySign(alt);
+      if ((error || !data) && tenantId && !path.startsWith(`${tenantId}/`)) {
+        const retry = await tryFetch(`${tenantId}/${path}`);
         data = retry.data;
         error = retry.error;
       }
-      if (error || !data?.signedUrl) throw error || new Error("Could not create signed URL");
-      window.open(data.signedUrl, "_blank");
+      if (error || !data) throw error || new Error("Could not download certificate");
+      const url = URL.createObjectURL(data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
     } catch (err) {
       toast({ title: "Error downloading certificate", description: err.message, variant: "destructive" });
     }

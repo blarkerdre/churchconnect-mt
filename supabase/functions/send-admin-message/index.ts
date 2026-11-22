@@ -13,6 +13,10 @@ const corsHeaders = {
 }
 
 const TEMPLATE_NAME = 'admin-direct-message'
+// Most direct emails one person may receive from the church in 24 hours.
+const MAX_PER_RECIPIENT_PER_DAY = 3
+// Most direct emails one church admin may send in 24 hours.
+const ADMIN_DAILY_DIRECT_EMAIL_LIMIT = 2000
 
 // Strip control characters and HTML tags; keep newlines only where allowed.
 function cleanText(v: string, max: number, keepNewlines = false): string {
@@ -134,6 +138,37 @@ Deno.serve(async (req) => {
       .limit(1)
     if (priorErr) return json({ error: 'Could not check recent emails' }, 500)
     if (prior && prior.length > 0) return json({ error: 'This email was already sent to this person in the last 24 hours.' }, 429)
+  }
+
+  // Limit how often one person can be emailed (any wording) and how many
+  // direct emails one admin can send per day, so a church login can't be
+  // used to bombard someone or blast large numbers of people.
+  {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const { count: toRecipient, error: recErr } = await admin
+      .from('audit_log')
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
+      .eq('entity_type', 'admin_direct_message')
+      .gte('created_at', since)
+      .contains('details', { recipient: recipientEmail })
+    if (recErr) return json({ error: 'Could not check recent emails' }, 500)
+    if ((toRecipient || 0) >= MAX_PER_RECIPIENT_PER_DAY) {
+      return json({ error: `This person has already been sent ${MAX_PER_RECIPIENT_PER_DAY} direct emails in the last 24 hours.` }, 429)
+    }
+    if (userId && !callerSuper) {
+      const { count: bySender, error: sendErr } = await admin
+        .from('audit_log')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId)
+        .eq('entity_type', 'admin_direct_message')
+        .eq('user_id', userId)
+        .gte('created_at', since)
+      if (sendErr) return json({ error: 'Could not check recent emails' }, 500)
+      if ((bySender || 0) >= ADMIN_DAILY_DIRECT_EMAIL_LIMIT) {
+        return json({ error: `You've reached the limit of ${ADMIN_DAILY_DIRECT_EMAIL_LIMIT} direct emails in 24 hours. Please try again later.` }, 429)
+      }
+    }
   }
 
   // Recipient must be someone already on record for this church. The

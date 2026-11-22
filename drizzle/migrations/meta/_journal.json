@@ -337,6 +337,13 @@
       "when": 1795305733973,
       "tag": "0047_sms_picture_messages",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1795308266892,
+      "tag": "0048_lock_call_log_billing",
+      "breakpoints": true
     }
   ]
 }

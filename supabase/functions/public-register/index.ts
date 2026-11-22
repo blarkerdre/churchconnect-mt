@@ -686,7 +686,9 @@ Deno.serve(async (req) => {
           console.warn("public-register: skipped join requests for unverified email match");
         }
 
-        return new Response(JSON.stringify({ success: true, mode: resultMode }), {
+        // Answer exactly as for a new registration unless the signed-in caller
+        // owns the matched record, so the form can't reveal who is a member.
+        return new Response(JSON.stringify({ success: true, mode: ownsExisting ? "updated" : "created" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

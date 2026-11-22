@@ -18,7 +18,9 @@ Deno.serve(async (req) => {
     if (!/^[0-9a-f-]{36}$/i.test(tenantId)) return json({ error: "Invalid church" }, 400);
     const { data: m } = await admin.from("tenant_memberships").select("role").eq("tenant_id", tenantId).eq("user_id", u.user.id).maybeSingle();
     const { data: sa } = await admin.from("user_roles").select("role").eq("user_id", u.user.id).eq("role", "super_admin").limit(1);
-    if (!m && !(sa && sa.length)) return json({ error: "Not allowed" }, 403);
+    // Only the church's owners/admins (or super admins) may check and apply top-ups.
+    const isChurchAdmin = !!m && ["owner", "admin"].includes(String(m.role));
+    if (!isChurchAdmin && !(sa && sa.length)) return json({ error: "Not allowed" }, 403);
 
     const since = new Date(Date.now() - 30 * 86400000).toISOString();
     const { data: pending } = await admin.from("call_minute_topups").select("id, stripe_session_id")
