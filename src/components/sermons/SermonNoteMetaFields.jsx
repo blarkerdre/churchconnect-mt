@@ -19,6 +19,7 @@ export default function SermonNoteMetaFields({
   setServiceDate,
   folderId,
   folders = [],
+  folderLabels = {},
   onFolderChange,
   creatingFolder,
   newFolderName,
@@ -70,7 +71,7 @@ export default function SermonNoteMetaFields({
             <SelectContent>
               <SelectItem value={NONE}>Unfiled</SelectItem>
               {folders.map((f) => (
-                <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                <SelectItem key={f.id} value={f.id}>{folderLabels[f.id] || f.name}</SelectItem>
               ))}
               <SelectItem value={NEW}>
                 <span className="flex items-center gap-1.5"><Plus className="h-3.5 w-3.5" /> Create new folder…</span>

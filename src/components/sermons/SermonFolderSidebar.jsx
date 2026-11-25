@@ -18,6 +18,7 @@ import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
 export default function SermonFolderSidebar({
   folders,
   notes,
+  folderLabels = {},
   selectedFolder,
   onSelectFolder,
 }) {
@@ -151,7 +152,7 @@ export default function SermonFolderSidebar({
         }
         return item(
           f.id,
-          f.name,
+          folderLabels[f.id] || f.name,
           selectedFolder === f.id ? FolderOpen : Folder,
           counts[f.id] || 0,
           () => onSelectFolder(f.id),
@@ -211,7 +212,7 @@ export default function SermonFolderSidebar({
       <AlertDialog open={!!deleteFolder} onOpenChange={(o) => !o && setDeleteFolder(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete folder "{deleteFolder?.name}"?</AlertDialogTitle>
+            <AlertDialogTitle>Delete folder "{deleteFolder ? folderLabels[deleteFolder.id] || deleteFolder.name : ""}"?</AlertDialogTitle>
             <AlertDialogDescription>
               The folder will be removed. Any notes inside will be moved to <strong>Unfiled</strong> - your notes are not deleted.
             </AlertDialogDescription>

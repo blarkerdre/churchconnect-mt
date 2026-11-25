@@ -30,6 +30,7 @@ import {
   AlertDialogHeader, AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { useConfirmDelete } from "@/components/shared/DeleteConfirmProvider";
+import { sermonFolderLabels } from "@/lib/sermon-folder-labels";
 
 const SORT_OPTIONS = [
   { value: "date_desc", label: "Date (newest)" },
@@ -57,14 +58,15 @@ export default function SermonNotes() {
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
+  // Personal notes follow the person: every church they belong to shows the
+  // same notes, each badged with the church it was written in.
   const { data: notes = [], isLoading } = useQuery({
-    queryKey: ["sermon_notes", user?.id, tenantId],
+    queryKey: ["sermon_notes", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sermon_notes")
         .select("*")
         .eq("user_id", user.id)
-        .eq("tenant_id", tenantId)
         .order("service_date", { ascending: false });
       if (error) throw error;
       return data;
@@ -73,13 +75,12 @@ export default function SermonNotes() {
   });
 
   const { data: folders = [] } = useQuery({
-    queryKey: ["sermon_note_folders", user?.id, tenantId],
+    queryKey: ["sermon_note_folders", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sermon_note_folders")
         .select("*")
         .eq("user_id", user.id)
-        .eq("tenant_id", tenantId)
         .order("name", { ascending: true });
       if (error) throw error;
       return data;
@@ -113,6 +114,13 @@ export default function SermonNotes() {
     folders.forEach((f) => { m[f.id] = f; });
     return m;
   }, [folders]);
+
+  // Folders are unique per church, so the same name can exist in two churches.
+  // When it does, show which church the folder belongs to.
+  const folderLabels = useMemo(
+    () => sermonFolderLabels(folders, tenantNames),
+    [folders, tenantNames],
+  );
 
 
   const categories = useMemo(() => {
@@ -277,7 +285,7 @@ export default function SermonNotes() {
   const headerLabel =
     selectedFolder === "all" ? "All Notes"
     : selectedFolder === "uncategorised" ? "Unfiled"
-    : (folderMap[selectedFolder]?.name || "Folder");
+    : (folderLabels[selectedFolder] || folderMap[selectedFolder]?.name || "Folder");
 
   const selectedCount = selectedIds.size;
   const allFilteredSelected = processed.length > 0 && processed.every((n) => selectedIds.has(n.id));
@@ -307,6 +315,7 @@ export default function SermonNotes() {
         <SermonFolderSidebar
           folders={folders}
           notes={notes}
+          folderLabels={folderLabels}
           selectedFolder={selectedFolder}
           onSelectFolder={setSelectedFolder}
         />
@@ -374,7 +383,7 @@ export default function SermonNotes() {
                   {folders.length > 0 && <DropdownMenuSeparator />}
                   {folders.map((f) => (
                     <DropdownMenuItem key={f.id} onClick={() => handleBulkMove(f.id)}>
-                      <Folder className="h-3.5 w-3.5 mr-2" /> {f.name}
+                      <Folder className="h-3.5 w-3.5 mr-2" /> {folderLabels[f.id] || f.name}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -505,6 +514,7 @@ export default function SermonNotes() {
         onOpenChange={setFormOpen}
         note={editNote}
         folders={folders}
+        folderLabels={folderLabels}
         defaultFolderId={
           !editNote && selectedFolder !== "all" && selectedFolder !== "uncategorised"
             ? selectedFolder

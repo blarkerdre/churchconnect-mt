@@ -18,7 +18,7 @@ import useSermonNoteDraft from "@/hooks/useSermonNoteDraft";
 import SermonNoteMetaFields, { NONE, NEW } from "@/components/sermons/SermonNoteMetaFields";
 
 
-export default function SermonNoteFormDialog({ open, onOpenChange, note, folders = [], defaultFolderId = null, onSaved }) {
+export default function SermonNoteFormDialog({ open, onOpenChange, note, folders = [], folderLabels = {}, defaultFolderId = null, onSaved }) {
   const { user } = useAuth();
   const { tenantId } = useTenantQuery();
   const { currentTenant } = useTenant();
@@ -116,8 +116,8 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
   };
 
   const folderName = useMemo(
-    () => (folderId && folderId !== NONE ? folders.find((f) => f.id === folderId)?.name || "" : ""),
-    [folderId, folders],
+    () => (folderId && folderId !== NONE ? folderLabels[folderId] || folders.find((f) => f.id === folderId)?.name || "" : ""),
+    [folderId, folders, folderLabels],
   );
 
   const handlePrint = async () => {
@@ -233,6 +233,7 @@ export default function SermonNoteFormDialog({ open, onOpenChange, note, folders
       setServiceDate={setServiceDate}
       folderId={folderId}
       folders={folders}
+      folderLabels={folderLabels}
       onFolderChange={handleFolderChange}
       creatingFolder={creatingFolder}
       newFolderName={newFolderName}
